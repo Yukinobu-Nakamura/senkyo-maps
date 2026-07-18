@@ -57,6 +57,17 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   }
   panel.querySelector(".guideClose").onclick = () => setOpen(false);
 
+  /* デモ動画: クリックで全画面表示 */
+  panel.querySelectorAll("img.gVideo").forEach((img) => {
+    img.addEventListener("click", () => {
+      const lb = document.createElement("div");
+      lb.className = "gLightbox";
+      lb.innerHTML = `<img src="${img.src}" alt="${img.alt || "操作デモ(拡大)"}"><button class="gLbClose" title="閉じる" aria-label="閉じる">✕</button>`;
+      lb.addEventListener("click", () => lb.remove());
+      document.body.appendChild(lb);
+    });
+  });
+
   const ctl = L.control({ position: "topleft" });
   ctl.onAdd = () => {
     btn = L.DomUtil.create("button", "guideBtn");

@@ -6,7 +6,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="assets/common.css?v=3">
+<link rel="stylesheet" href="assets/common.css?v=4">
 </head>
 <body>
 <header class="appbar">
@@ -23,7 +23,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="assets/common.js?v=3"></script>
+<script src="assets/common.js?v=4"></script>
 <script>
 "use strict";
 const SHAPE_STATUSES = [
@@ -46,8 +46,8 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
     <li><b>共有・バックアップ</b> — 「💾 GeoJSON書出」で保存し、メンバーはそのファイルを「読込」すると図形が追加されます</li>
   </ol>
-  <img class="gVideo" src="assets/posting_demo.gif" alt="操作デモ: 矩形ツールで配布区域を描き、状態と担当を保存すると色と件数が更新される" loading="lazy">
-  <div class="gVideoCap">▲ 操作デモ(区域を描く→済に変更→保存)</div>
+  <img class="gVideo" src="assets/posting_demo.gif" alt="操作デモ: 矩形ツールで配布区域を描き、状態と担当を保存すると色と件数が更新される" width="960" height="474">
+  <div class="gVideoCap">▲ 操作デモ(区域を描く→済に変更→保存)※クリックで拡大表示</div>
   <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
   "postingMap");
 
