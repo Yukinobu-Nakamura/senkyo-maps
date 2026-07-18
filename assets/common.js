@@ -38,6 +38,41 @@ function addLocateControl(map) {
   map.on("locationerror", () => alert("現在地を取得できませんでした(位置情報の許可を確認してください)"));
 }
 
+/* ---- 使い方ガイド(初回は自動表示、❓ボタンで開閉) ---- */
+function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
+  const seenKey = storageKey + ".guideSeen";
+  const container = map.getContainer();
+
+  const panel = document.createElement("div");
+  panel.className = "guidePanel";
+  panel.style.display = "none";
+  panel.innerHTML = `<button class="guideClose" title="ガイドを閉じる" aria-label="ガイドを閉じる">✕</button><h2>${titleHtml}</h2>${bodyHtml}`;
+  container.appendChild(panel);
+  L.DomEvent.disableClickPropagation(panel);
+  L.DomEvent.disableScrollPropagation(panel);
+
+  let btn;
+  function setOpen(open) {
+    panel.style.display = open ? "block" : "none";
+    if (btn) btn.classList.toggle("on", open);
+    if (!open) localStorage.setItem(seenKey, "1");
+  }
+  panel.querySelector(".guideClose").onclick = () => setOpen(false);
+
+  const ctl = L.control({ position: "topleft" });
+  ctl.onAdd = () => {
+    btn = L.DomUtil.create("button", "guideBtn");
+    btn.textContent = "❓";
+    btn.title = "使い方ガイドを表示/非表示";
+    L.DomEvent.disableClickPropagation(btn);
+    btn.onclick = () => setOpen(panel.style.display === "none");
+    return btn;
+  };
+  ctl.addTo(map);
+
+  if (!localStorage.getItem(seenKey)) setOpen(true);
+}
+
 /* ---- localStorage ---- */
 function loadLocal(key, fallback) {
   try {

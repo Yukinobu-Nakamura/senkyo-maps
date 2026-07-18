@@ -39,6 +39,15 @@ baseLayers["地理院地図(淡色)"].addTo(map);
 L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 addLocateControl(map);
 L.control.scale({ imperial: false }).addTo(map);
+addGuideControl(map, "📮 ポスティングマップの使い方",
+  `<ol>
+    <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
+    <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます</li>
+    <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
+    <li><b>共有・バックアップ</b> — 「💾 GeoJSON書出」で保存し、メンバーはそのファイルを「読込」すると図形が追加されます</li>
+  </ol>
+  <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドをいつでも再表示できます。</div>`,
+  "postingMap");
 
 map.pm.setLang("ja");
 map.pm.addControls({

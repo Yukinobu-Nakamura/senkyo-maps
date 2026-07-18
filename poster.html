@@ -43,6 +43,15 @@ STATUSES.forEach(s => { statusLayers[s.label] = L.layerGroup().addTo(map); });
 L.control.layers(baseLayers, statusLayers, { collapsed: true }).addTo(map);
 addLocateControl(map);
 L.control.scale({ imperial: false }).addTo(map);
+addGuideControl(map, "🗺️ ポスターマップの使い方",
+  `<ol>
+    <li><b>掲示場データを読み込む</b> — 右上「📂 CSV読込」で選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示はダミーのサンプル)</li>
+    <li><b>ピンをタップ</b> — ステータス(未/完了/予約/要確認/異常)とメモを保存。色が変わり右上の完了率も更新されます</li>
+    <li><b>表示を絞る</b> — 右上のレイヤボタンでステータス別に表示切替、左の📍で現在地表示</li>
+    <li><b>共有・バックアップ</b> — 「💾 CSV書出」で保存し、メンバーはそのCSVを「読込」すると同じ状態を再現できます</li>
+  </ol>
+  <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドをいつでも再表示できます。</div>`,
+  "posterMap");
 
 /* 進捗ボックス */
 const statCtl = L.control({ position: "topright" });
