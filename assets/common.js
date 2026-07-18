@@ -57,8 +57,17 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   }
   panel.querySelector(".guideClose").onclick = () => setOpen(false);
 
-  /* デモ動画: クリックで全画面表示 */
+  /* デモ動画: 吹き出し(PC=クリック/スマホ=タップ)+クリックで全画面表示 */
+  const isTouch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
   panel.querySelectorAll("img.gVideo").forEach((img) => {
+    const wrap = document.createElement("div");
+    wrap.className = "gVideoWrap";
+    img.parentNode.insertBefore(wrap, img);
+    wrap.appendChild(img);
+    const hint = document.createElement("span");
+    hint.className = "gVideoHint";
+    hint.textContent = isTouch ? "👆 タップで拡大" : "🖱️ クリックで拡大";
+    wrap.appendChild(hint);
     img.addEventListener("click", () => {
       const lb = document.createElement("div");
       lb.className = "gLightbox";
