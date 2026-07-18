@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>選挙・政治活動マップツール</title>
+<style>
+  :root{ --ink:#1f2937; --muted:#6b7280; --accent:#0d9488; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif; color:var(--ink); background:#f6f7fb; line-height:1.8; padding:40px 18px;}
+  .wrap{max-width:760px; margin:0 auto;}
+  h1{font-size:24px; margin-bottom:4px;}
+  .lead{color:var(--muted); font-size:14px; margin-bottom:26px;}
+  .card{display:block; background:#fff; border-radius:14px; padding:20px 22px; margin-bottom:16px; text-decoration:none; color:inherit; box-shadow:0 1px 4px rgba(0,0,0,.08); border:1.5px solid transparent; transition:border-color .15s, transform .12s;}
+  .card:hover{border-color:var(--accent); transform:translateY(-2px);}
+  .card h2{font-size:17px; color:var(--accent); margin-bottom:4px;}
+  .card p{font-size:13.5px; color:var(--muted);}
+  .note{background:#fffbeb; border:1.5px solid #f59e0b; border-radius:12px; padding:10px 14px; font-size:12.5px; margin-top:24px;}
+  footer{margin-top:30px; font-size:12px; color:var(--muted);}
+  footer a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🗺️ 選挙・政治活動マップツール</h1>
+  <p class="lead">ブラウザだけで動く、ポスター貼付けとポスティングの進捗管理マップです。サーバ登録不要・データは各自の端末に保存されます。</p>
+
+  <a class="card" href="poster.html">
+    <h2>🗺️ ポスターマップ</h2>
+    <p>選挙運動用ポスターの掲示場(掲示板)を地図に表示し、貼付けの進捗(未・予約・完了・要確認・異常)を色分け管理。選管公表の掲示場一覧CSVを読み込んで使います。</p>
+  </a>
+
+  <a class="card" href="posting.html">
+    <h2>📮 ポスティングマップ</h2>
+    <p>政治活動用ビラのポスティング区域・ルートを地図に描いて、予定・配布中・済を色分け管理。GeoJSONの書出/読込でメンバー間の共有ができます。</p>
+  </a>
+
+  <div class="note">⚠️ <b>使い方の注意:</b> データはブラウザ(端末)ごとの保存です。端末をまたいで共有するときは「書出」したファイルを渡して相手が「読込」してください。ポスターの掲示場データはお住まいの選挙管理委員会が公表する一覧をCSV化して読み込んでください(同梱データはダミーです)。</div>
+
+  <footer>
+    チームみらい(安野たかひろ陣営)公開の <a href="https://github.com/team-mirai-volunteer/poster-map" target="_blank" rel="noopener noreferrer">poster-map</a> の仕組みを参考にした独自実装です(コードは書き下ろし)。
+    ソースコード: <a href="https://github.com/Yukinobu-Nakamura/senkyo-maps" target="_blank" rel="noopener noreferrer">GitHub</a> / 地図: 国土地理院・OpenStreetMap
+  </footer>
+</div>
+</body>
+</html>

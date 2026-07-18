@@ -1,0 +1,27 @@
+:root{
+  --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff; --accent:#0d9488;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{font-family:"Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif; color:var(--ink); background:var(--bg); display:flex; flex-direction:column;}
+header.appbar{background:var(--accent); color:#fff; padding:8px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; z-index:1100;}
+header.appbar h1{font-size:15px; font-weight:bold; flex:1; min-width:180px;}
+header.appbar a{color:#ccfbf1; font-size:12px; text-decoration:none;}
+header.appbar a:hover{text-decoration:underline;}
+.toolbar{display:flex; gap:6px; flex-wrap:wrap;}
+.toolbar button, .toolbar label.filebtn{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; background:rgba(255,255,255,.18); color:#fff;}
+.toolbar button:hover, .toolbar label.filebtn:hover{background:rgba(255,255,255,.32);}
+.toolbar input[type=file]{display:none;}
+#map{flex:1; min-height:0;}
+.samplebar{background:#fffbeb; border-bottom:1.5px solid #f59e0b; color:#92400e; font-size:12px; padding:5px 12px; text-align:center;}
+.leaflet-popup-content{font-size:13px; line-height:1.7;}
+.leaflet-popup-content select, .leaflet-popup-content input[type=text], .leaflet-popup-content textarea{font-family:inherit; font-size:12.5px; width:100%; border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; margin:2px 0 6px;}
+.leaflet-popup-content button{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:6px; padding:5px 12px; cursor:pointer; margin-right:6px;}
+.popupSave{background:var(--accent); color:#fff;}
+.popupDel{background:#fee2e2; color:#b91c1c;}
+.statbox{background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.25); padding:8px 12px; font-size:12px; line-height:1.6;}
+.statbox b{font-size:17px;}
+.legend{background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.25); padding:8px 12px; font-size:12px; line-height:1.9;}
+.legend i{display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid #333; margin-right:6px; vertical-align:-1px;}
+.legend i.sq{border-radius:3px;}
+.locateBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer;}

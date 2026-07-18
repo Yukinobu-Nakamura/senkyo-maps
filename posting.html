@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポスティングマップ — ビラ配布区域の管理</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
+<link rel="stylesheet" href="assets/common.css">
+</head>
+<body>
+<header class="appbar">
+  <h1>📮 ポスティングマップ</h1>
+  <div class="toolbar">
+    <label class="filebtn">📂 GeoJSON読込<input type="file" id="gjIn" accept=".geojson,.json,application/geo+json"></label>
+    <button id="gjOut">💾 GeoJSON書出</button>
+    <button id="resetBtn">全消去</button>
+    <a href="index.html" style="align-self:center;">← トップ</a>
+  </div>
+</header>
+<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
+<script src="assets/common.js"></script>
+<script>
+"use strict";
+const SHAPE_STATUSES = [
+  { id: "plan",  label: "予定",   color: "#1e88e5" },
+  { id: "doing", label: "配布中", color: "#fb8c00" },
+  { id: "done",  label: "済",     color: "#43a047" },
+];
+const KEY_SHAPES = "postingMap.shapes";
+
+const map = L.map("map").setView([35.7295, 139.7109], 14);
+const baseLayers = createBaseLayers();
+baseLayers["地理院地図(淡色)"].addTo(map);
+L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
+addLocateControl(map);
+L.control.scale({ imperial: false }).addTo(map);
+
+map.pm.setLang("ja");
+map.pm.addControls({
+  position: "topleft",
+  drawMarker: false, drawCircleMarker: false, drawCircle: false,
+  drawRectangle: true, drawPolygon: true, drawPolyline: true, drawText: false,
+  editMode: true, dragMode: true, cutPolygon: false, removalMode: true, rotateMode: false,
+});
+
+const shapesLayer = L.featureGroup().addTo(map);
+
+/* 進捗ボックス */
+const statCtl = L.control({ position: "topright" });
+let statDiv;
+statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return statDiv; };
+statCtl.addTo(map);
+
+/* 凡例 */
+const legendCtl = L.control({ position: "bottomright" });
+legendCtl.onAdd = () => {
+  const div = L.DomUtil.create("div", "legend");
+  div.innerHTML = SHAPE_STATUSES.map(s => `<i class="sq" style="background:${s.color}"></i>${s.label}`).join("<br>");
+  return div;
+};
+legendCtl.addTo(map);
+
+function statusOf(id) { return SHAPE_STATUSES.find(s => s.id === id) || SHAPE_STATUSES[0]; }
+
+function styleFor(props) {
+  const st = statusOf(props.status);
+  return { color: st.color, weight: 3, fillColor: st.color, fillOpacity: 0.25 };
+}
+
+function popupHtml(props) {
+  const opts = SHAPE_STATUSES.map(s => `<option value="${s.id}" ${s.id === props.status ? "selected" : ""}>${s.label}</option>`).join("");
+  const esc = (v) => (v || "").replace(/"/g, "&quot;");
+  return `状態:<select id="sStatus">${opts}</select>` +
+    `担当:<input type="text" id="sWho" value="${esc(props.who)}" maxlength="20" placeholder="例)佐藤">` +
+    `メモ:<input type="text" id="sMemo" value="${esc(props.memo)}" maxlength="100" placeholder="例)7/20 午前に配布予定">` +
+    `<button class="popupSave" id="sSave">保存</button><button class="popupDel" id="sDel">削除</button>`;
+}
+
+function wireLayer(layer) {
+  if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
+  const props = layer.feature.properties;
+  if (!props.status) props.status = "plan";
+  if (layer.setStyle) layer.setStyle(styleFor(props));
+  layer.bindPopup(() => popupHtml(props));
+  layer.on("popupopen", (e) => {
+    const node = e.popup.getElement();
+    node.querySelector("#sSave").onclick = () => {
+      props.status = node.querySelector("#sStatus").value;
+      props.who = node.querySelector("#sWho").value.trim();
+      props.memo = node.querySelector("#sMemo").value.trim();
+      if (layer.setStyle) layer.setStyle(styleFor(props));
+      persist();
+      map.closePopup();
+      renderStats();
+    };
+    node.querySelector("#sDel").onclick = () => {
+      if (!confirm("この図形を削除しますか?")) return;
+      shapesLayer.removeLayer(layer);
+      persist();
+      renderStats();
+    };
+  });
+}
+
+function renderStats() {
+  const counts = { plan: 0, doing: 0, done: 0 };
+  shapesLayer.eachLayer(l => { counts[(l.feature?.properties?.status) || "plan"]++; });
+  const total = counts.plan + counts.doing + counts.done;
+  statDiv.innerHTML = `区域/ルート <b>${total}</b> 件<br>済 ${counts.done} ・ 配布中 ${counts.doing} ・ 予定 ${counts.plan}`;
+}
+
+function persist() {
+  saveLocal(KEY_SHAPES, shapesLayer.toGeoJSON());
+  renderStats();
+}
+
+function loadGeoJson(gj, fit) {
+  L.geoJSON(gj, {
+    onEachFeature: (feature, layer) => {
+      layer.feature = feature;
+      shapesLayer.addLayer(layer);
+      wireLayer(layer);
+      layer.on("pm:edit", persist);
+      layer.on("pm:dragend", persist);
+    },
+  });
+  if (fit && shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
+  renderStats();
+}
+
+map.on("pm:create", (e) => {
+  const layer = e.layer;
+  shapesLayer.addLayer(layer);
+  wireLayer(layer);
+  layer.on("pm:edit", persist);
+  layer.on("pm:dragend", persist);
+  persist();
+  layer.openPopup();
+});
+map.on("pm:remove", (e) => {
+  shapesLayer.removeLayer(e.layer);
+  persist();
+});
+
+onFileSelected(document.getElementById("gjIn"), (text) => {
+  let gj;
+  try { gj = JSON.parse(text); } catch (err) { return alert("GeoJSONとして読み込めませんでした"); }
+  if (!confirm("読み込んだ図形を現在のマップに追加します。よろしいですか?")) return;
+  loadGeoJson(gj, true);
+  persist();
+});
+
+document.getElementById("gjOut").onclick = () => {
+  downloadFile(`posting_areas_${todayStamp()}.geojson`, JSON.stringify(shapesLayer.toGeoJSON(), null, 1), "application/geo+json");
+};
+
+document.getElementById("resetBtn").onclick = () => {
+  if (!confirm("すべての図形を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+  shapesLayer.clearLayers();
+  localStorage.removeItem(KEY_SHAPES);
+  renderStats();
+};
+
+/* 起動 */
+const saved = loadLocal(KEY_SHAPES, null);
+if (saved) loadGeoJson(saved, true);
+renderStats();
+</script>
+</body>
+</html>
