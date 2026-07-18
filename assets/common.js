@@ -38,9 +38,8 @@ function addLocateControl(map) {
   map.on("locationerror", () => alert("現在地を取得できませんでした(位置情報の許可を確認してください)"));
 }
 
-/* ---- 使い方ガイド(初回は自動表示、❓ボタンで開閉) ---- */
+/* ---- 使い方ガイド(毎回初期表示、❓ボタンで開閉) ---- */
 function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
-  const seenKey = storageKey + ".guideSeen";
   const container = map.getContainer();
 
   const panel = document.createElement("div");
@@ -55,7 +54,6 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   function setOpen(open) {
     panel.style.display = open ? "block" : "none";
     if (btn) btn.classList.toggle("on", open);
-    if (!open) localStorage.setItem(seenKey, "1");
   }
   panel.querySelector(".guideClose").onclick = () => setOpen(false);
 
@@ -70,7 +68,7 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   };
   ctl.addTo(map);
 
-  if (!localStorage.getItem(seenKey)) setOpen(true);
+  setOpen(true);
 }
 
 /* ---- localStorage ---- */
