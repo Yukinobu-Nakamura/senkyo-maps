@@ -59,19 +59,37 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
 
   /* デモ動画: 吹き出し(PC=クリック/スマホ=タップ)+クリックで全画面表示 */
   const isTouch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
-  panel.querySelectorAll("img.gVideo").forEach((img) => {
+  panel.querySelectorAll(".gVideo").forEach((media) => {
     const wrap = document.createElement("div");
     wrap.className = "gVideoWrap";
-    img.parentNode.insertBefore(wrap, img);
-    wrap.appendChild(img);
+    media.parentNode.insertBefore(wrap, media);
+    wrap.appendChild(media);
     const hint = document.createElement("span");
     hint.className = "gVideoHint";
     hint.textContent = isTouch ? "👆 タップで拡大" : "🖱️ クリックで拡大";
     wrap.appendChild(hint);
-    img.addEventListener("click", () => {
+    media.addEventListener("click", () => {
       const lb = document.createElement("div");
       lb.className = "gLightbox";
-      lb.innerHTML = `<img src="${img.src}" alt="${img.alt || "操作デモ(拡大)"}"><button class="gLbClose" title="閉じる" aria-label="閉じる">✕</button>`;
+      let big;
+      if (media.tagName === "VIDEO") {
+        big = document.createElement("video");
+        big.src = media.currentSrc || media.src;
+        big.autoplay = true;
+        big.muted = true;
+        big.loop = true;
+        big.playsInline = true;
+      } else {
+        big = document.createElement("img");
+        big.src = media.src;
+        big.alt = media.alt || "操作デモ(拡大)";
+      }
+      const close = document.createElement("button");
+      close.className = "gLbClose";
+      close.title = "閉じる";
+      close.setAttribute("aria-label", "閉じる");
+      close.textContent = "✕";
+      lb.append(big, close);
       lb.addEventListener("click", () => lb.remove());
       document.body.appendChild(lb);
     });

@@ -6,7 +6,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="assets/common.css?v=6">
+<link rel="stylesheet" href="assets/common.css?v=7">
 </head>
 <body>
 <header class="appbar">
@@ -23,7 +23,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="assets/common.js?v=6"></script>
+<script src="assets/common.js?v=7"></script>
 <script>
 "use strict";
 const SHAPE_STATUSES = [
@@ -46,7 +46,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
     <li><b>共有・バックアップ</b> — 「💾 GeoJSON書出」で保存し、メンバーはそのファイルを「読込」すると図形が追加されます</li>
   </ol>
-  <img class="gVideo" src="assets/posting_demo.gif?v=3" alt="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ" width="1280" height="633">
+  <video class="gVideo" src="assets/posting_demo.mp4?v=1" autoplay muted loop playsinline width="1568" height="776" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
   <div class="gVideoCap">▲ 操作デモ(①池袋二丁目をポリゴンで囲って新規登録→「予定」で保存 ②実施後に「済」へ変更)</div>
   <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
   "postingMap");
