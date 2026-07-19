@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポスターマップ — 掲示板の貼付け管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="assets/common.css?v=7">
+<link rel="stylesheet" href="assets/common.css?v=9">
 </head>
 <body>
 <header class="appbar">
@@ -14,6 +14,7 @@
     <label class="filebtn">📂 CSV読込<input type="file" id="csvIn" accept=".csv,text/csv"></label>
     <button id="csvOut">💾 CSV書出</button>
     <button id="resetBtn">状態リセット</button>
+    <a class="dlbtn" href="dist/poster_map_standalone.html" download="ポスターマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="index.html" style="align-self:center;">← トップ</a>
   </div>
 </header>
@@ -21,7 +22,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/common.js?v=8"></script>
+<script src="assets/common.js?v=9"></script>
 <script>
 "use strict";
 /* ステータス定義(ここを書き換えれば増減可能) */
@@ -184,8 +185,12 @@ document.getElementById("resetBtn").onclick = () => {
     document.getElementById("sampleBar").style.display = "none";
     map.fitBounds(L.latLngBounds(boards.map(b => [b.lat, b.long])), { padding: [30, 30] });
   } else {
-    const res = await fetch("data/boards.sample.json");
-    boards = await res.json();
+    if (Array.isArray(window.EMBEDDED_BOARDS)) {
+      boards = window.EMBEDDED_BOARDS; // 配布用単一ファイル版はデータ同梱
+    } else {
+      const res = await fetch("data/boards.sample.json");
+      boards = await res.json();
+    }
     const edits = loadLocal(KEY_EDITS, {});
     boards.forEach(b => { if (edits[b.id]) Object.assign(b, edits[b.id]); });
   }

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポスティングマップ — ビラ配布区域の管理</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
+<style>
+:root{
+  --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff; --accent:#8b5cf6;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{font-family:"Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif; color:var(--ink); background:var(--bg); display:flex; flex-direction:column;}
+header.appbar{background:var(--accent); color:#fff; padding:8px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; z-index:1100;}
+header.appbar h1{font-size:15px; font-weight:bold; flex:1; min-width:180px;}
+header.appbar a{color:#ede9fe; font-size:12px; text-decoration:none;}
+header.appbar a:hover{text-decoration:underline;}
+.toolbar{display:flex; gap:6px; flex-wrap:wrap;}
+.toolbar button, .toolbar label.filebtn{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; background:rgba(255,255,255,.18); color:#fff;}
+.toolbar button:hover, .toolbar label.filebtn:hover{background:rgba(255,255,255,.32);}
+.toolbar a.dlbtn{font-size:12px; font-weight:bold; border-radius:8px; padding:6px 10px; background:rgba(255,255,255,.18); color:#fff !important; text-decoration:none;}
+.toolbar a.dlbtn:hover{background:rgba(255,255,255,.32); text-decoration:none;}
+.toolbar input[type=file]{display:none;}
+#map{flex:1; min-height:0;}
+.samplebar{background:#fffbeb; border-bottom:1.5px solid #f59e0b; color:#92400e; font-size:12px; padding:5px 12px; text-align:center;}
+.leaflet-popup-content{font-size:13px; line-height:1.7;}
+.leaflet-popup-content select, .leaflet-popup-content input[type=text], .leaflet-popup-content textarea{font-family:inherit; font-size:12.5px; width:100%; border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; margin:2px 0 6px;}
+.leaflet-popup-content button{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:6px; padding:5px 12px; cursor:pointer; margin-right:6px;}
+.popupSave{background:var(--accent); color:#fff;}
+.popupDel{background:#fee2e2; color:#b91c1c;}
+.statbox{background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.25); padding:8px 12px; font-size:12px; line-height:1.6;}
+.statbox b{font-size:17px;}
+.legend{background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.25); padding:8px 12px; font-size:12px; line-height:1.9;}
+.legend i{display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid #333; margin-right:6px; vertical-align:-1px;}
+.legend i.sq{border-radius:3px;}
+.locateBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer;}
+.guideBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer; font-weight:bold; color:var(--accent);}
+.guideBtn.on{background:var(--accent); color:#fff;}
+.guidePanel{position:absolute; top:12px; right:12px; z-index:1200; width:min(480px, calc(100% - 24px)); max-height:calc(100% - 24px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.25); padding:14px 16px 12px; font-size:13px; line-height:1.7;}
+.guidePanel h2{font-size:14.5px; color:var(--accent); margin-bottom:8px; padding-right:28px;}
+.guidePanel ol{padding-left:20px; margin-bottom:8px;}
+.guidePanel ol li{margin-bottom:4px;}
+.guidePanel .gNote{font-size:11.5px; color:var(--muted); border-top:1px solid #e5e7eb; padding-top:6px;}
+.guidePanel .gVideo{display:block; width:100%; height:auto; border:1px solid #e5e7eb; border-radius:8px; margin:4px 0 8px; cursor:zoom-in;}
+.guidePanel .gVideoWrap{position:relative; margin:4px 0 8px;}
+.guidePanel .gVideoWrap .gVideo{margin:0;}
+.gVideoHint{position:absolute; top:8px; right:8px; background:var(--accent); color:#fff; font-size:11.5px; font-weight:bold; padding:4px 11px; border-radius:99px; box-shadow:0 2px 6px rgba(0,0,0,.35); pointer-events:none; white-space:nowrap;}
+.gVideoHint::after{content:""; position:absolute; bottom:-5px; right:16px; border:6px solid transparent; border-top:6px solid var(--accent); border-bottom:0;}
+.guidePanel .gVideoCap{font-size:11px; color:var(--muted); margin:-4px 0 8px;}
+.gLightbox{position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,.78); display:flex; align-items:center; justify-content:center; padding:16px; cursor:zoom-out;}
+.gLightbox img, .gLightbox video{width:96%; height:auto; max-height:94vh; object-fit:contain; border-radius:10px; box-shadow:0 8px 40px rgba(0,0,0,.6); background:#fff;}
+.gLightbox .gLbClose{position:absolute; top:14px; right:20px; border:none; background:none; color:#fff; font-size:30px; cursor:pointer; line-height:1;}
+.guideClose{position:absolute; top:8px; right:10px; border:none; background:none; font-size:18px; cursor:pointer; color:var(--muted); line-height:1;}
+.guideClose:hover{color:var(--ink);}
+@media (max-height:500px){ .guidePanel{max-height:calc(100% - 24px); overflow-y:auto;} }
+
+</style>
+</head>
+<body>
+<header class="appbar">
+  <h1>📮 ポスティングマップ</h1>
+  <div class="toolbar">
+    <label class="filebtn">📂 GeoJSON読込<input type="file" id="gjIn" accept=".geojson,.json,application/geo+json"></label>
+    <button id="gjOut">💾 GeoJSON書出</button>
+    <button id="resetBtn">全消去</button>
+    <a class="dlbtn" href="https://yukinobu-nakamura.github.io/senkyo-maps/dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
+    <a href="https://yukinobu-nakamura.github.io/senkyo-maps/" style="align-self:center;">← トップ</a>
+  </div>
+</header>
+<div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。最新版: <a href="https://yukinobu-nakamura.github.io/senkyo-maps/">https://yukinobu-nakamura.github.io/senkyo-maps/</a></div>
+<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
+<script>
+/* 共通ユーティリティ(ポスターマップ/ポスティングマップ) */
+"use strict";
+
+/* ---- ベース地図 ---- */
+function createBaseLayers() {
+  const gsiPale = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png", {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+  });
+  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  });
+  const gsiPhoto = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+  });
+  return { "地理院地図(淡色)": gsiPale, "OpenStreetMap": osm, "航空写真(地理院)": gsiPhoto };
+}
+
+/* ---- 現在地ボタン ---- */
+function addLocateControl(map) {
+  const ctl = L.control({ position: "topleft" });
+  ctl.onAdd = () => {
+    const btn = L.DomUtil.create("button", "locateBtn");
+    btn.textContent = "📍";
+    btn.title = "現在地を表示";
+    L.DomEvent.disableClickPropagation(btn);
+    btn.onclick = () => map.locate({ setView: true, maxZoom: 16 });
+    return btn;
+  };
+  ctl.addTo(map);
+  let locMarker = null;
+  map.on("locationfound", (e) => {
+    if (locMarker) map.removeLayer(locMarker);
+    locMarker = L.circleMarker(e.latlng, { radius: 7, color: "#fff", weight: 2, fillColor: "#1a73e8", fillOpacity: 1 }).addTo(map);
+  });
+  map.on("locationerror", () => alert("現在地を取得できませんでした(位置情報の許可を確認してください)"));
+}
+
+/* ---- 使い方ガイド(毎回初期表示、❓ボタンで開閉) ---- */
+function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
+  const container = map.getContainer();
+
+  const panel = document.createElement("div");
+  panel.className = "guidePanel";
+  panel.style.display = "none";
+  panel.innerHTML = `<button class="guideClose" title="ガイドを閉じる" aria-label="ガイドを閉じる">✕</button><h2>${titleHtml}</h2>${bodyHtml}`;
+  container.appendChild(panel);
+  L.DomEvent.disableClickPropagation(panel);
+  L.DomEvent.disableScrollPropagation(panel);
+
+  let btn;
+  function setOpen(open) {
+    panel.style.display = open ? "block" : "none";
+    if (btn) btn.classList.toggle("on", open);
+  }
+  panel.querySelector(".guideClose").onclick = () => setOpen(false);
+
+  /* デモ動画: 吹き出し(PC=クリック/スマホ=タップ)+クリックで全画面表示 */
+  const isTouch = window.matchMedia("(hover: none), (pointer: coarse)").matches;
+  panel.querySelectorAll(".gVideo").forEach((media) => {
+    const wrap = document.createElement("div");
+    wrap.className = "gVideoWrap";
+    media.parentNode.insertBefore(wrap, media);
+    wrap.appendChild(media);
+    const hint = document.createElement("span");
+    hint.className = "gVideoHint";
+    hint.textContent = isTouch ? "👆 タップで拡大" : "🖱️ クリックで拡大";
+    wrap.appendChild(hint);
+    if (media.tagName === "VIDEO") {
+      // 自動再生がブラウザ都合で止まった場合に再開する保険
+      const ensurePlay = () => { if (!document.hidden && media.paused) media.play().catch(() => {}); };
+      media.addEventListener("loadeddata", ensurePlay);
+      media.addEventListener("pause", ensurePlay);
+      document.addEventListener("visibilitychange", ensurePlay);
+      ensurePlay();
+    }
+    media.addEventListener("click", () => {
+      const lb = document.createElement("div");
+      lb.className = "gLightbox";
+      let big;
+      if (media.tagName === "VIDEO") {
+        big = document.createElement("video");
+        big.src = media.currentSrc || media.src;
+        big.autoplay = true;
+        big.muted = true;
+        big.loop = true;
+        big.playsInline = true;
+      } else {
+        big = document.createElement("img");
+        big.src = media.src;
+        big.alt = media.alt || "操作デモ(拡大)";
+      }
+      const close = document.createElement("button");
+      close.className = "gLbClose";
+      close.title = "閉じる";
+      close.setAttribute("aria-label", "閉じる");
+      close.textContent = "✕";
+      lb.append(big, close);
+      lb.addEventListener("click", () => lb.remove());
+      document.body.appendChild(lb);
+    });
+  });
+
+  const ctl = L.control({ position: "topleft" });
+  ctl.onAdd = () => {
+    btn = L.DomUtil.create("button", "guideBtn");
+    btn.textContent = "❓";
+    btn.title = "使い方ガイドを表示/非表示";
+    L.DomEvent.disableClickPropagation(btn);
+    btn.onclick = () => setOpen(panel.style.display === "none");
+    return btn;
+  };
+  ctl.addTo(map);
+
+  setOpen(true);
+}
+
+/* ---- localStorage ---- */
+function loadLocal(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function saveLocal(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+/* ---- ファイル入出力 ---- */
+function downloadFile(filename, text, mime) {
+  const blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function onFileSelected(inputEl, handler) {
+  inputEl.addEventListener("change", () => {
+    const f = inputEl.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      handler(reader.result, f.name);
+      inputEl.value = ""; // 同じファイルの再選択を許可
+    };
+    reader.readAsText(f, "utf-8");
+  });
+}
+
+/* ---- CSV (RFC4180の範囲で簡易対応) ---- */
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = "", inQ = false;
+  const src = text.replace(/^﻿/, "");
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (inQ) {
+      if (c === '"') {
+        if (src[i + 1] === '"') { field += '"'; i++; } else { inQ = false; }
+      } else field += c;
+    } else if (c === '"') inQ = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && src[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.some((v) => v !== "")) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some((v) => v !== "")) rows.push(row);
+  return rows;
+}
+function toCsv(rows) {
+  const esc = (v) => {
+    const s = String(v == null ? "" : v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  return rows.map((r) => r.map(esc).join(",")).join("\r\n");
+}
+function todayStamp() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
+}
+
+</script>
+<script>
+"use strict";
+const SHAPE_STATUSES = [
+  { id: "plan",  label: "予定",   color: "#1e88e5" },
+  { id: "doing", label: "配布中", color: "#fb8c00" },
+  { id: "done",  label: "済",     color: "#8b5cf6" },
+];
+const KEY_SHAPES = "postingMap.shapes";
+
+const map = L.map("map").setView([35.7295, 139.7109], 14);
+const baseLayers = createBaseLayers();
+baseLayers["地理院地図(淡色)"].addTo(map);
+L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
+addLocateControl(map);
+L.control.scale({ imperial: false }).addTo(map);
+addGuideControl(map, "📮 ポスティングマップの使い方",
+  `<ol>
+    <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
+    <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます</li>
+    <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
+    <li><b>共有・バックアップ</b> — 「💾 GeoJSON書出」で保存し、メンバーはそのファイルを「読込」すると図形が追加されます</li>
+  </ol>
+  <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
+  <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
+  <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
+  "postingMap");
+
+map.pm.setLang("ja");
+map.pm.addControls({
+  position: "topleft",
+  drawMarker: false, drawCircleMarker: false, drawCircle: false,
+  drawRectangle: true, drawPolygon: true, drawPolyline: true, drawText: false,
+  editMode: true, dragMode: true, cutPolygon: false, removalMode: true, rotateMode: false,
+});
+
+const shapesLayer = L.featureGroup().addTo(map);
+
+/* 進捗ボックス */
+const statCtl = L.control({ position: "topright" });
+let statDiv;
+statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return statDiv; };
+statCtl.addTo(map);
+
+/* 凡例 */
+const legendCtl = L.control({ position: "bottomright" });
+legendCtl.onAdd = () => {
+  const div = L.DomUtil.create("div", "legend");
+  div.innerHTML = SHAPE_STATUSES.map(s => `<i class="sq" style="background:${s.color}"></i>${s.label}`).join("<br>");
+  return div;
+};
+legendCtl.addTo(map);
+
+function statusOf(id) { return SHAPE_STATUSES.find(s => s.id === id) || SHAPE_STATUSES[0]; }
+
+function styleFor(props) {
+  const st = statusOf(props.status);
+  return { color: st.color, weight: 3, fillColor: st.color, fillOpacity: 0.25 };
+}
+
+function popupHtml(props) {
+  const opts = SHAPE_STATUSES.map(s => `<option value="${s.id}" ${s.id === props.status ? "selected" : ""}>${s.label}</option>`).join("");
+  const esc = (v) => (v || "").replace(/"/g, "&quot;");
+  return `状態:<select id="sStatus">${opts}</select>` +
+    `担当:<input type="text" id="sWho" value="${esc(props.who)}" maxlength="20" placeholder="例)佐藤">` +
+    `メモ:<input type="text" id="sMemo" value="${esc(props.memo)}" maxlength="100" placeholder="例)7/20 午前に配布予定">` +
+    `<button class="popupSave" id="sSave">保存</button><button class="popupDel" id="sDel">削除</button>`;
+}
+
+function wireLayer(layer) {
+  if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
+  const props = layer.feature.properties;
+  if (!props.status) props.status = "plan";
+  if (layer.setStyle) layer.setStyle(styleFor(props));
+  layer.bindPopup(() => popupHtml(props));
+  layer.on("popupopen", (e) => {
+    const node = e.popup.getElement();
+    node.querySelector("#sSave").onclick = () => {
+      props.status = node.querySelector("#sStatus").value;
+      props.who = node.querySelector("#sWho").value.trim();
+      props.memo = node.querySelector("#sMemo").value.trim();
+      if (layer.setStyle) layer.setStyle(styleFor(props));
+      persist();
+      map.closePopup();
+      renderStats();
+    };
+    node.querySelector("#sDel").onclick = () => {
+      if (!confirm("この図形を削除しますか?")) return;
+      shapesLayer.removeLayer(layer);
+      persist();
+      renderStats();
+    };
+  });
+}
+
+function renderStats() {
+  const counts = { plan: 0, doing: 0, done: 0 };
+  shapesLayer.eachLayer(l => { counts[(l.feature?.properties?.status) || "plan"]++; });
+  const total = counts.plan + counts.doing + counts.done;
+  statDiv.innerHTML = `区域/ルート <b>${total}</b> 件<br>済 ${counts.done} ・ 配布中 ${counts.doing} ・ 予定 ${counts.plan}`;
+}
+
+function persist() {
+  saveLocal(KEY_SHAPES, shapesLayer.toGeoJSON());
+  renderStats();
+}
+
+function loadGeoJson(gj, fit) {
+  L.geoJSON(gj, {
+    onEachFeature: (feature, layer) => {
+      layer.feature = feature;
+      shapesLayer.addLayer(layer);
+      wireLayer(layer);
+      layer.on("pm:edit", persist);
+      layer.on("pm:dragend", persist);
+    },
+  });
+  if (fit && shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
+  renderStats();
+}
+
+map.on("pm:create", (e) => {
+  const layer = e.layer;
+  shapesLayer.addLayer(layer);
+  wireLayer(layer);
+  layer.on("pm:edit", persist);
+  layer.on("pm:dragend", persist);
+  persist();
+  layer.openPopup();
+});
+map.on("pm:remove", (e) => {
+  shapesLayer.removeLayer(e.layer);
+  persist();
+});
+
+onFileSelected(document.getElementById("gjIn"), (text) => {
+  let gj;
+  try { gj = JSON.parse(text); } catch (err) { return alert("GeoJSONとして読み込めませんでした"); }
+  if (!confirm("読み込んだ図形を現在のマップに追加します。よろしいですか?")) return;
+  loadGeoJson(gj, true);
+  persist();
+});
+
+document.getElementById("gjOut").onclick = () => {
+  downloadFile(`posting_areas_${todayStamp()}.geojson`, JSON.stringify(shapesLayer.toGeoJSON(), null, 1), "application/geo+json");
+};
+
+document.getElementById("resetBtn").onclick = () => {
+  if (!confirm("すべての図形を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+  shapesLayer.clearLayers();
+  localStorage.removeItem(KEY_SHAPES);
+  renderStats();
+};
+
+/* 起動 */
+const saved = loadLocal(KEY_SHAPES, null);
+if (saved) loadGeoJson(saved, true);
+renderStats();
+</script>
+</body>
+</html>

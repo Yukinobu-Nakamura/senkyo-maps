@@ -11,6 +11,8 @@ header.appbar a:hover{text-decoration:underline;}
 .toolbar{display:flex; gap:6px; flex-wrap:wrap;}
 .toolbar button, .toolbar label.filebtn{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; background:rgba(255,255,255,.18); color:#fff;}
 .toolbar button:hover, .toolbar label.filebtn:hover{background:rgba(255,255,255,.32);}
+.toolbar a.dlbtn{font-size:12px; font-weight:bold; border-radius:8px; padding:6px 10px; background:rgba(255,255,255,.18); color:#fff !important; text-decoration:none;}
+.toolbar a.dlbtn:hover{background:rgba(255,255,255,.32); text-decoration:none;}
 .toolbar input[type=file]{display:none;}
 #map{flex:1; min-height:0;}
 .samplebar{background:#fffbeb; border-bottom:1.5px solid #f59e0b; color:#92400e; font-size:12px; padding:5px 12px; text-align:center;}
