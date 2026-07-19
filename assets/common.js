@@ -68,6 +68,14 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
     hint.className = "gVideoHint";
     hint.textContent = isTouch ? "👆 タップで拡大" : "🖱️ クリックで拡大";
     wrap.appendChild(hint);
+    if (media.tagName === "VIDEO") {
+      // 自動再生がブラウザ都合で止まった場合に再開する保険
+      const ensurePlay = () => { if (!document.hidden && media.paused) media.play().catch(() => {}); };
+      media.addEventListener("loadeddata", ensurePlay);
+      media.addEventListener("pause", ensurePlay);
+      document.addEventListener("visibilitychange", ensurePlay);
+      ensurePlay();
+    }
     media.addEventListener("click", () => {
       const lb = document.createElement("div");
       lb.className = "gLightbox";
