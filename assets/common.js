@@ -114,6 +114,25 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   };
   ctl.addTo(map);
 
+  /* ガイド内のタブ切替(.gTab で .gPane を切り替え。動画は表示中のペインだけ再生) */
+  const gTabs = panel.querySelectorAll(".gTab");
+  const gPanes = panel.querySelectorAll(".gPane");
+  if (gTabs.length && gPanes.length) {
+    const showPane = (id) => {
+      gPanes.forEach((p) => {
+        const on = p.id === id;
+        p.style.display = on ? "block" : "none";
+        p.querySelectorAll("video").forEach((v) => { if (on) v.play().catch(() => {}); else v.pause(); });
+      });
+      gTabs.forEach((t) => t.classList.toggle("active", t.dataset.pane === id));
+    };
+    gTabs.forEach((t) => {
+      L.DomEvent.disableClickPropagation(t);
+      t.addEventListener("click", () => showPane(t.dataset.pane));
+    });
+    showPane(gTabs[0].dataset.pane);
+  }
+
   setOpen(true);
 }
 

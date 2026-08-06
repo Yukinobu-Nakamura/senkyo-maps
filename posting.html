@@ -6,7 +6,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="assets/common.css?v=9">
+<link rel="stylesheet" href="assets/common.css?v=10">
 </head>
 <body>
 <header class="appbar">
@@ -24,7 +24,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="assets/common.js?v=9"></script>
+<script src="assets/common.js?v=10"></script>
 <script>
 "use strict";
 const SHAPE_STATUSES = [
@@ -41,15 +41,37 @@ L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 addLocateControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
-  `<ol>
-    <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
-    <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます</li>
-    <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
-    <li><b>共有・バックアップ</b> — 「💾 GeoJSON書出」で保存し、メンバーはそのファイルを「読込」すると図形が追加されます</li>
-    <li><b>GPXの取込</b> — スマホの記録アプリ等で取った歩行ルート(GPX)を「📂読込」で配布ルートとして取り込めます。複数を1つにまとめた結合GPXも、各トラック/ルートごとに取り込まれます</li>
-  </ol>
-  <video class="gVideo" src="assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
-  <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
+  `<div class="gTabs">
+    <button class="gTab active" data-pane="gp1" type="button">🖊️ 手で描いて登録</button>
+    <button class="gTab" data-pane="gp2" type="button">📮 GPXを読み込む</button>
+    <button class="gTab" data-pane="gp3" type="button">📂 GeoJSONを共有</button>
+  </div>
+  <div class="gPane" id="gp1">
+    <ol>
+      <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
+      <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます</li>
+      <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
+    </ol>
+    <video class="gVideo" src="assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
+    <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
+  </div>
+  <div class="gPane" id="gp2">
+    <ol>
+      <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
+      <li>スマホの記録アプリ等で保存した<b>GPXファイル</b>を選ぶ(複数をまとめた<b>結合GPX</b>も可)</li>
+      <li>「〇本のルートを読み込みました」の確認 → <b>配布ルート(線)</b>として地図に追加</li>
+      <li>あとは通常どおり、線をタップして状態・担当・メモを記録</li>
+    </ol>
+    <div class="gPrep">🎬 GPX読み込みの操作デモ動画は準備中です。</div>
+  </div>
+  <div class="gPane" id="gp3">
+    <ol>
+      <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
+      <li>他のメンバーが<b>「💾GeoJSON書出」</b>で保存した<b>GeoJSONファイル</b>を選ぶ</li>
+      <li>確認 → 区域・ルートがまとめて追加。全員で同じデータを共有できます</li>
+    </ol>
+    <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
+  </div>
   <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
   "postingMap");
 

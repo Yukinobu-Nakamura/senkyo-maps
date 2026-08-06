@@ -34,6 +34,13 @@ header.appbar a:hover{text-decoration:underline;}
 .guidePanel ol{padding-left:20px; margin-bottom:8px;}
 .guidePanel ol li{margin-bottom:4px;}
 .guidePanel .gNote{font-size:11.5px; color:var(--muted); border-top:1px solid #e5e7eb; padding-top:6px;}
+.guidePanel .gTabs{display:flex; gap:6px; margin:6px 0 10px; flex-wrap:wrap;}
+.guidePanel .gTab{flex:1 1 auto; font-family:inherit; font-size:12px; font-weight:bold; cursor:pointer; border:1.5px solid #e5e7eb; background:#fff; color:var(--ink); border-radius:99px; padding:5px 10px; white-space:nowrap;}
+.guidePanel .gTab:hover{border-color:var(--accent);}
+.guidePanel .gTab.active{background:var(--accent); color:#fff; border-color:var(--accent);}
+.guidePanel .gPane ol{padding-left:20px; margin-bottom:8px;}
+.guidePanel .gPane ol li{margin-bottom:4px;}
+.guidePanel .gPrep{font-size:11.5px; color:var(--accent); background:#f5f3ff; border:1px dashed var(--accent); border-radius:8px; padding:6px 9px; margin:2px 0 4px;}
 .guidePanel .gVideo{display:block; width:100%; height:auto; border:1px solid #e5e7eb; border-radius:8px; margin:4px 0 8px; cursor:zoom-in;}
 .guidePanel .gVideoWrap{position:relative; margin:4px 0 8px;}
 .guidePanel .gVideoWrap .gVideo{margin:0;}
