@@ -47,7 +47,8 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 
 1. 左のツールでポリゴン(配布区域)・線(配布ルート)を描く
 2. 図形をタップ → 状態(予定/配布中/済)・担当・メモを保存
-3. 「💾 GeoJSON書出」でファイル共有(相手は「📂 GeoJSON読込」で追加読込)
+3. 「💾 GeoJSON書出」でファイル共有(相手は「📂 読込(GeoJSON/GPX)」で追加読込)
+4. **GPX取込**: スマホの記録アプリ等で取った歩行ルート(GPX)を「📂 読込」で配布ルート(線)として取り込める。複数の trk/rte をまとめた**結合GPX**も各ルートとして取り込む(実装: `assets/common.js` の `gpxToGeoJSON()`)
 
 ## 注意事項
 
@@ -55,6 +56,11 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 - 同梱のサンプル掲示場データはダミーです。実在の掲示場所とは無関係です
 - 公職選挙法上、選挙運動用ポスターの掲出は掲示場・期間等のルールがあります。運用は各自治体の選管の案内に従ってください
 
+## 残タスク(TODO)
+
+- [ ] **使い方ガイドのデモ動画(GPX/GeoJSONタブ)** — 現在 `posting.html` のガイドは3タブ(🖊️手描き登録=既存動画あり / 📮GPX読込 / 📂GeoJSON共有)。後者2つは手順のみで「🎬準備中」表示。実機で画面録画し `assets/posting_gpx_demo.mp4`・`assets/posting_geojson_demo.mp4` を追加 → 該当 `.gPane` に `<video class="gVideo" src="assets/xxx_demo.mp4" autoplay muted loop playsinline ...>` を入れる。`node build/make_dist.mjs` で配布版(`dist/`)にも自動反映(`*_demo.mp4` は絶対URL化される)。
+
 ## ライセンス
 
 MIT License(`LICENSE` 参照)。地図タイルは国土地理院・OpenStreetMap の利用規約に従います。
+チームみらい版 [team-mirai-volunteer/poster-map](https://github.com/team-mirai-volunteer/poster-map)(GPL-3.0)の仕組みを参考にした独自実装(コード非流用)。
