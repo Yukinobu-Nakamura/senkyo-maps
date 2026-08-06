@@ -62,7 +62,7 @@ header.appbar a:hover{text-decoration:underline;}
 <header class="appbar">
   <h1>📮 ポスティングマップ</h1>
   <div class="toolbar">
-    <label class="filebtn">📂 GeoJSON読込<input type="file" id="gjIn" accept=".geojson,.json,application/geo+json"></label>
+    <label class="filebtn">📂 読込(GeoJSON/GPX)<input type="file" id="gjIn" accept=".geojson,.json,application/geo+json,.gpx,application/gpx+xml"></label>
     <button id="gjOut">💾 GeoJSON書出</button>
     <button id="resetBtn">全消去</button>
     <a class="dlbtn" href="https://yukinobu-nakamura.github.io/senkyo-maps/dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
@@ -70,7 +70,7 @@ header.appbar a:hover{text-decoration:underline;}
   </div>
 </header>
 <div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。最新版: <a href="https://yukinobu-nakamura.github.io/senkyo-maps/">https://yukinobu-nakamura.github.io/senkyo-maps/</a></div>
-<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。</div>
+<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -267,6 +267,49 @@ function todayStamp() {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 }
 
+/* ---- GPX → GeoJSON ----
+   トラック(<trk>/<trkseg>/<trkpt>)とルート(<rte>/<rtept>)を LineString に変換。
+   1ファイルに複数の trk/rte を含む「結合GPX」もそれぞれ別ルートとして取り込む。
+   名前空間つきGPXでも動くよう getElementsByTagName(局所名一致)で走査する。 */
+function gpxToGeoJSON(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("XMLとして解析できませんでした");
+  const root = doc.documentElement;
+  if (!root || root.nodeName.toLowerCase() !== "gpx") throw new Error("GPXファイルではありません");
+  const features = [];
+  const coordsFrom = (parent, tag) =>
+    Array.from(parent.getElementsByTagName(tag))
+      .map((p) => [parseFloat(p.getAttribute("lon")), parseFloat(p.getAttribute("lat"))])
+      .filter((c) => isFinite(c[0]) && isFinite(c[1]));
+  const directName = (el, fallback) => {
+    for (const ch of Array.from(el.children)) {
+      if (ch.nodeName.toLowerCase() === "name" && ch.textContent.trim()) return ch.textContent.trim();
+    }
+    return fallback;
+  };
+  const push = (coords, name) => {
+    if (coords.length < 2) return;
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: coords },
+      properties: { name: name, memo: name },
+    });
+  };
+  const trks = doc.getElementsByTagName("trk");
+  for (let ti = 0; ti < trks.length; ti++) {
+    const tname = directName(trks[ti], `トラック${ti + 1}`);
+    const segs = trks[ti].getElementsByTagName("trkseg");
+    for (let si = 0; si < segs.length; si++) {
+      push(coordsFrom(segs[si], "trkpt"), segs.length > 1 ? `${tname} (${si + 1})` : tname);
+    }
+  }
+  const rtes = doc.getElementsByTagName("rte");
+  for (let ri = 0; ri < rtes.length; ri++) {
+    push(coordsFrom(rtes[ri], "rtept"), directName(rtes[ri], `ルート${ri + 1}`));
+  }
+  return { type: "FeatureCollection", features };
+}
+
 </script>
 <script>
 "use strict";
@@ -289,6 +332,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます</li>
     <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
     <li><b>共有・バックアップ</b> — 「💾 GeoJSON書出」で保存し、メンバーはそのファイルを「読込」すると図形が追加されます</li>
+    <li><b>GPXの取込</b> — スマホの記録アプリ等で取った歩行ルート(GPX)を「📂読込」で配布ルートとして取り込めます。複数を1つにまとめた結合GPXも、各トラック/ルートごとに取り込まれます</li>
   </ol>
   <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
   <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
@@ -402,10 +446,21 @@ map.on("pm:remove", (e) => {
   persist();
 });
 
-onFileSelected(document.getElementById("gjIn"), (text) => {
+onFileSelected(document.getElementById("gjIn"), (text, name) => {
+  const isGpx = /\.gpx$/i.test(name || "") || /<gpx[\s>]/i.test(text);
   let gj;
-  try { gj = JSON.parse(text); } catch (err) { return alert("GeoJSONとして読み込めませんでした"); }
-  if (!confirm("読み込んだ図形を現在のマップに追加します。よろしいですか?")) return;
+  try {
+    gj = isGpx ? gpxToGeoJSON(text) : JSON.parse(text);
+  } catch (err) {
+    return alert(isGpx ? "GPXを読み込めませんでした: " + err.message : "GeoJSONとして読み込めませんでした");
+  }
+  if (isGpx && (!gj.features || !gj.features.length)) {
+    return alert("GPXから配布ルート(トラック/ルート)を取り出せませんでした。\n位置情報を含むGPXか確認してください。");
+  }
+  const msg = isGpx
+    ? `GPXから ${gj.features.length} 本のルートを読み込みました。現在のマップに追加します。よろしいですか?`
+    : "読み込んだ図形を現在のマップに追加します。よろしいですか?";
+  if (!confirm(msg)) return;
   loadGeoJson(gj, true);
   persist();
 });

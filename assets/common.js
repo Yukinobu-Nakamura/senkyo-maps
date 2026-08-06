@@ -188,3 +188,46 @@ function todayStamp() {
   const p = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 }
+
+/* ---- GPX → GeoJSON ----
+   トラック(<trk>/<trkseg>/<trkpt>)とルート(<rte>/<rtept>)を LineString に変換。
+   1ファイルに複数の trk/rte を含む「結合GPX」もそれぞれ別ルートとして取り込む。
+   名前空間つきGPXでも動くよう getElementsByTagName(局所名一致)で走査する。 */
+function gpxToGeoJSON(text) {
+  const doc = new DOMParser().parseFromString(text, "application/xml");
+  if (doc.getElementsByTagName("parsererror").length) throw new Error("XMLとして解析できませんでした");
+  const root = doc.documentElement;
+  if (!root || root.nodeName.toLowerCase() !== "gpx") throw new Error("GPXファイルではありません");
+  const features = [];
+  const coordsFrom = (parent, tag) =>
+    Array.from(parent.getElementsByTagName(tag))
+      .map((p) => [parseFloat(p.getAttribute("lon")), parseFloat(p.getAttribute("lat"))])
+      .filter((c) => isFinite(c[0]) && isFinite(c[1]));
+  const directName = (el, fallback) => {
+    for (const ch of Array.from(el.children)) {
+      if (ch.nodeName.toLowerCase() === "name" && ch.textContent.trim()) return ch.textContent.trim();
+    }
+    return fallback;
+  };
+  const push = (coords, name) => {
+    if (coords.length < 2) return;
+    features.push({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: coords },
+      properties: { name: name, memo: name },
+    });
+  };
+  const trks = doc.getElementsByTagName("trk");
+  for (let ti = 0; ti < trks.length; ti++) {
+    const tname = directName(trks[ti], `トラック${ti + 1}`);
+    const segs = trks[ti].getElementsByTagName("trkseg");
+    for (let si = 0; si < segs.length; si++) {
+      push(coordsFrom(segs[si], "trkpt"), segs.length > 1 ? `${tname} (${si + 1})` : tname);
+    }
+  }
+  const rtes = doc.getElementsByTagName("rte");
+  for (let ri = 0; ri < rtes.length; ri++) {
+    push(coordsFrom(rtes[ri], "rtept"), directName(rtes[ri], `ルート${ri + 1}`));
+  }
+  return { type: "FeatureCollection", features };
+}
