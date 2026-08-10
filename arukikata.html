@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>選挙と政治活動の歩き方</title>
+<title>選挙と政治活動の歩き方(下書き)</title>
 <style>
   :root{
     --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff;
@@ -174,14 +174,48 @@
   .kzB.ng{background:#fef2f2; color:var(--ng); border:1px solid var(--ng);}
   .kzB.tri{background:#fffbeb; color:#b45309; border:1px solid #d97706;}
   .kzNote{font-size:12.5px; background:var(--cbg); border-radius:8px; padding:8px 10px; margin-top:2px; line-height:1.6;}
+
+  /* ===== 🤝 支援者ガイド(かんたん/詳細トグル) ===== */
+  .helpIntro{background:var(--s6bg); border:1.5px solid var(--s6); border-radius:12px; padding:12px 16px; font-size:13.5px; margin:6px 0 4px; line-height:1.7;}
+  .helpIntro b{color:#0f766e;}
+  .helpBar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0 10px;}
+  .helpBar .htLabel{font-size:13px; font-weight:bold; color:var(--muted);}
+  .helpToggle{display:inline-flex; border:2px solid var(--s6); border-radius:99px; overflow:hidden;}
+  .helpToggle button{font-family:inherit; font-size:14px; font-weight:bold; border:none; cursor:pointer; padding:8px 22px; background:#fff; color:#0f766e; transition:.12s;}
+  .helpToggle button.on{background:var(--s6); color:#fff;}
+  .helpCards{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:6px 0;}
+  @media(max-width:860px){.helpCards{grid-template-columns:1fr;}}
+  .helpCard{border:2px solid var(--hc); border-radius:16px; overflow:hidden; background:#fff; display:flex; flex-direction:column;}
+  .helpCard .hcHead{background:var(--hcbg); padding:12px 14px;}
+  .helpCard .hcIcon{font-size:26px; line-height:1;}
+  .helpCard .hcName{font-size:16.5px; font-weight:bold; color:var(--hc); margin-top:4px;}
+  .helpCard .hcWhen{font-size:11.5px; font-weight:bold; display:inline-block; margin-top:6px; background:#fff; color:var(--hc); border:1px solid var(--hc); border-radius:99px; padding:1px 10px;}
+  .helpCard .hcBody{padding:12px 14px; font-size:13px; flex:1;}
+  .helpCard .hcOne{font-size:12.5px; color:var(--muted); margin-bottom:10px; line-height:1.6;}
+  .hcSub{font-size:13px; font-weight:bold; margin:10px 0 5px;}
+  .hcSub.ok{color:var(--ok);} .hcSub.ng{color:var(--ng);}
+  .hcList{margin:0; padding:0; list-style:none;}
+  .hcList li{display:flex; gap:6px; align-items:flex-start; margin-bottom:5px; line-height:1.55;}
+  .hcOK li::before{content:"⭕"; flex:0 0 auto;}
+  .hcNG li::before{content:"🚫"; flex:0 0 auto;}
+  .hcDetail{background:#f8fafc; border-top:1.5px dashed #cbd5e1; padding:11px 14px; font-size:12px; line-height:1.65; color:#334155;}
+  .hcDetail b{color:#1f2937;}
+  .hcDetail .hdTitle{display:block; font-weight:bold; color:var(--hc); margin-bottom:4px; font-size:12.5px;}
+  .detailOnly{display:none;}
+  .panel.showDetail .detailOnly{display:block;}
+  .panel.showDetail li.detailOnly{display:flex;}
+  .helpFoot{background:#fef2f2; border:2px solid var(--ng); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-top:14px; line-height:1.7;}
+  .helpFoot b{color:var(--ng);}
 </style>
 </head>
 <body>
 <noscript>
   <div style="background:#fef2f2; border:2px solid #dc2626; color:#7f1d1d; border-radius:10px; padding:14px 16px; margin:12px auto; max-width:1000px; font-size:14px; line-height:1.7;">
-    ⚠️ <b>このページは JavaScript で動きます。</b>上部のアイコンで表示を切り替えるには、お使いのブラウザで<b>JavaScript を有効</b>にしてご覧ください。
+    ⚠️ <b>このページは JavaScript で動きます。</b>上部のアイコンで表示を切り替えるには、<b>ファイルを保存してから Chrome / Edge / Safari などのブラウザで開いて</b>ください。<br>
+    メールやチャットの「プレビュー」表示のまま開くと、切り替えが動かず最初のページしか表示されません。
   </div>
 </noscript>
+<div class="draftbar">⚠️ 下書き(条文突合・法務チェック前)— 公開・共有はまだしないでください</div>
 <div class="wrap">
   <header>
     <h1>🗺️ 選挙と政治活動の歩き方</h1>
@@ -201,7 +235,10 @@
     <button class="stop p5" data-p="s5" role="tab"><span class="icon">📊</span><span class="label">選挙のあと</span><span class="phase">投票日後</span></button>
   </div>
   <div class="tapnote">▲ 気になるところをクリックすると、下に詳しい説明が出ます</div>
-  <div class="ctaWrap"><button class="ctaBtn" id="openSched">🗓️ スケジュールを作る — 準備の計画表(Excel・スプレッド出力対応)</button></div>
+  <div class="ctaWrap">
+    <button class="ctaBtn" id="openHelp" style="background:var(--s7); box-shadow:0 2px 8px rgba(219,39,119,.35);">🤝 手伝いたい人へ — 支援者ガイド(ポスティング・辻立ち・街頭演説)</button>
+    <button class="ctaBtn" id="openSched">🗓️ スケジュールを作る — 準備の計画表(Excel・スプレッド出力対応)</button>
+  </div>
 
   <!-- ===== S0 まず知る ===== -->
   <section class="panel p0 active" id="s0">
@@ -295,7 +332,39 @@
       <li>氏名入りの政治活動用<b>ポスター</b>は<b>任期満了日の6か月前から選挙区内で掲示禁止</b>(143条19項)。この期間は政党・団体の演説会告知(2連)ポスターに切り替えるのが実務</li>
       <li>執行は警告ベースで逮捕例はほぼ確認されないものの、選管の公式見解は全国一律「禁止」。<b>通報や「公選法違反」のレッテル貼りは新人ほど狙われます</b>。迷ったら選管に照会し、回答を記録に残す</li>
     </ul></div>
-    <div class="vol">🤝 <b>支える人:</b> 後援会への入会・会費、イベント運営の手伝いは平時から可能。ただし団体への寄附は上限・記載ルールあり。</div>
+
+    <h3>📮 ポスティング(ビラ・機関誌の各戸投函)の歩き方</h3>
+    <p>政策リーフレットや機関誌を郵便受けに投函するポスティングは、平時の政治活動の王道。ただし<b>「配るビラの種類」でルールが真逆</b>になり、投函先によっては<b>刑事罰リスク</b>もあります。現場マニュアルの常識も、法的な話とマナーの話が混ざっているので、下で切り分けました。</p>
+    <div class="req3" style="border-color:var(--s2);">
+      <b style="color:var(--s2);">⚠️ 最重要 — 配るビラの「種類」でポスティングの可否が真逆になる</b>
+      <table style="margin-top:8px;">
+        <tr><th>ビラの種類</th><th>ポスティング</th><th>根拠(目安)</th></tr>
+        <tr><td><b>選挙運動用ビラ(証紙ビラ)</b></td><td><span class="kzB ng">❌ 禁止</span></td><td>公選法142条6項・施行令109条の6(頒布方法が限定)</td></tr>
+        <tr><td>確認団体のビラ(選挙期間中)</td><td><span class="kzB ok">⭕ 可</span></td><td>確認団体制度(公選法201条の5以下)。時間帯の法的制限なし</td></tr>
+        <tr><td>平時の政治活動用ビラ・政策リーフ</td><td><span class="kzB ok">⭕ 可</span></td><td>平時の政治活動(投票依頼を書くと事前運動でNG)</td></tr>
+        <tr><td>政党の機関紙誌</td><td><span class="kzB ok">⭕ 可</span></td><td>選挙期間中も頒布可(公選法201条の15)</td></tr>
+      </table>
+      <div style="font-size:12.5px; margin-top:8px;">👉 <b>「証紙ビラはポスティング禁止」</b>は正しい。証紙ビラ(選挙運動用ビラ)を配れるのは①新聞折込 ②選挙事務所内 ③個人演説会の会場内 ④街頭演説の場所での<b>手渡し</b>だけ。郵便受けへの投函・郵送はいずれも不可で、違反は<b>2年以下の禁錮か50万円以下の罰金</b>(公選法243条)。逆に現場マニュアルが対象にする<b>確認団体ビラ</b>は選挙期間中でも投函でき、時間帯の法的制限もありません(だから「時間帯に制限なし」と書かれています)。</div>
+    </div>
+    <div class="okng">
+      <div class="ngbox"><h4>❌ 法的にNG(刑事罰・賠償リスク)</h4><ul>
+        <li><b>「住人関係者以外立入禁止」等の建物・オートロック内に入る</b> — 住居侵入罪(刑法130条・3年以下の拘禁刑か10万円以下の罰金)/軽犯罪法1条32号。通報事例あり</li>
+        <li><b>「チラシお断り」のポストへ入れる</b> — 投函拒否の意思表示に反する立入で同上のリスク。<b>現場で最も苦情が多い</b></li>
+        <li><b>証紙ビラのポスティング</b>(上表)</li>
+        <li><b>宛名(「〇〇様」)入りの投函</b> — 信書扱いになり郵便法4条違反のおそれ。投函物に個人宛名を入れない</li>
+        <li><b>仮置き自転車・荷物で駐車車両を傷つける</b> — 器物損壊・損害賠償(実際に事案発生)</li>
+      </ul></div>
+      <div class="okbox"><h4>⭕ マナー・安全(法ではないがトラブル回避に必須)</h4><ul>
+        <li>ビラは<b>ポストの中へ全部入れきる</b>(雨濡れ・風で飛んでゴミ化→苦情・環境負荷)</li>
+        <li><b>チラシが貯まっているポストには入れない</b>(不在で読まれず苦情の温床)</li>
+        <li>ポストの<b>開閉は静かに</b>。早朝夜間に限らず近隣配慮、他人の敷地では謙虚に</li>
+        <li>飲み物・バッグ等は<b>各自で用意</b>(陣営からの提供は寄附・供応の回避にもなる)</li>
+        <li>活動中のトラブルは自己責任の前提で、<b>事故・熱中症に注意し無理をしない</b></li>
+      </ul></div>
+    </div>
+    <div class="vol">🚶 <b>経験者談(安全・効率のルート取り):</b> 道を挟んで両側を<b>ジグザグ歩行すると横断回数が増えて危険・非効率</b>。可能なら<b>2名で片側ずつ</b>、1ブロックの1本道を往復投函するのが安全で効率的。<b>清潔感のある明るい服装</b>は好印象になり、不審者通報や交通事故のリスクも下げます。</div>
+    <div class="more">📚 根拠: 公選法142条・201条の5以下・201条の15・243条/刑法130条/軽犯罪法1条32号/郵便法4条。詳細と一次情報は ポスティング留意事項(整理メモ)。実務ルールは政党・確認団体の配布マニュアルと所轄選管でも確認を。</div>
+    <div class="vol">🤝 <b>支える人:</b> 後援会への入会・会費、イベント運営の手伝いは平時から可能。ただし団体への寄附は上限・記載ルールあり。<b>ポスティングは平時の政治活動用ビラ・機関誌なら手伝えます</b>(証紙ビラは投函NG)。</div>
   </section>
 
   <!-- ===== S8 寄附とお金 ===== -->
@@ -477,6 +546,7 @@
         <li>買収・供応接待 — 最も重い違反。<b>連座制</b>で運動員の違反でも当選無効になりうる</li>
         <li><b>電子メール</b>での選挙運動 — 送信できるのは候補者・政党のみ(一般の人は転送も不可)<span style="color:#a16207;">※2027/3/1施行予定の改正で一般の人も可になる見込み(下の備考)</span></li>
         <li>署名運動・人気投票の公表</li>
+        <li><b>証紙ビラ(選挙運動用ビラ)のポスティング・郵送</b> — 頒布は新聞折込/事務所内/個人演説会場内/街頭演説での手渡しのみ(142条・243条)。※確認団体ビラ・機関紙誌の投函は可(「🌱政治活動」タブのポスティング欄)</li>
         <li>18歳未満の選挙運動</li>
       </ul></div>
     </div>
@@ -520,6 +590,134 @@
     </ol>
     <div class="ngbox" style="margin-top:10px;"><h4>❌ 選挙後にやりがちな違反</h4><ul><li>当選御礼のポスター・ビラ・広告</li><li>運動員への「打ち上げ」での過度な飲食提供・慰労金(買収・供応に問われうる)</li></ul></div>
     <div class="vol">🤝 <b>支える人:</b> 選挙後の慰労会は費用の出どころ・程度に注意。報告書に載る支出です。</div>
+  </section>
+
+  <!-- ===== S-HELP 支援者ガイド ===== -->
+  <section class="panel p7" id="sHelp">
+    <h2>🤝 手伝いたい人へ — 支援者ガイド</h2>
+    <span class="period">全国どこからでも・できることから</span>
+    <p>「応援したいけど、何をしていいか分からない」——そんな支援者のためのページです。<b>ポスティング・辻立ち・街頭演説</b>の3つを中心に、<b>何を手伝えるか / してよいこと / してはいけないこと</b>をまとめました。</p>
+
+    <div class="helpIntro">
+      🧭 <b>まず、たった2つの大原則:</b><br>
+      ① <b>平時(選挙の告示前)</b>は「政治を応援する」はOK、でも<b>「〇〇さんに投票して」はNG</b>(事前運動)。<br>
+      ② <b>選挙期間中(告示日〜投票日の前日)</b>は「投票して」もOK。ただし<b>手伝いは無報酬が原則</b>・投票日当日はネットも含め選挙運動は一切NG。<br>
+      迷ったら <b>選挙管理委員会に確認 + 陣営・仲間に共有</b> が鉄則です。
+    </div>
+
+    <div class="helpBar">
+      <span class="htLabel">表示:</span>
+      <div class="helpToggle" role="tablist">
+        <button type="button" class="htBtn on" data-mode="simple">🟢 かんたん版</button>
+        <button type="button" class="htBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button>
+      </div>
+    </div>
+    <p class="help" style="font-size:12px; color:var(--muted); margin-bottom:6px;">※「かんたん版」は要点だけ。「くわしく」を押すと各カードの下に<b>法的な根拠・条文・細かい注意</b>が開きます。</p>
+
+    <div class="helpCards">
+
+      <!-- ポスティング -->
+      <div class="helpCard" style="--hc:#d97706; --hcbg:#fef3c7;">
+        <div class="hcHead">
+          <div class="hcIcon">📮</div>
+          <div class="hcName">ポスティング</div>
+          <span class="hcWhen">平時◎ / 選挙中も一部OK</span>
+        </div>
+        <div class="hcBody">
+          <div class="hcOne">チラシ(政策リーフ・機関誌)を郵便受けへ。自宅の近所からできる王道の手伝い。</div>
+          <div class="hcSub ok">してよいこと</div>
+          <ul class="hcList hcOK">
+            <li>政策リーフ・機関誌・確認団体ビラの投函</li>
+            <li>「お断り」でないポストに、中まで全部入れきる</li>
+            <li>静かに開閉・清潔感のある服装で</li>
+          </ul>
+          <div class="hcSub ng">してはいけないこと</div>
+          <ul class="hcList hcNG">
+            <li>証紙ビラ(選挙運動用ビラ)の投函</li>
+            <li>「立入禁止」「チラシお断り」を無視して入る</li>
+            <li>平時に「投票して」と書いたビラを配る</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          <b>証紙ビラ</b>を配れるのは①新聞折込②選挙事務所内③個人演説会場内④街頭演説での手渡しだけ(公選法142条6項)。投函・郵送は違反で<b>2年以下の禁錮か50万円以下の罰金</b>(243条)。<br>
+          <b>立入禁止・お断り無視</b>は住居侵入罪(刑法130条=3年以下の拘禁刑か10万円以下の罰金)・軽犯罪法1条32号。<br>
+          宛名(「〇〇様」)を入れると<b>信書</b>になり郵便法4条違反のおそれ。<br>
+          雨・強風の日は避ける/貯まったポストは入れない/2名で片側ずつ・ジグザグ歩行を避ける。<br>
+          → 詳細は「🌱 政治活動」タブの📮ポスティング欄へ。
+        </div>
+      </div>
+
+      <!-- 辻立ち -->
+      <div class="helpCard" style="--hc:#0d9488; --hcbg:#ccfbf1;">
+        <div class="hcHead">
+          <div class="hcIcon">🚩</div>
+          <div class="hcName">辻立ち・朝立ち</div>
+          <span class="hcWhen">平時の政治活動</span>
+        </div>
+        <div class="hcBody">
+          <div class="hcOne">駅前や交差点に立ってあいさつ・政策を訴える。のぼり持ちやビラ配りで一緒に立てる。</div>
+          <div class="hcSub ok">してよいこと</div>
+          <ul class="hcList hcOK">
+            <li>一緒に立ってあいさつ・お辞儀・ビラ配り</li>
+            <li>「本人」やイメージカラー・政党名ののぼり持ち</li>
+            <li>政策を語る(平時の政治活動として)</li>
+          </ul>
+          <div class="hcSub ng">してはいけないこと</div>
+          <ul class="hcList hcNG">
+            <li>氏名・顔写真入りののぼり／立て看板</li>
+            <li>平時に「投票してください」と言う</li>
+            <li>通行の妨げ・大音量で近隣に迷惑</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          <b>氏名入りののぼり・立て看板は常時禁止</b>(公選法143条16項)。ひらがな表記・顔写真・氏名入り後援会名も同じ。使えるのは事務所の証票付き看板か演説会の会場内だけ。街頭では<b>「本人」型・政党名型</b>にする。<br>
+          マイクを使うなら道路使用・騒音への配慮を。長時間の場所占有はトラブルの元。<br>
+          平時に投票を頼むと<b>事前運動</b>(公選法129条)。<br>
+          → 詳細は「🌱 政治活動」タブの「掲示物の落とし穴」へ。
+        </div>
+      </div>
+
+      <!-- 街頭演説 -->
+      <div class="helpCard" style="--hc:#0284c7; --hcbg:#e0f2fe;">
+        <div class="hcHead">
+          <div class="hcIcon">📣</div>
+          <div class="hcName">街頭演説</div>
+          <span class="hcWhen">平時=政策のみ / 選挙中=投票依頼OK</span>
+        </div>
+        <div class="hcBody">
+          <div class="hcOne">候補や弁士がマイクで訴える場。支援者は聴衆・ビラの運び手・盛り上げ役で活躍できる。</div>
+          <div class="hcSub ok">してよいこと</div>
+          <ul class="hcList hcOK">
+            <li>選挙中: ビラ手渡し・のぼり持ち・拍手・SNS拡散</li>
+            <li>平時: 政策の街頭活動(投票依頼はしない)</li>
+            <li>自宅からSNSで応援シェア(選挙中も可)</li>
+          </ul>
+          <div class="hcSub ng">してはいけないこと</div>
+          <ul class="hcList hcNG">
+            <li>報酬・弁当・謝礼を受け取る(買収に問われうる)</li>
+            <li>18歳未満が選挙運動をする</li>
+            <li>朝8時前・夜8時以降の演説</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          選挙運動の街頭演説は<b>標旗の掲示が必要・時間はおおむね8時〜20時</b>(公選法164条の5・164条の6)。標旗の設置は陣営が行う。<br>
+          支援ボランティアは<b>完全無報酬が原則</b>。報酬を払えるのは車上運動員・手話通訳者など限られた職種だけ。無償のつもりでも弁当・謝礼の受領は<b>買収</b>(221条)に問われうる。<br>
+          <b>18歳未満の選挙運動は禁止</b>。SNSでの応援はOK(なりすまし・虚偽情報はNG)、メール送信は現行は候補者・政党のみ(2027年3月施行予定の改正で一般も可の見込み)。<br>
+          証紙ビラは街頭演説の場所で聴衆・通行人へ<b>手渡し</b>のみ(投函・かごへの配布はNG)。<br>
+          → 詳細は「📣 選挙運動」タブへ。
+        </div>
+      </div>
+
+    </div>
+
+    <div class="helpFoot">
+      🚫 <b>3つとも共通のNG(これだけは覚えて):</b> ①<b>買収・お金や物のやりとり</b>(受けても渡してもNG。運動員の違反で候補者が当選無効になる連座制も) ②<b>投票日当日の選挙運動</b>(SNS投稿もNG) ③<b>ウソ・なりすまし</b>。<br>
+      困ったら「これって大丈夫?」と<b>陣営・選管に一言確認</b>を。その一手間があなたと候補者を守ります。
+    </div>
+    <div class="more">📚 根拠: 公選法129条・142条・143条・164条の5/6・201条の5以下・221条・243条/刑法130条/軽犯罪法1条32号/郵便法4条。整理メモ: ポスティング留意事項・掲示物(のぼり)整理。数値・可否は目安、実務は所轄選管で確認を。</div>
   </section>
 
   <!-- ===== S6 活動スケジュール ===== -->
@@ -584,13 +782,14 @@
     </div>
     <div class="exporthint" id="exportHint"></div>
     <p class="help" style="margin-top:6px;">「Googleスプレッドに出力」は表をコピーして新規スプレッドシート(sheets.new)を開きます。開いたシートのA1セルで貼り付け(Ctrl+V)してください。「Excelダウンロード」は .xlsx ファイルを保存します。</p>
-    <div class="more">📚 基本モデルは、一般的な統一地方選の準備工程を整理した一例です。時期・内容はあくまで目安 — 必ず選挙管理委員会の日程・説明会でご確認ください。</div>
+    <div class="more">📚 基本モデルの出典: 統一選準備スケジュール(内部資料)。時期・内容は一例です — 必ず選管の日程・説明会で確認を。</div>
   </section>
 
   <footer>
-    本ページは、政治活動・選挙のルールを一般向けにまとめた情報提供です。内容は作成時点の情報に基づく目安であり、正確性を保証するものではありません。実際の手続・数値・期限は、お住まいの<b>選挙管理委員会</b>および<b>総務省</b>の一次情報で必ずご確認ください。<br>
-    公職選挙法・政治資金規正法・租税特別措置法等に基づき記載。出典として総務省・各選挙管理委員会・国税庁タックスアンサー等の公開情報を参照しています。<br>
-    最終更新: 2026年8月 ／ どなたでも自由に共有・紹介いただけます。
+    出典ベース: 選挙政治資金KB(Notion)・公職選挙法・政治資金規正法(条文突合は未実施)。<br>
+    本資料は下書きです。公開前に legal-officer による法務レビューと選管Q&A・最新条文との突合を行ってください。<br>
+    作成日: 2026-07-12 ／ 最終更新日: 2026-08-10(📮ポスティング留意事項を追加+🤝支援者ガイド[ポスティング/辻立ち/街頭演説・かんたん⇄くわしく切替]を新設) ／ 作成: JARVIS ／ 原本: Notion 選挙政治資金KB — 更新時は「歩き方HTMLを作り直して」でJARVISが再生成します。<br>
+    機密度: _C2(下書き・法務レビュー前のため社内限定。公開・外部共有は不可)
   </footer>
 </div>
 
@@ -631,23 +830,42 @@
 </div>
 
 <script>
+  function clearActive(){
+    document.querySelectorAll('.stop').forEach(function(b){b.classList.remove('active');});
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+    document.querySelectorAll('.ctaBtn').forEach(function(b){b.classList.remove('active');});
+  }
   document.querySelectorAll('.stop').forEach(function(btn){
     btn.addEventListener('click', function(){
-      document.querySelectorAll('.stop').forEach(function(b){b.classList.remove('active');});
-      document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
-      document.getElementById('openSched').classList.remove('active');
+      clearActive();
       btn.classList.add('active');
       document.getElementById(btn.dataset.p).classList.add('active');
       document.getElementById(btn.dataset.p).scrollIntoView({behavior:'smooth', block:'start'});
     });
   });
-  document.getElementById('openSched').addEventListener('click', function(){
-    document.querySelectorAll('.stop').forEach(function(b){b.classList.remove('active');});
-    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
-    this.classList.add('active');
-    document.getElementById('s6').classList.add('active');
-    document.getElementById('s6').scrollIntoView({behavior:'smooth', block:'start'});
-  });
+  function ctaOpen(btnId, panelId){
+    document.getElementById(btnId).addEventListener('click', function(){
+      clearActive();
+      this.classList.add('active');
+      document.getElementById(panelId).classList.add('active');
+      document.getElementById(panelId).scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+  ctaOpen('openSched','s6');
+  ctaOpen('openHelp','sHelp');
+
+  /* 🤝 支援者ガイド: かんたん/くわしく トグル */
+  (function(){
+    var help = document.getElementById('sHelp');
+    document.querySelectorAll('.helpToggle .htBtn').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.querySelectorAll('.helpToggle .htBtn').forEach(function(x){x.classList.remove('on');});
+        b.classList.add('on');
+        if(b.dataset.mode === 'detail'){ help.classList.add('showDetail'); }
+        else { help.classList.remove('showDetail'); }
+      });
+    });
+  })();
 
   /* 受け皿別スイッチャー(💴タブ) — JS無効時は全カード縦積み表示(=フォールバック) */
   (function(){
