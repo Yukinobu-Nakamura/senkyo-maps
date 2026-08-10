@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>選挙と政治活動の歩き方(下書き)</title>
+<style>
+  :root{
+    --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff;
+    --s0:#6366f1; --s0bg:#eef2ff;
+    --s1:#059669; --s1bg:#d1fae5;
+    --s2:#d97706; --s2bg:#fef3c7;
+    --s3:#dc2626; --s3bg:#fee2e2;
+    --s4:#7c3aed; --s4bg:#ede9fe;
+    --s5:#0284c7; --s5bg:#e0f2fe;
+    --s6:#0d9488; --s6bg:#ccfbf1;
+    --s7:#db2777; --s7bg:#fce7f3;
+    --s8:#a16207; --s8bg:#fef9c3;
+    --ok:#059669; --ng:#dc2626;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif; background:var(--bg); color:var(--ink); line-height:1.75; padding-bottom:60px;}
+  .draftbar{position:sticky; top:0; z-index:50; background:#dc2626; color:#fff; text-align:center; font-size:12.5px; font-weight:bold; padding:6px 10px;}
+  .wrap{max-width:1000px; margin:0 auto; padding:26px 18px 0;}
+  header h1{font-size:clamp(22px,4vw,30px); margin-bottom:6px;}
+  header .lead{color:var(--muted); font-size:14px; margin-bottom:14px;}
+  .note{background:#fffbeb; border:1.5px solid #f59e0b; border-radius:12px; padding:10px 14px; font-size:12.5px; margin-bottom:22px;}
+
+  /* ===== 歩き方マップ ===== */
+  .mapTitle{font-size:14px; font-weight:bold; color:var(--muted); margin-bottom:10px;}
+  .journey{display:flex; gap:0; align-items:stretch; overflow-x:auto; padding:10px 2px 18px; scroll-snap-type:x proximity;}
+  .stop{flex:1 0 150px; min-width:150px; scroll-snap-align:start; position:relative; display:flex; flex-direction:column; align-items:center; cursor:pointer; border:none; background:none; font-family:inherit; padding:0 6px;}
+  .stop .icon{width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; background:var(--card); border:4px solid var(--c); box-shadow:0 2px 6px rgba(0,0,0,.12); transition:transform .15s; position:relative; z-index:2;}
+  .stop:hover .icon{transform:scale(1.1);}
+  .stop.active .icon{background:var(--c); }
+  .stop .label{margin-top:8px; font-size:13px; font-weight:bold; text-align:center; color:var(--ink);}
+  .stop .phase{font-size:10.5px; color:var(--muted); text-align:center;}
+  .stop::before{content:""; position:absolute; top:32px; left:-50%; width:100%; height:6px; background:#d3d7e3; z-index:1;}
+  .stop:first-child::before{display:none;}
+  .stop.active .label{color:var(--c);}
+  .tapnote{text-align:center; font-size:12px; color:var(--muted); margin-bottom:14px;}
+  .ctaWrap{text-align:center; margin-bottom:20px;}
+  .ctaBtn{font-family:inherit; font-size:14.5px; font-weight:bold; cursor:pointer; color:#fff; background:var(--s6); border:none; border-radius:99px; padding:11px 26px; box-shadow:0 2px 8px rgba(13,148,136,.35); transition:transform .12s;}
+  .ctaBtn:hover{transform:scale(1.04);}
+  .ctaBtn.active{outline:3px solid #99f6e4;}
+
+  /* ===== 詳細パネル ===== */
+  .panel{display:none; background:var(--card); border-radius:16px; box-shadow:0 1px 6px rgba(0,0,0,.09); padding:22px; border-top:8px solid var(--c); margin-bottom:30px;}
+  .panel.active{display:block;}
+  .panel h2{font-size:20px; margin-bottom:2px;}
+  .panel .period{display:inline-block; font-size:12px; font-weight:bold; background:var(--cbg); color:var(--c); border-radius:99px; padding:2px 12px; margin-bottom:12px;}
+  .panel h3{font-size:15.5px; margin:18px 0 8px; padding-left:10px; border-left:4px solid var(--c);}
+  .panel p{font-size:13.5px; margin-bottom:8px;}
+  .panel ul,.panel ol{font-size:13.5px; padding-left:24px; margin-bottom:8px;}
+  .panel li{margin-bottom:4px;}
+  .okng{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:10px 0;}
+  @media(max-width:700px){.okng{grid-template-columns:1fr;}}
+  .okbox,.ngbox{border-radius:12px; padding:12px 14px; font-size:13px;}
+  .okbox{background:#ecfdf5; border:1.5px solid var(--ok);}
+  .ngbox{background:#fef2f2; border:1.5px solid var(--ng);}
+  .okbox h4{color:var(--ok); font-size:13.5px; margin-bottom:6px;}
+  .ngbox h4{color:var(--ng); font-size:13.5px; margin-bottom:6px;}
+  .okbox ul,.ngbox ul{padding-left:20px; margin:0;}
+  .vol{background:#fdf2f8; border:1.5px dashed #be185d; border-radius:12px; padding:10px 14px; font-size:13px; margin-top:14px;}
+  .vol b{color:#be185d;}
+  .vol.volBig{font-size:15.5px; border-width:2.5px; padding:14px 18px; line-height:1.85;}
+  .req3{background:#fef2f2; border:2px solid var(--ng); border-radius:12px; padding:12px 16px; font-size:13.5px; margin:10px 0 14px;}
+  .req3>b{color:var(--ng); font-size:14.5px;}
+  .req3 ol{margin:6px 0 0; padding-left:24px;}
+  .req3 li{margin-bottom:3px;}
+  .tools{background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:12px; padding:10px 14px; font-size:13px; margin-top:14px;}
+  .tools b{color:#334155;}
+  .toolBox{margin-top:16px; background:#f5f3ff; border:1.5px solid #8b5cf6; border-radius:12px; padding:12px 14px;}
+  .toolBox b.tbTitle{display:block; font-size:13.5px; margin-bottom:8px;}
+  .toolBtns{display:flex; gap:10px; flex-wrap:wrap;}
+  .toolBtn{display:inline-block; text-decoration:none; font-size:13px; font-weight:bold; color:#fff; background:#8b5cf6; border-radius:99px; padding:9px 18px; box-shadow:0 2px 6px rgba(139,92,246,.35); transition:transform .12s;}
+  .toolBtn:hover{transform:scale(1.04);}
+  .toolBox .tbNote{font-size:11.5px; color:var(--muted); margin-top:8px;}
+  .more{margin-top:16px; font-size:12.5px; background:var(--cbg); border-radius:10px; padding:8px 12px;}
+  .more a{color:var(--c); font-weight:bold;}
+  table{border-collapse:collapse; width:100%; font-size:12.5px; margin:8px 0;}
+  th,td{border:1px solid #e5e7eb; padding:6px 10px; text-align:left; vertical-align:top;}
+  th{background:#f3f4f6; white-space:nowrap;}
+  .p0{--c:var(--s0); --cbg:var(--s0bg);} .p1{--c:var(--s1); --cbg:var(--s1bg);}
+  .p2{--c:var(--s2); --cbg:var(--s2bg);} .p3{--c:var(--s3); --cbg:var(--s3bg);}
+  .p4{--c:var(--s4); --cbg:var(--s4bg);} .p5{--c:var(--s5); --cbg:var(--s5bg);}
+  .p6{--c:var(--s6); --cbg:var(--s6bg);}
+  .p7{--c:var(--s7); --cbg:var(--s7bg);}
+  .p8{--c:var(--s8); --cbg:var(--s8bg);}
+  footer{max-width:1000px; margin:0 auto; padding:0 18px; color:var(--muted); font-size:11.5px;}
+
+  /* ===== 🗓️ 活動スケジュール ===== */
+  .settings{display:flex; flex-wrap:wrap; gap:14px 26px; align-items:flex-end; margin:8px 0;}
+  .settings label{font-size:13px; font-weight:bold; display:block; margin-bottom:3px;}
+  .settings input[type=date]{font-size:15px; padding:6px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
+  .countdown{font-size:14px; background:var(--cbg); color:var(--c); font-weight:bold; border-radius:99px; padding:6px 16px;}
+  .todayLabel{font-size:13px; color:var(--muted);}
+  .help{font-size:12px; color:var(--muted); margin-bottom:8px;}
+  .catblock{margin-bottom:12px;}
+  .catblock .cattitle{font-size:13px; font-weight:bold; margin-bottom:6px;}
+  .tags{display:flex; flex-wrap:wrap; gap:8px;}
+  .tag{border:none; cursor:pointer; font-family:inherit; font-size:13px; font-weight:bold; border-radius:99px; padding:5px 14px; background:var(--tbg); color:var(--t); border:1.5px solid var(--t); transition:transform .1s;}
+  .tag:hover{transform:scale(1.06);}
+  .tag.assigned{background:var(--t); color:#fff;}
+  .tag.assigned::before{content:"✓ ";}
+  .cat-poster{--t:#d97706; --tbg:#fef3c7;} .cat-pr{--t:#0284c7; --tbg:#e0f2fe;}
+  .cat-vol{--t:#059669; --tbg:#d1fae5;} .cat-office{--t:#6366f1; --tbg:#eef2ff;}
+  .cat-fund{--t:#be185d; --tbg:#fdf2f8;} .cat-policy{--t:#7c3aed; --tbg:#ede9fe;}
+  .cat-misc{--t:#475569; --tbg:#f1f5f9;}
+  .newitem{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; padding-top:12px; border-top:1.5px dashed #d3d7e3; align-items:center;}
+  .newitem input[type=text]{font-size:13.5px; padding:6px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit; flex:1; min-width:180px;}
+  .newitem select{font-size:13.5px; padding:6px 8px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
+  .btn{font-family:inherit; font-size:13.5px; font-weight:bold; border:none; border-radius:8px; padding:7px 16px; cursor:pointer; background:var(--c,#6366f1); color:#fff;}
+  .btn.gray{background:#e5e7eb; color:var(--ink);}
+  .btn.danger{background:var(--ng);}
+  .btn.gsheet{background:#188038;}
+  .tablewrap{overflow-x:auto;}
+  .schedtable{min-width:760px;}
+  .schedtable td.when{white-space:nowrap; font-weight:bold;}
+  .schedtable td.month{white-space:nowrap; color:var(--muted);}
+  .schedtable td.model{color:var(--muted); font-size:11.5px; max-width:280px;}
+  .schedtable tr.now td{background:#fff7ed !important;}
+  .schedtable tr.now td.when::after{content:" 📍今ココ"; color:var(--ng); font-size:11px;}
+  .schedtable tr.kokuji td{background:#fef2f2;}
+  .schedtable tr.vote td{background:#ede9fe;}
+  .chip{display:inline-block; font-size:11.5px; font-weight:bold; border-radius:99px; padding:2px 10px; margin:2px 4px 2px 0; background:var(--tbg); color:var(--t); border:1px solid var(--t); cursor:pointer;}
+  .legend{font-size:11.5px; color:var(--muted); margin-top:8px;}
+  .exportbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px;}
+  .exporthint{font-size:12px; color:#188038; font-weight:bold;}
+  .overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; align-items:center; justify-content:center; padding:16px;}
+  .overlay.open{display:flex;}
+  .modal{background:#fff; border-radius:16px; padding:22px; width:100%; max-width:440px; box-shadow:0 8px 30px rgba(0,0,0,.25);}
+  .modal h3{font-size:16px; margin:0 0 4px; padding:0; border:none;}
+  .modal .catname{font-size:12px; color:var(--muted); margin-bottom:14px;}
+  .modal .mrow{margin-bottom:12px;}
+  .modal label{font-size:13px; font-weight:bold; display:block; margin-bottom:3px;}
+  .modal select,.modal input[type=text],.modal input[type=date],.modal input[type=time]{width:100%; font-size:14px; padding:7px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
+  .modal .btns{display:flex; gap:8px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;}
+  .memberPanel{position:fixed; right:12px; top:200px; width:164px; background:#fff; border:2px solid var(--s6); border-radius:14px; padding:10px 12px; z-index:40; box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  .memberPanel .mpTitle{font-size:13.5px; font-weight:bold; color:var(--s6); margin-bottom:8px;}
+  .mplist{display:flex; flex-direction:column; gap:6px; margin-bottom:8px;}
+  .pmember{display:flex; align-items:center; justify-content:space-between; gap:4px; background:#ccfbf1; color:#0f766e; border:1.5px solid #0d9488; border-radius:99px; padding:3px 10px; font-size:13px; font-weight:bold; cursor:grab;}
+  .pmember:active{cursor:grabbing;}
+  .memberAddRow{display:flex; gap:4px; margin-bottom:6px;}
+  .memberAddRow input{width:100%; min-width:0; font-size:13px; padding:4px 8px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
+  .mphelp{font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.5;}
+  @media(max-width:1279px){ .memberPanel{position:static; width:auto; margin:10px 0;} .mplist{flex-direction:row; flex-wrap:wrap;} }
+  .schedtable td.no{white-space:nowrap; font-weight:bold; color:var(--muted); text-align:right;}
+  .schedtable tr.dropTarget td{background:#ccfbf1 !important;}
+  .mchip{display:inline-flex; align-items:center; gap:3px; font-size:11.5px; font-weight:bold; border-radius:99px; padding:2px 8px; margin:2px 4px 2px 0; background:#ccfbf1; color:#0f766e; border:1px solid #0d9488;}
+  .mchip .mdate{font-weight:normal; opacity:.85;}
+  .mdel{border:none; background:none; color:inherit; font-weight:bold; cursor:pointer; font-size:12px; padding:0 2px; font-family:inherit; line-height:1;}
+  .drophint{font-size:11px; color:var(--muted);}
+  .modelref{margin-top:16px;}
+  .modelref summary{cursor:pointer; font-size:13px; font-weight:bold; color:var(--muted); margin-bottom:6px;}
+  .mmembers{display:flex; flex-wrap:wrap; gap:4px; margin:6px 0;}
+  .maddrow{display:flex; gap:6px;}
+  .maddrow select{flex:1;}
+
+  /* ===== 受け皿別スイッチャー(💴タブ) ===== */
+  .kzWrap{margin:12px 0 8px;}
+  .kzTabs{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;}
+  .kzBtn{flex:1 1 150px; min-width:140px; cursor:pointer; border:2px solid #e5e7eb; background:#fff; border-radius:12px; padding:9px 8px; font-size:13px; font-weight:bold; color:var(--ink); line-height:1.35; text-align:center; transition:.15s;}
+  .kzBtn small{display:block; font-weight:normal; font-size:11px; color:var(--muted); margin-top:2px;}
+  .kzBtn:hover{border-color:var(--c);}
+  .kzBtn.active{border-color:var(--c); background:var(--cbg); color:var(--c);}
+  .kzCard{border:2px solid var(--c); border-radius:14px; padding:14px 16px; background:#fff; margin-top:6px;}
+  .kzCard h4{font-size:15px; margin-bottom:10px; color:var(--c);}
+  .kzTable{width:100%; border-collapse:collapse; font-size:13px; margin-bottom:8px;}
+  .kzTable th{text-align:left; width:34%; vertical-align:top; padding:7px 9px; background:var(--cbg); border:1px solid #eee; font-size:12.5px;}
+  .kzTable td{padding:7px 9px; border:1px solid #eee; vertical-align:top;}
+  .kzB{display:inline-block; font-weight:bold; border-radius:6px; padding:1px 7px; font-size:12px; margin-right:6px; white-space:nowrap;}
+  .kzB.ok{background:#ecfdf5; color:var(--ok); border:1px solid var(--ok);}
+  .kzB.ng{background:#fef2f2; color:var(--ng); border:1px solid var(--ng);}
+  .kzB.tri{background:#fffbeb; color:#b45309; border:1px solid #d97706;}
+  .kzNote{font-size:12.5px; background:var(--cbg); border-radius:8px; padding:8px 10px; margin-top:2px; line-height:1.6;}
+
+  /* ===== 🤝 支援者ガイド(かんたん/詳細トグル) ===== */
+  .helpIntro{background:var(--s6bg); border:1.5px solid var(--s6); border-radius:12px; padding:12px 16px; font-size:13.5px; margin:6px 0 4px; line-height:1.7;}
+  .helpIntro b{color:#0f766e;}
+  .helpBar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0 10px;}
+  .helpBar .htLabel{font-size:13px; font-weight:bold; color:var(--muted);}
+  .helpToggle{display:inline-flex; border:2px solid var(--s6); border-radius:99px; overflow:hidden;}
+  .helpToggle button{font-family:inherit; font-size:14px; font-weight:bold; border:none; cursor:pointer; padding:8px 22px; background:#fff; color:#0f766e; transition:.12s;}
+  .helpToggle button.on{background:var(--s6); color:#fff;}
+  .helpCards{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:6px 0;}
+  @media(max-width:860px){.helpCards{grid-template-columns:1fr;}}
+  .helpCard{border:2px solid var(--hc); border-radius:16px; overflow:hidden; background:#fff; display:flex; flex-direction:column;}
+  .helpCard .hcHead{background:var(--hcbg); padding:12px 14px;}
+  .helpCard .hcIcon{font-size:26px; line-height:1;}
+  .helpCard .hcName{font-size:16.5px; font-weight:bold; color:var(--hc); margin-top:4px;}
+  .helpCard .hcWhen{font-size:11.5px; font-weight:bold; display:inline-block; margin-top:6px; background:#fff; color:var(--hc); border:1px solid var(--hc); border-radius:99px; padding:1px 10px;}
+  .helpCard .hcBody{padding:12px 14px; font-size:13px; flex:1;}
+  .helpCard .hcOne{font-size:12.5px; color:var(--muted); margin-bottom:10px; line-height:1.6;}
+  .hcSub{font-size:13px; font-weight:bold; margin:10px 0 5px;}
+  .hcSub.ok{color:var(--ok);} .hcSub.ng{color:var(--ng);}
+  .hcList{margin:0; padding:0; list-style:none;}
+  .hcList li{display:flex; gap:6px; align-items:flex-start; margin-bottom:5px; line-height:1.55;}
+  .hcOK li::before{content:"⭕"; flex:0 0 auto;}
+  .hcNG li::before{content:"🚫"; flex:0 0 auto;}
+  .hcDetail{background:#f8fafc; border-top:1.5px dashed #cbd5e1; padding:11px 14px; font-size:12px; line-height:1.65; color:#334155;}
+  .hcDetail b{color:#1f2937;}
+  .hcDetail .hdTitle{display:block; font-weight:bold; color:var(--hc); margin-bottom:4px; font-size:12.5px;}
+  .detailOnly{display:none;}
+  .panel.showDetail .detailOnly{display:block;}
+  .panel.showDetail li.detailOnly{display:flex;}
+  .helpFoot{background:#fef2f2; border:2px solid var(--ng); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-top:14px; line-height:1.7;}
+  .helpFoot b{color:var(--ng);}
+</style>
+</head>
+<body>
+<noscript>
+  <div style="background:#fef2f2; border:2px solid #dc2626; color:#7f1d1d; border-radius:10px; padding:14px 16px; margin:12px auto; max-width:1000px; font-size:14px; line-height:1.7;">
+    ⚠️ <b>このページは JavaScript で動きます。</b>上部のアイコンで表示を切り替えるには、<b>ファイルを保存してから Chrome / Edge / Safari などのブラウザで開いて</b>ください。<br>
+    メールやチャットの「プレビュー」表示のまま開くと、切り替えが動かず最初のページしか表示されません。
+  </div>
+</noscript>
+<div class="draftbar">⚠️ 下書き(条文突合・法務チェック前)— 公開・共有はまだしないでください</div>
+<div class="wrap">
+  <header>
+    <h1>🗺️ 選挙と政治活動の歩き方</h1>
+    <p class="lead">これから政治活動を始める人・候補者を支える人・関心のある有権者のための、スタートからゴールまでの道案内。</p>
+    <div class="note">本ページは一般的な情報提供であり、特定候補への投票を勧めるものではありません。ルールの詳細・最新情報は必ず<b>選挙管理委員会・総務省</b>でご確認ください。記載の条文・数値は目安です。</div>
+  </header>
+
+  <div class="mapTitle">🚶 道のり(タップ/クリックで詳細へ)</div>
+  <div class="journey" role="tablist">
+    <button class="stop p0 active" data-p="s0" role="tab"><span class="icon">🧭</span><span class="label">まず知る</span><span class="phase">大前提のルール</span></button>
+    <button class="stop p1" data-p="s1" role="tab"><span class="icon">🌱</span><span class="label">政治活動スタート</span><span class="phase">平時</span></button>
+    <button class="stop p8" data-p="s8" role="tab"><span class="icon">💴</span><span class="label">寄附とお金</span><span class="phase">平時〜選挙後</span></button>
+    <button class="stop p7" data-p="s7" role="tab"><span class="icon">🏠</span><span class="label">ホームページ</span><span class="phase">平時(早めに)</span></button>
+    <button class="stop p2" data-p="s2" role="tab"><span class="icon">📦</span><span class="label">選挙の準備</span><span class="phase">告示前</span></button>
+    <button class="stop p3" data-p="s3" role="tab"><span class="icon">📣</span><span class="label">選挙運動</span><span class="phase">告示日〜前日</span></button>
+    <button class="stop p4" data-p="s4" role="tab"><span class="icon">🗳️</span><span class="label">投票日</span><span class="phase">当日</span></button>
+    <button class="stop p5" data-p="s5" role="tab"><span class="icon">📊</span><span class="label">選挙のあと</span><span class="phase">投票日後</span></button>
+  </div>
+  <div class="tapnote">▲ 気になるところをクリックすると、下に詳しい説明が出ます</div>
+  <div class="ctaWrap">
+    <button class="ctaBtn" id="openHelp" style="background:var(--s7); box-shadow:0 2px 8px rgba(219,39,119,.35);">🤝 手伝いたい人へ — 支援者ガイド(ポスティング・辻立ち・街頭演説)</button>
+    <button class="ctaBtn" id="openSched">🗓️ スケジュールを作る — 準備の計画表(Excel・スプレッド出力対応)</button>
+  </div>
+
+  <!-- ===== S0 まず知る ===== -->
+  <section class="panel p0 active" id="s0">
+    <h2>🧭 まず知る — 「政治活動」と「選挙運動」は別物</h2>
+    <span class="period">すべての土台になる大前提</span>
+    <p>ここを混同すると、悪気がなくても法律違反(事前運動など)になります。最初に3分だけ押さえましょう。</p>
+    <div class="req3">
+      <b>📣 「選挙運動」とされる3要件</b> — 次の3つがそろう行為は選挙運動です。直接の言葉でなくても、<b>これらを想起させる行動</b>も選挙運動とみなされます。
+      <ol>
+        <li><b>特定の選挙</b> — どの選挙かがわかる(例: 「来春の〇〇市議選」)</li>
+        <li><b>特定の候補者</b> — 誰への支持かがわかる(候補者・候補予定者が特定できる)</li>
+        <li><b>投票依頼</b> — 投票を得る(得させる)ことを目的とした働きかけ</li>
+      </ol>
+    </div>
+    <table>
+      <tr><th></th><th>🌱 政治活動</th><th>📣 選挙運動</th></tr>
+      <tr><td><b>なに?</b></td><td>政策の発信・後援会づくりなど、政治上の主張を広める活動全般</td><td>特定の選挙で特定の候補者への<b>投票を呼びかける</b>行為</td></tr>
+      <tr><td><b>いつできる?</b></td><td>平時は自由(選挙期間中は一部制限)</td><td><b>告示日の立候補届出後〜投票日の前日</b>だけ</td></tr>
+      <tr><td><b>主なルール</b></td><td>政治資金規正法(お金の透明化)</td><td>公職選挙法(やり方を細かく規定)</td></tr>
+    </table>
+    <p>👉 「こんなまちにしたい」と語るのは<b>政治活動</b>(平時OK)。「〇〇選挙で私に投票を」は<b>選挙運動</b>(期間外は事前運動でNG)。</p>
+    <div style="margin:14px 0 18px; text-align:center;">
+      <svg viewBox="0 0 900 280" role="img" aria-label="時間の流れで見る政治活動と選挙運動の違いのタイムライン図。政治活動は常時できるが、選挙運動期間中だけは一部制限される(点線で表示)。選挙運動は告示日から投票日前日までの選挙運動期間だけでき、期間外は事前運動としてNG。" style="width:100%; height:auto;">
+        <!-- 時間軸 -->
+        <line x1="170" y1="42" x2="860" y2="42" stroke="#6b7280" stroke-width="2.5"/>
+        <polygon points="860,35 860,49 878,42" fill="#6b7280"/>
+        <text x="515" y="26" text-anchor="middle" font-size="15" fill="#6b7280">時間の流れ</text>
+        <!-- 選挙運動期間の帯 -->
+        <rect x="500" y="56" width="190" height="188" fill="#fee2e2" opacity="0.55"/>
+        <line x1="500" y1="56" x2="500" y2="244" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 5"/>
+        <line x1="690" y1="56" x2="690" y2="244" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 5"/>
+        <text x="500" y="266" text-anchor="middle" font-size="15" font-weight="bold" fill="#dc2626">告示日(届出)</text>
+        <text x="690" y="266" text-anchor="middle" font-size="15" font-weight="bold" fill="#dc2626">投票日</text>
+        <!-- 期間ラベル -->
+        <text x="595" y="78" text-anchor="middle" font-size="16.5" font-weight="bold" fill="#dc2626">選挙運動期間</text>
+        <!-- 政治活動の行 -->
+        <text x="10" y="130" font-size="18" font-weight="bold" fill="#059669">🌱 政治活動</text>
+        <text x="10" y="152" font-size="13.5" fill="#059669">(常時できる)</text>
+        <line x1="170" y1="136" x2="496" y2="136" stroke="#059669" stroke-width="7" stroke-linecap="round"/>
+        <line x1="508" y1="136" x2="682" y2="136" stroke="#059669" stroke-width="7" stroke-linecap="round" stroke-dasharray="1 16"/>
+        <line x1="694" y1="136" x2="856" y2="136" stroke="#059669" stroke-width="7" stroke-linecap="round"/>
+        <text x="330" y="118" text-anchor="middle" font-size="14" fill="#059669">自由</text>
+        <text x="595" y="118" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#059669">一部制限あり</text>
+        <text x="775" y="118" text-anchor="middle" font-size="14" fill="#059669">自由</text>
+        <!-- 選挙運動の行 -->
+        <text x="10" y="206" font-size="18" font-weight="bold" fill="#dc2626">📣 選挙運動</text>
+        <text x="10" y="228" font-size="13.5" fill="#dc2626">(期間中だけ)</text>
+        <line x1="508" y1="212" x2="680" y2="212" stroke="#dc2626" stroke-width="7" stroke-linecap="round"/>
+        <text x="595" y="194" text-anchor="middle" font-size="14.5" font-weight="bold" fill="#dc2626">この期間だけOK</text>
+        <text x="330" y="217" text-anchor="middle" font-size="14" fill="#dc2626" opacity="0.75">✕ できない(事前運動NG)</text>
+        <text x="775" y="217" text-anchor="middle" font-size="14" fill="#dc2626" opacity="0.75">✕ できない</text>
+      </svg>
+    </div>
+    <h3>時期を問わず、ずっと禁止の3つ</h3>
+    <ul>
+      <li>🚫 <b>寄附の禁止</b> — 政治家・候補者(になろうとする人)が選挙区内の人にお金や物を贈ること(お祭りへの差し入れ、香典・お中元なども原則NG)。※逆に<b>受け取る</b>寄附のルールと支援者の税控除は「💴 寄附とお金」タブへ</li>
+      <li>🚫 <b>事前運動の禁止</b> — 告示前の投票依頼</li>
+      <li>🚫 <b>「投票依頼」の戸別訪問の禁止</b> — <b>投票を得る目的</b>で家や会社を戸別に訪ね歩くことは、時期を問わず禁止(公選法138条)。一方、<b>投票依頼を伴わない</b>あいさつ回りや後援会加入の勧誘訪問は、政治活動として可能です(支持者集めの正攻法)。ただし話の中身が実質的な投票依頼になると事前運動とみなされるおそれがあるので線引きに注意</li>
+    </ul>
+    <div class="vol volBig">🤝 <b>支える人・有権者のみなさんへ:</b> 応援する側の行為も「選挙運動」に当たれば同じ期間ルールが適用されます。<b>「迷ったら選管に確認 + みんなへの情報共有」</b>が鉄則です。</div>
+    <div class="toolBox">
+      <b class="tbTitle">🛠️ 実働ツール — 現場の進捗管理マップ(ブラウザだけで動きます)</b>
+      <div class="toolBtns">
+        <a class="toolBtn" href="https://yukinobu-nakamura.github.io/senkyo-maps/poster.html" target="_blank" rel="noopener noreferrer">🗺️ ポスターマップを作る(選挙運動)</a>
+        <a class="toolBtn" href="https://yukinobu-nakamura.github.io/senkyo-maps/posting.html" target="_blank" rel="noopener noreferrer">📮 ポスティングマップを作る(政治活動)</a>
+      </div>
+      <div class="tbNote">ポスターマップ=選挙運動用ポスター掲示場の貼付け進捗管理(選管公表の掲示場一覧CSVを読込)。ポスティングマップ=政治活動用ビラの配布区域・ルート管理。チームみらい(安野たかひろ陣営)公開の poster-map の仕組みを参考にした独自実装で、<a href="https://github.com/Yukinobu-Nakamura/senkyo-maps" target="_blank" rel="noopener noreferrer">ソースはGitHubで公開</a>しています。</div>
+    </div>
+  </section>
+
+  <!-- ===== S1 政治活動スタート ===== -->
+  <section class="panel p1" id="s1">
+    <h2>🌱 政治活動のスタートを切る</h2>
+    <span class="period">平時(告示日より前ならいつでも)</span>
+    <h3>手順(この順番で)</h3>
+    <ol>
+      <li><b>目的と立場を決める</b> — 何のために・どの選挙を見据えるか。この段階で投票依頼をすると事前運動になるので注意</li>
+      <li><b>政治団体(後援会)を立ち上げる</b> — 支援の受け皿。<b>政治団体とは</b>、政治上の主義・施策の推進や候補者の推薦・支持を本来の目的とする団体のこと(政治資金規正法)。<b>設立の届出</b>を選挙管理委員会に提出し、<b>会計責任者</b>を決め、毎年の<b>収支報告</b>を行う義務が生じます。届出前の寄附受領・支出は禁止</li>
+      <li><b>平時の活動を積み上げる</b> — あいさつ回り、ミニ集会での政策発信、SNS・ブログ、後援会の拡大</li>
+      <li><b>お金のルールを押さえる</b> — 政治家<b>個人</b>への金銭の寄附は原則禁止。献金は<b>政治団体宛</b>が原則。すべて収支報告書に記載し領収書を保存(受け皿ごとの違いと支援者の税控除は「💴 寄附とお金」タブに詳説)</li>
+    </ol>
+    <div class="okng">
+      <div class="okbox"><h4>⭕ 平時にできること</h4><ul><li>政策を語る演説・集会・SNS発信</li><li>後援会の会員集め</li><li><b>あいさつ回り・後援会加入の勧誘訪問</b>(投票依頼なし。支持者集めの有力手段)</li><li>政策リーフレットの配布</li></ul></div>
+      <div class="ngbox"><h4>❌ 平時でもダメなこと</h4><ul><li>投票依頼(事前運動)</li><li>選挙区内への寄附・差し入れ</li><li><b>投票依頼を伴う</b>戸別訪問</li></ul></div>
+    </div>
+    <div class="tools">🧰 <b>そろえる道具(政治活動用):</b> 事務所/名刺/政治活動用リーフレット/SNS・ホームページ/ポスター(政治活動用ポスターは掲示ルールに細かい制限あり※要選管確認)</div>
+    <div class="ngbox" style="margin-top:14px;"><h4>🚩 掲示物の落とし穴 — 氏名入り「のぼり」はほぼ使えません</h4><ul>
+      <li>のぼり・横断幕は法律上「<b>立札・看板の類</b>」。立候補予定者の<b>氏名入り(ひらがな・顔写真・氏名入り後援会名も同じ)は原則掲示禁止</b>(公選法143条16項)。使えるのは①事務所に掲げる選管証票付き看板(縦150×横40cm以内・数量制限)、②<b>演説会などの会場内・開催中</b>だけ</li>
+      <li><b>駅頭・街頭演説ではNG</b> — 街頭演説は「演説会の会場」に当たらないと解されており、日時・場所を刷り込んだ告知風デザインにしても例外になりません。「<b>本人</b>」と書いたのぼりが普及したのは、氏名入りが違法だから</li>
+      <li>よく見る「2連ポスター」(弁士2名の演説会告知)は<b>紙のポスターだから成り立つ手法</b>(裏打ちなしポスターを認める明文の受け皿規定がある)。<b>同じデザインでも、のぼりにした瞬間に法的根拠を失います</b></li>
+      <li>氏名入りの政治活動用<b>ポスター</b>は<b>任期満了日の6か月前から選挙区内で掲示禁止</b>(143条19項)。この期間は政党・団体の演説会告知(2連)ポスターに切り替えるのが実務</li>
+      <li>執行は警告ベースで逮捕例はほぼ確認されないものの、選管の公式見解は全国一律「禁止」。<b>通報や「公選法違反」のレッテル貼りは新人ほど狙われます</b>。迷ったら選管に照会し、回答を記録に残す</li>
+    </ul></div>
+
+    <h3>📮 ポスティング(ビラ・機関誌の各戸投函)の歩き方</h3>
+    <p>政策リーフレットや機関誌を郵便受けに投函するポスティングは、平時の政治活動の王道。ただし<b>「配るビラの種類」でルールが真逆</b>になり、投函先によっては<b>刑事罰リスク</b>もあります。現場マニュアルの常識も、法的な話とマナーの話が混ざっているので、下で切り分けました。</p>
+    <div class="req3" style="border-color:var(--s2);">
+      <b style="color:var(--s2);">⚠️ 最重要 — 配るビラの「種類」でポスティングの可否が真逆になる</b>
+      <table style="margin-top:8px;">
+        <tr><th>ビラの種類</th><th>ポスティング</th><th>根拠(目安)</th></tr>
+        <tr><td><b>選挙運動用ビラ(証紙ビラ)</b></td><td><span class="kzB ng">❌ 禁止</span></td><td>公選法142条6項・施行令109条の6(頒布方法が限定)</td></tr>
+        <tr><td>確認団体のビラ(選挙期間中)</td><td><span class="kzB ok">⭕ 可</span></td><td>確認団体制度(公選法201条の5以下)。時間帯の法的制限なし</td></tr>
+        <tr><td>平時の政治活動用ビラ・政策リーフ</td><td><span class="kzB ok">⭕ 可</span></td><td>平時の政治活動(投票依頼を書くと事前運動でNG)</td></tr>
+        <tr><td>政党の機関紙誌</td><td><span class="kzB ok">⭕ 可</span></td><td>選挙期間中も頒布可(公選法201条の15)</td></tr>
+      </table>
+      <div style="font-size:12.5px; margin-top:8px;">👉 <b>「証紙ビラはポスティング禁止」</b>は正しい。証紙ビラ(選挙運動用ビラ)を配れるのは①新聞折込 ②選挙事務所内 ③個人演説会の会場内 ④街頭演説の場所での<b>手渡し</b>だけ。郵便受けへの投函・郵送はいずれも不可で、違反は<b>2年以下の禁錮か50万円以下の罰金</b>(公選法243条)。逆に現場マニュアルが対象にする<b>確認団体ビラ</b>は選挙期間中でも投函でき、時間帯の法的制限もありません(だから「時間帯に制限なし」と書かれています)。</div>
+    </div>
+    <div class="okng">
+      <div class="ngbox"><h4>❌ 法的にNG(刑事罰・賠償リスク)</h4><ul>
+        <li><b>「住人関係者以外立入禁止」等の建物・オートロック内に入る</b> — 住居侵入罪(刑法130条・3年以下の拘禁刑か10万円以下の罰金)/軽犯罪法1条32号。通報事例あり</li>
+        <li><b>「チラシお断り」のポストへ入れる</b> — 投函拒否の意思表示に反する立入で同上のリスク。<b>現場で最も苦情が多い</b></li>
+        <li><b>証紙ビラのポスティング</b>(上表)</li>
+        <li><b>宛名(「〇〇様」)入りの投函</b> — 信書扱いになり郵便法4条違反のおそれ。投函物に個人宛名を入れない</li>
+        <li><b>仮置き自転車・荷物で駐車車両を傷つける</b> — 器物損壊・損害賠償(実際に事案発生)</li>
+      </ul></div>
+      <div class="okbox"><h4>⭕ マナー・安全(法ではないがトラブル回避に必須)</h4><ul>
+        <li>ビラは<b>ポストの中へ全部入れきる</b>(雨濡れ・風で飛んでゴミ化→苦情・環境負荷)</li>
+        <li><b>チラシが貯まっているポストには入れない</b>(不在で読まれず苦情の温床)</li>
+        <li>ポストの<b>開閉は静かに</b>。早朝夜間に限らず近隣配慮、他人の敷地では謙虚に</li>
+        <li>飲み物・バッグ等は<b>各自で用意</b>(陣営からの提供は寄附・供応の回避にもなる)</li>
+        <li>活動中のトラブルは自己責任の前提で、<b>事故・熱中症に注意し無理をしない</b></li>
+      </ul></div>
+    </div>
+    <div class="vol">🚶 <b>経験者談(安全・効率のルート取り):</b> 道を挟んで両側を<b>ジグザグ歩行すると横断回数が増えて危険・非効率</b>。可能なら<b>2名で片側ずつ</b>、1ブロックの1本道を往復投函するのが安全で効率的。<b>清潔感のある明るい服装</b>は好印象になり、不審者通報や交通事故のリスクも下げます。</div>
+    <div class="more">📚 根拠: 公選法142条・201条の5以下・201条の15・243条/刑法130条/軽犯罪法1条32号/郵便法4条。詳細と一次情報は ポスティング留意事項(整理メモ)。実務ルールは政党・確認団体の配布マニュアルと所轄選管でも確認を。</div>
+    <div class="vol">🤝 <b>支える人:</b> 後援会への入会・会費、イベント運営の手伝いは平時から可能。ただし団体への寄附は上限・記載ルールあり。<b>ポスティングは平時の政治活動用ビラ・機関誌なら手伝えます</b>(証紙ビラは投函NG)。</div>
+  </section>
+
+  <!-- ===== S8 寄附とお金 ===== -->
+  <section class="panel p8" id="s8">
+    <h2>💴 寄附とお金 — 受け皿で変わるルールと税控除</h2>
+    <span class="period">平時〜選挙後(受け皿づくりは早めに)</span>
+    <p>寄附は「<b>誰宛てに受けるか(受け皿)</b>」で、受けられるお金の種類も、支援者が受けられる税優遇も大きく変わります。受け皿の設計を間違えると、支援者に案内した税控除が使えない事態になります。</p>
+
+    <h3>大原則 — 政治家「個人」は金銭の寄附を受け取れない</h3>
+    <ul>
+      <li>🚫 政治家個人への金銭等の寄附は<b>原則禁止</b>(政治資金規正法21条の2)。献金の受け皿は<b>政治団体(後援会など)か政党</b>が基本</li>
+      <li>⭕ 唯一の例外が「<b>選挙運動に関する寄附</b>」。選挙の立候補届出<b>前</b>(前年など)に受けたものも適法(公選法186条2項が明文で想定)。ただし全額を<b>選挙運動費用収支報告書</b>に載せ、使い道も選挙運動・立候補準備に限る</li>
+      <li><b>どの受け皿でも共通で禁止</b>: <b>匿名・他人名義・外国人</b>からの寄附/国から補助金等を受けた会社などからの寄附(規正法22条の3〜22条の6)</li>
+      <li><b>受け皿によって変わる</b>: ①<b>企業・労働組合など「団体」からの寄附</b>は<b>政党・政治資金団体だけ</b>が受けられ、後援会・政治家個人は受けられません。②<b>個人からの上限額</b>も、政党・政治資金団体は年2,000万円、後援会・政治家個人などは年150万円と差があります(規正法21条・21条の3・22条)。→ 下の「受け皿別の早わかり」で切り替えて確認できます</li>
+    </ul>
+
+    <h3>受け皿別の早わかり — タブで切り替え</h3>
+    <p style="font-size:13px;">同じ「寄附」でも、受け皿(受ける団体の種類)で <b>①団体献金の可否 ②個人からの上限 ③支援者の税控除</b> が変わります。代表例で切り替えてみてください。</p>
+    <div class="kzWrap">
+      <div class="kzTabs" role="tablist">
+        <button class="kzBtn active" data-k="k1" type="button">🏛️ 政党・政党支部<small>自民党・国民民主党 等</small></button>
+        <button class="kzBtn" data-k="k2" type="button">💠 政治資金団体<small>政党が指定</small></button>
+        <button class="kzBtn" data-k="k3" type="button">🤝 後援会・資金管理団体<small>その他の政治団体</small></button>
+        <button class="kzBtn" data-k="k4" type="button">🌱 政党要件なしの政治団体<small>例:再生の道</small></button>
+        <button class="kzBtn" data-k="k5" type="button">🙋 政治家個人<small>選挙運動の寄附だけ</small></button>
+      </div>
+      <div class="kzCards">
+        <div class="kzCard" id="k1">
+          <h4>🏛️ 政党・政党支部(例:自民党・国民民主党とその支部)</h4>
+          <table class="kzTable">
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ok">⭕ 受けられる</span>政党・政治資金団体だけの特権(献金する企業側の資本金別・年間上限750万〜1億円)</td></tr>
+            <tr><th>個人からの上限</th><td>年<b>2,000万円</b>まで(政党・政治資金団体向けの総枠)</td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB ok">⭐ 税額控除30%</span>か所得控除の<b>有利な方</b>・<b>通年</b></td></tr>
+          </table>
+          <div class="kzNote">いちばん優遇が大きい受け皿。<b>支部を作れば、市区町村議など公職を問わず税額控除まで提供</b>できます。</div>
+        </div>
+        <div class="kzCard" id="k2">
+          <h4>💠 政治資金団体(政党が1つだけ指定する資金援助団体)</h4>
+          <table class="kzTable">
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ok">⭕ 受けられる</span></td></tr>
+            <tr><th>個人からの上限</th><td>年<b>2,000万円</b>まで(政党と同じ総枠)</td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB ok">⭐ 税額控除30%</span>か所得控除・<b>通年</b></td></tr>
+          </table>
+          <div class="kzNote">実務上は政党とほぼ同じ扱い。全国で数は限られます。</div>
+        </div>
+        <div class="kzCard" id="k3">
+          <h4>🤝 後援会・資金管理団体など(その他の政治団体)</h4>
+          <table class="kzTable">
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span></td></tr>
+            <tr><th>個人からの上限</th><td>同じ団体へ年<b>150万円</b>まで</td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB tri">△ 条件つき</span>原則なし。<b>国会議員・都道府県議・知事・政令市の議員/市長</b>を推薦・支持する団体なら<b>所得控除のみ</b>(現職=通年/新人=届出の年とその前年だけ)</td></tr>
+          </table>
+          <div class="kzNote">一般の<b>市区町村議・東京23区の区議/区長</b>の後援会は、税控除の対象外です。</div>
+        </div>
+        <div class="kzCard" id="k4">
+          <h4>🌱 政党要件を満たさない政治団体(例:再生の道)</h4>
+          <table class="kzTable">
+            <tr><th>法的な位置づけ</th><td>「政党」ではなく<b>その他の政治団体</b>(=🤝と同じ枠)</td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span></td></tr>
+            <tr><th>個人からの上限</th><td>年<b>150万円</b>まで</td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB ng">❌ 原則なし</span>(特定の対象公職候補の推薦・支持が本来の目的でない限り)</td></tr>
+          </table>
+          <div class="kzNote"><b>これが「選挙のない年は控除はありません」という案内の正体</b>です。政党要件(国会議員5人以上、または直近の国政選挙で得票率2%以上)を満たすと🏛️政党になり、税額控除まで提供できるようになります。</div>
+        </div>
+        <div class="kzCard" id="k5">
+          <h4>🙋 政治家個人(選挙運動に関する寄附だけ)</h4>
+          <table class="kzTable">
+            <tr><th>そもそも受け取れる?</th><td>金銭等の寄附は<b>原則禁止</b>(規正法21条の2)。<b>選挙運動に関する寄附だけ</b>が例外</td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span></td></tr>
+            <tr><th>個人からの上限</th><td>年<b>150万円</b>まで</td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB tri">△ 条件つき</span>対象公職なら<b>所得控除のみ</b>・選挙運動費用収支報告書に載った分だけ(実質、選挙のあった年)</td></tr>
+          </table>
+          <div class="kzNote">前年に受けた分は確定申告期限に間に合わず<b>更正の請求</b>での対応になりがち(下の「事後確定」参照)。</div>
+        </div>
+      </div>
+      <div class="more" style="margin-top:10px;">📚 出典: <a href="https://www.soumu.go.jp/senkyo/seiji_s/naruhodo01.html" target="_blank" rel="noopener noreferrer">総務省 なるほど!政治資金</a> / <a href="https://www.senkyo.metro.tokyo.lg.jp/documents/d/senkyo/3001kifuseigen" target="_blank" rel="noopener noreferrer">東京都選管 寄附の制限</a>(金額・可否は目安。個別事情は所轄選管・税務署へ)</div>
+    </div>
+
+    <h3>支援者が受けられる税控除 — 受け皿別の早見表</h3>
+    <table>
+      <tr><th>寄附の受け皿</th><th>控除の種類</th><th>対象になる時期</th></tr>
+      <tr><td><b>政党(支部含む)・政治資金団体</b></td><td>所得控除 or <b>税額控除30%</b>(有利な方を選べる)</td><td>通年</td></tr>
+      <tr><td><b>現職</b>議員の後援会など(推薦・支持が本来の目的の団体)</td><td>所得控除のみ</td><td>通年</td></tr>
+      <tr><td><b>新人候補</b>の後援会など(同上)</td><td>所得控除のみ</td><td><b>立候補届出の年と、その前年だけ</b></td></tr>
+      <tr><td>候補者個人(選挙運動に関する寄附)</td><td>所得控除のみ</td><td>選挙運動費用収支報告書に載った寄附のみ(実質、選挙の前後)</td></tr>
+    </table>
+    <div class="ngbox" style="margin-top:10px;"><h4>❌ 見落としやすい限定(ここでつまずく)</h4><ul>
+      <li><b>対象になる公職の限定</b> — 政党・政治資金団体<b>以外</b>への寄附で控除が使えるのは<b>衆参議員・都道府県議・知事・政令市の議員/市長</b>の関係だけ。<b>一般の市町村議・市町村長・東京23区の区議/区長は対象外</b>(受け皿が政党支部なら公職を問わず可)</li>
+      <li><b>「資金管理団体だから控除」ではない</b> — 控除の根拠はその団体の<b>本来の目的</b>が特定の人の推薦・支持かどうか。設立届出の目的欄の書き方が実務上重要</li>
+      <li>政治献金に<b>住民税の控除はない</b>。年末調整も不可 — <b>確定申告+選管等の確認印付き「寄附金(税額)控除のための書類」</b>が必要</li>
+    </ul></div>
+
+    <h3>立候補届出「前」の寄附と、控除の"事後確定"の仕組み</h3>
+    <ul>
+      <li>選挙運動に関する寄附は届出前から受けられるが、支援者の控除は「<b>実際に立候補し、収支報告書に載って初めて遡って確定</b>」する仕組み。出馬しなければ控除は発生しない(寄附の返還等の整理も必要になる)</li>
+      <li>控除の帰属年は<b>寄附した年</b>。証明書類は選挙後にまとめて発行されるため、前年の寄附分は確定申告期限に間に合わず<b>更正の請求</b>(5年以内)での対応になることが多い</li>
+      <li><b>年明けすぐの選挙は特に煩雑</b> — 12月と1月の寄附で控除年が割れる/150万円の上限は暦年でカウント/後援会の年次報告と選挙の報告が交錯。<b>受け皿の一本化・専用口座の分離・寄附者への案内文の事前準備</b>が対策</li>
+    </ul>
+    <div class="vol">🤝 <b>支える人(寄附する側)へ:</b> 「選挙のない年は控除がありません」と案内されたら、それは受け皿が候補者個人(または新人の後援会)だからです。政党支部宛てなら通年+30%税額控除が使えます。寄附するときは<b>宛先(受け皿)と控除書類の受け取り方</b>を確認しましょう。</div>
+    <div class="more">📚 根拠: 租税特別措置法41条の18/政治資金規正法21条の2/公職選挙法186条・189条。国税庁タックスアンサー <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1154.htm" target="_blank" rel="noopener noreferrer">No.1154(政治献金と寄附金)</a>・<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">No.1260(政党等寄附金特別控除)</a></div>
+  </section>
+
+  <!-- ===== S7 ホームページを立ち上げる ===== -->
+  <section class="panel p7" id="s7">
+    <h2>🏠 ホームページを立ち上げる</h2>
+    <span class="period">平時(政治活動の早い段階で)</span>
+    <p>候補者・政治団体の「顔」になるのがホームページ。実は<b>構造さえ知れば、外注しなくても作れる時代</b>になっています(このページ自体もその方法で作られています)。まず全体像を「家を建てる」に例えて押さえましょう。</p>
+    <h3>必要なもの一覧 — 「家を建てる」に例えると全部わかる</h3>
+    <table>
+      <tr><th>要素</th><th>例えると</th><th>費用の目安</th><th>ひとこと</th></tr>
+      <tr><td><b>ドメイン</b>(○○.jp)</td><td>住所</td><td>年数千円</td><td>本名ドメインは「本人のサイト」という信頼の証明。<b>必ず自分名義</b>で取得(業者名義だと住所が人質に)</td></tr>
+      <tr><td><b>サーバー</b></td><td>土地</td><td>月数百円</td><td>レンタルで十分。「政治家だから高性能サーバーが必要」は営業トーク</td></tr>
+      <tr><td><b>HTML/CSS/JavaScript</b></td><td>建物本体</td><td><b>外注費の大半はここ</b></td><td>今はAIに日本語で指示すれば書ける。「トップに写真、名前を大きく」でOK</td></tr>
+      <tr><td><b>FTP</b>(転送ソフト)</td><td>引っ越しトラック</td><td>無料</td><td>作ったファイルをサーバーに運ぶだけ(ドラッグ&ドロップ)</td></tr>
+      <tr><td><b>SSL</b>(httpsの鍵マーク)</td><td>玄関の鍵</td><td>無料</td><td>ないと「保護されていない通信」警告で信用を失う</td></tr>
+      <tr><td><b>お問い合わせフォーム</b></td><td>郵便受け</td><td>無料</td><td>メールアドレス直載せは迷惑メールの的。唯一つまずきやすい箇所(送信元証明の設定)</td></tr>
+      <tr><td><b>スパム対策</b></td><td>郵便受けの防犯</td><td>無料</td><td>公開されたフォームはボットの自動投稿に必ず見つかる。不可視の罠(honeypot)+日本語チェックで遮断し、スパムには自動返信を返さない(ドメインの信用を守る)</td></tr>
+      <tr><td><b>管理アカウントの防護</b>(2段階認証)</td><td>母屋の金庫</td><td>無料</td><td>狙われるのはサイトより「管理する側」。ドメイン・サーバー・GitHub等の全アカウントで2段階認証+バックアップコードの安全保管。FTPは暗号化接続(FTPS)で</td></tr>
+      <tr><td><b>ブログ連携</b></td><td>掲示板の自動更新</td><td>無料</td><td>サイトの死因1位は「最終更新が1年前」。note等と連携し自動更新に</td></tr>
+      <tr><td><b>検索エンジン登録</b></td><td>地図への登録</td><td>無料・半日</td><td>Googleに届け出ないと検索に出ない・古いままになる</td></tr>
+      <tr><td><b>プライバシーポリシー等</b></td><td>建築確認</td><td>自分の頭</td><td>フォームで個人情報を預かるなら必須。寄付案内には規正法の注意書きも</td></tr>
+    </table>
+    <p>👉 <b>固定費は「住所」と「土地」で年1万円前後だけ</b>。外注費の大部分=「建てる人件費」は、AI+無料ツールでかなり置き換えられます。</p>
+    <h3>「知識ゼロ+AI」で作るときの心得 — AIは大工、自分は施主</h3>
+    <p>設計図(コード)は読めなくてOK。ただし<b>完成した家に住んで確かめる責任</b>は施主にあります。</p>
+    <ol>
+      <li><b>中身の正しさは自分の目で</b> — コードの誤りは表示が崩れて気づけるが、<b>経歴・政策・数字の誤りは正常に表示されてしまう</b>。文章は必ず本人が確認</li>
+      <li><b>法律まわりはAIを鵜呑みにしない</b> — 寄付案内の注意書き(外国人寄付の禁止等)、個人情報の扱いは条文・選管の一次情報で裏取り。<b>ここは業者も教えてくれない領域</b></li>
+      <li><b>検証は「使ってみる」でできる</b> — スマホで全ページを開く/フォームから自分でテスト送信して受信確認/自分の名前で検索。コードが読めなくてもできる品質チェック</li>
+    </ol>
+    <div class="okng">
+      <div class="okbox"><h4>⭕ 自作(AI活用)が向くケース</h4><ul><li>初期費用を抑えたい</li><li>活動報告などの更新が多い(修正が自分で数分・無料)</li><li>構造を理解して業者とも対等に話したい</li></ul></div>
+      <div class="ngbox"><h4>❌ 気をつけること</h4><ul><li>ドメインを他人名義で取られる契約</li><li>公開前の作りかけページを鍵なしで置く(検索エンジンにも見えます)</li><li>更新が止まったまま放置(活動停止に見える)</li></ul></div>
+    </div>
+    <div class="tools">🧰 <b>公選法の留意:</b> ホームページでの政治活動は平時から自由ですが、内容が投票依頼(事前運動)にならないよう注意。選挙運動期間中のウェブ利用にも一定のルールがあります(詳しくは「📣 選挙運動」タブと選管へ)。</div>
+    <div class="vol">🤝 <b>体験談:</b> 筆者は2025年の初出馬時に制作を外注(40〜50万円)→2026年にAIと自作してリニューアル。顛末はブログ「政治家のホームページの『原価』の話」で公開しています。</div>
+  </section>
+
+  <!-- ===== S2 選挙の準備 ===== -->
+  <section class="panel p2" id="s2">
+    <h2>📦 選挙に向けた準備</h2>
+    <span class="period">立候補を決めてから告示日まで</span>
+    <h3>チェックリスト</h3>
+    <ol>
+      <li><b>立候補予定者説明会に参加</b> — 選管が開催。必要書類一式と日程がわかる</li>
+      <li><b>供託金を準備</b> — 選挙の種類で額が異なる(例: 市区議選30万円、都道府県議選60万円 ※目安・要確認)。一定得票に届かないと没収</li>
+      <li><b>書類の事前審査</b> — 立候補届出書類を選管が事前チェックしてくれる</li>
+      <li><b>出納責任者を選任</b> — 選挙運動のお金の管理者。選任前の支出は原則不可</li>
+      <li><b>選挙事務所・スタッフ体制</b> — 事務所は原則1か所</li>
+      <li><b>選挙運動用ツールの発注</b> — ポスター・ビラ・はがき・たすき等(数量・規格の上限あり)。<b>公費負担</b>(ポスター代・ビラ代・選挙カー等を公費で賄える制度)は条例により内容が異なるので要確認</li>
+    </ol>
+    <div class="okbox" style="margin-top:10px;"><h4>📋 選挙運動用ポスターの入稿前チェック(2025年改正対応)</h4><ul>
+      <li>規格<b>42cm×30cm以内</b>(市区議選等)/表面に<b>掲示責任者と印刷者の氏名・住所</b>を必ず記載(小さすぎて読めない印刷は不可)</li>
+      <li>2025年改正で新設: <b>候補者氏名の記載義務</b>/<b>品位保持</b>(他人・他党の名誉を傷つける内容等の禁止)/<b>営利目的の広告禁止</b>(違反は罰金)</li>
+      <li>経歴・肩書・「公認/推薦」の表記は<b>事実・決定文書と一字一句合わせる</b>(虚偽は虚偽事項公表罪=公選法235条)。推薦状などの証跡を保管</li>
+      <li>貼れるのは<b>告示日の届出受理後、公営掲示場の自分の区画だけ</b>。告示前にデザインをSNSで公開するのも事前運動リスク — 公開は告示後に</li>
+    </ul></div>
+    <div class="ngbox" style="margin-top:10px;"><h4>❌ この時期にやりがちな違反</h4><ul><li>「出馬します、よろしく」=事前運動(出馬表明自体は可、投票依頼が不可)</li><li>告示前のビラに投票依頼を書く</li><li>激励の会での飲食提供(寄附禁止に触れうる)</li></ul></div>
+    <div class="vol">🤝 <b>支える人:</b> ポスター貼りの下見・事務所準備などは手伝えます。告示前の「投票お願いします」の声かけ・SNS投稿はNG。</div>
+  </section>
+
+  <!-- ===== S3 選挙運動期間 ===== -->
+  <section class="panel p3" id="s3">
+    <h2>📣 選挙運動期間 — できること・できないこと</h2>
+    <span class="period">告示日の立候補届出後 〜 投票日の前日まで</span>
+    <p>立候補の届出が受理された瞬間から、初めて「投票してください」と言えるようになります。ただし<b>やり方は公職選挙法で細かく決まっています</b>。</p>
+    <div class="okng">
+      <div class="okbox"><h4>⭕ できること(主なもの)</h4><ul>
+        <li>街頭演説(標旗を掲げて。おおむね朝8時〜夜8時 ※要確認)</li>
+        <li>個人演説会の開催</li>
+        <li>選挙カー・拡声機での連呼(台数制限あり)</li>
+        <li>選挙運動用ビラ(証紙貼付・枚数上限)・公営掲示場へのポスター・選挙運動用はがき</li>
+        <li>ネット選挙運動 — HP・SNS・動画での投票呼びかけOK(候補者も一般の人も)</li>
+        <li>たすき・のぼり等の着用(規格制限あり)</li>
+      </ul></div>
+      <div class="ngbox"><h4>❌ できないこと(主なもの)</h4><ul>
+        <li>戸別訪問(投票を得る目的の訪問)</li>
+        <li>飲食物の提供(湯茶・通常の菓子程度を除く)</li>
+        <li>買収・供応接待 — 最も重い違反。<b>連座制</b>で運動員の違反でも当選無効になりうる</li>
+        <li><b>電子メール</b>での選挙運動 — 送信できるのは候補者・政党のみ(一般の人は転送も不可)<span style="color:#a16207;">※2027/3/1施行予定の改正で一般の人も可になる見込み(下の備考)</span></li>
+        <li>署名運動・人気投票の公表</li>
+        <li><b>証紙ビラ(選挙運動用ビラ)のポスティング・郵送</b> — 頒布は新聞折込/事務所内/個人演説会場内/街頭演説での手渡しのみ(142条・243条)。※確認団体ビラ・機関紙誌の投函は可(「🌱政治活動」タブのポスティング欄)</li>
+        <li>18歳未満の選挙運動</li>
+      </ul></div>
+    </div>
+    <div style="background:#fefce8; border:1.5px dashed #a16207; border-radius:12px; padding:10px 14px; font-size:12.5px; margin-top:14px; color:#713f12;">
+      📅 <b>【備考・予定情報】2027年3月1日 施行"予定"のネット選挙関連改正</b>(2026年7月成立・与野党6党の議員立法。2027年4月の統一地方選から適用の見込み)<br>
+      <span style="color:#a16207;">※以下は<b>まだ施行前・総務省ガイドライン未策定</b>のため、実務詳細は施行前に必ず再確認してください。上の「できないこと」は<b>現行法</b>の内容です。</span>
+      <ul style="padding-left:20px; margin:6px 0 0;">
+        <li><b>電子メール解禁</b> — 一般の人も選挙期間中にメールで投票依頼が可能になる見込み(現行の候補者・政党限定を撤廃し、ネット規制に一本化)</li>
+        <li><b>AI表示義務</b> — AIで作成・加工した、実物と誤認するおそれのある画像・動画には「AI利用」である旨の表示が義務化の見込み(選挙運動・落選運動とも対象。罰則はなく、事業者が削除しやすくする建付け)</li>
+        <li><b>虚偽情報対策</b> — 利用者全体に「虚偽・歪曲した情報で選挙の公正を害さない」責務規定+プラットフォーム事業者の削除対応(罰則なし)</li>
+      </ul>
+    </div>
+    <div class="vol">🤝 <b>支える人(ボランティア):</b> 原則<b>完全無報酬</b>が条件(報酬を払えるのは車上運動員・手話通訳者など限られた職種だけ)。無償のつもりでも弁当・謝礼を受け取ると買収に問われるおそれ。SNSでの応援シェアはOK(なりすまし・虚偽情報はNG)。</div>
+    <div class="tools">🧰 <b>この期間の道具:</b> 選挙運動用ポスター/ビラ(証紙)/はがき/たすき/標旗/腕章/選挙カー — いずれも枚数・規格・台数の上限あり。多くは公費負担の対象(条例確認)。</div>
+  </section>
+
+  <!-- ===== S4 投票日 ===== -->
+  <section class="panel p4" id="s4">
+    <h2>🗳️ 投票日 — 選挙運動は「前日まで」</h2>
+    <span class="period">投票日当日</span>
+    <ul>
+      <li>投票日当日の選挙運動は<b>一切禁止</b>。「今日は投票日!〇〇候補へ!」というSNS投稿もNG(前日までの投稿がネット上に残っているのは問題なし)</li>
+      <li>候補者・運動員ができるのは、静かに見守ることと、投票所での手続きくらい</li>
+      <li>有権者の「投票に行こう!」という<b>特定候補に触れない一般的な呼びかけ</b>は可</li>
+      <li>期日前投票・不在者投票の制度もこの機会に周知しておくと親切</li>
+    </ul>
+    <div class="vol">🤝 <b>支える人:</b> 当日にできる応援はありません。友人へ「投票行った?」と聞くのはOK、「〇〇さんに入れてね」はNG。</div>
+  </section>
+
+  <!-- ===== S5 選挙のあと ===== -->
+  <section class="panel p5" id="s5">
+    <h2>📊 選挙のあと — 終わってからが本番の手続き</h2>
+    <span class="period">投票日の翌日から</span>
+    <h3>候補者側がやること</h3>
+    <ol>
+      <li><b>選挙運動費用収支報告書の提出</b> — 出納責任者が投票日から<b>15日以内</b>(目安・要確認)に選管へ。領収書添付</li>
+      <li><b>公費負担の請求手続</b> — ポスター代・ビラ代等の請求書類を業者・選管と処理</li>
+      <li><b>当選した場合</b> — 当選証書の受領。<b>当選御礼のあいさつ行為には制限</b>(お礼の文書・あいさつ広告は原則不可。自筆の信書・SNSでの御礼は可 ※要確認)</li>
+      <li><b>落選した場合</b> — 政治団体は存続可能。平時の政治活動ルールに戻って次に備える</li>
+      <li><b>政治団体の年次収支報告</b> — 選挙と関係なく毎年提出</li>
+    </ol>
+    <div class="ngbox" style="margin-top:10px;"><h4>❌ 選挙後にやりがちな違反</h4><ul><li>当選御礼のポスター・ビラ・広告</li><li>運動員への「打ち上げ」での過度な飲食提供・慰労金(買収・供応に問われうる)</li></ul></div>
+    <div class="vol">🤝 <b>支える人:</b> 選挙後の慰労会は費用の出どころ・程度に注意。報告書に載る支出です。</div>
+  </section>
+
+  <!-- ===== S-HELP 支援者ガイド ===== -->
+  <section class="panel p7" id="sHelp">
+    <h2>🤝 手伝いたい人へ — 支援者ガイド</h2>
+    <span class="period">全国どこからでも・できることから</span>
+    <p>「応援したいけど、何をしていいか分からない」——そんな支援者のためのページです。<b>ポスティング・辻立ち・街頭演説</b>の3つを中心に、<b>何を手伝えるか / してよいこと / してはいけないこと</b>をまとめました。</p>
+
+    <div class="helpIntro">
+      🧭 <b>まず、たった2つの大原則:</b><br>
+      ① <b>平時(選挙の告示前)</b>は「政治を応援する」はOK、でも<b>「〇〇さんに投票して」はNG</b>(事前運動)。<br>
+      ② <b>選挙期間中(告示日〜投票日の前日)</b>は「投票して」もOK。ただし<b>手伝いは無報酬が原則</b>・投票日当日はネットも含め選挙運動は一切NG。<br>
+      迷ったら <b>選挙管理委員会に確認 + 陣営・仲間に共有</b> が鉄則です。
+    </div>
+
+    <div class="helpBar">
+      <span class="htLabel">表示:</span>
+      <div class="helpToggle" role="tablist">
+        <button type="button" class="htBtn on" data-mode="simple">🟢 かんたん版</button>
+        <button type="button" class="htBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button>
+      </div>
+    </div>
+    <p class="help" style="font-size:12px; color:var(--muted); margin-bottom:6px;">※「かんたん版」は要点だけ。「くわしく」を押すと各カードの下に<b>法的な根拠・条文・細かい注意</b>が開きます。</p>
+
+    <div class="helpCards">
+
+      <!-- ポスティング -->
+      <div class="helpCard" style="--hc:#d97706; --hcbg:#fef3c7;">
+        <div class="hcHead">
+          <div class="hcIcon">📮</div>
+          <div class="hcName">ポスティング</div>
+          <span class="hcWhen">平時◎ / 選挙中も一部OK</span>
+        </div>
+        <div class="hcBody">
+          <div class="hcOne">チラシ(政策リーフ・機関誌)を郵便受けへ。自宅の近所からできる王道の手伝い。</div>
+          <div class="hcSub ok">してよいこと</div>
+          <ul class="hcList hcOK">
+            <li>政策リーフ・機関誌・確認団体ビラの投函</li>
+            <li>「お断り」でないポストに、中まで全部入れきる</li>
+            <li>静かに開閉・清潔感のある服装で</li>
+          </ul>
+          <div class="hcSub ng">してはいけないこと</div>
+          <ul class="hcList hcNG">
+            <li>証紙ビラ(選挙運動用ビラ)の投函</li>
+            <li>「立入禁止」「チラシお断り」を無視して入る</li>
+            <li>平時に「投票して」と書いたビラを配る</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          <b>証紙ビラ</b>を配れるのは①新聞折込②選挙事務所内③個人演説会場内④街頭演説での手渡しだけ(公選法142条6項)。投函・郵送は違反で<b>2年以下の禁錮か50万円以下の罰金</b>(243条)。<br>
+          <b>立入禁止・お断り無視</b>は住居侵入罪(刑法130条=3年以下の拘禁刑か10万円以下の罰金)・軽犯罪法1条32号。<br>
+          宛名(「〇〇様」)を入れると<b>信書</b>になり郵便法4条違反のおそれ。<br>
+          雨・強風の日は避ける/貯まったポストは入れない/2名で片側ずつ・ジグザグ歩行を避ける。<br>
+          → 詳細は「🌱 政治活動」タブの📮ポスティング欄へ。
+        </div>
+      </div>
+
+      <!-- 辻立ち -->
+      <div class="helpCard" style="--hc:#0d9488; --hcbg:#ccfbf1;">
+        <div class="hcHead">
+          <div class="hcIcon">🚩</div>
+          <div class="hcName">辻立ち・朝立ち</div>
+          <span class="hcWhen">平時の政治活動</span>
+        </div>
+        <div class="hcBody">
+          <div class="hcOne">駅前や交差点に立ってあいさつ・政策を訴える。のぼり持ちやビラ配りで一緒に立てる。</div>
+          <div class="hcSub ok">してよいこと</div>
+          <ul class="hcList hcOK">
+            <li>一緒に立ってあいさつ・お辞儀・ビラ配り</li>
+            <li>「本人」やイメージカラー・政党名ののぼり持ち</li>
+            <li>政策を語る(平時の政治活動として)</li>
+          </ul>
+          <div class="hcSub ng">してはいけないこと</div>
+          <ul class="hcList hcNG">
+            <li>氏名・顔写真入りののぼり／立て看板</li>
+            <li>平時に「投票してください」と言う</li>
+            <li>通行の妨げ・大音量で近隣に迷惑</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          <b>氏名入りののぼり・立て看板は常時禁止</b>(公選法143条16項)。ひらがな表記・顔写真・氏名入り後援会名も同じ。使えるのは事務所の証票付き看板か演説会の会場内だけ。街頭では<b>「本人」型・政党名型</b>にする。<br>
+          マイクを使うなら道路使用・騒音への配慮を。長時間の場所占有はトラブルの元。<br>
+          平時に投票を頼むと<b>事前運動</b>(公選法129条)。<br>
+          → 詳細は「🌱 政治活動」タブの「掲示物の落とし穴」へ。
+        </div>
+      </div>
+
+      <!-- 街頭演説 -->
+      <div class="helpCard" style="--hc:#0284c7; --hcbg:#e0f2fe;">
+        <div class="hcHead">
+          <div class="hcIcon">📣</div>
+          <div class="hcName">街頭演説</div>
+          <span class="hcWhen">平時=政策のみ / 選挙中=投票依頼OK</span>
+        </div>
+        <div class="hcBody">
+          <div class="hcOne">候補や弁士がマイクで訴える場。支援者は聴衆・ビラの運び手・盛り上げ役で活躍できる。</div>
+          <div class="hcSub ok">してよいこと</div>
+          <ul class="hcList hcOK">
+            <li>選挙中: ビラ手渡し・のぼり持ち・拍手・SNS拡散</li>
+            <li>平時: 政策の街頭活動(投票依頼はしない)</li>
+            <li>自宅からSNSで応援シェア(選挙中も可)</li>
+          </ul>
+          <div class="hcSub ng">してはいけないこと</div>
+          <ul class="hcList hcNG">
+            <li>報酬・弁当・謝礼を受け取る(買収に問われうる)</li>
+            <li>18歳未満が選挙運動をする</li>
+            <li>朝8時前・夜8時以降の演説</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          選挙運動の街頭演説は<b>標旗の掲示が必要・時間はおおむね8時〜20時</b>(公選法164条の5・164条の6)。標旗の設置は陣営が行う。<br>
+          支援ボランティアは<b>完全無報酬が原則</b>。報酬を払えるのは車上運動員・手話通訳者など限られた職種だけ。無償のつもりでも弁当・謝礼の受領は<b>買収</b>(221条)に問われうる。<br>
+          <b>18歳未満の選挙運動は禁止</b>。SNSでの応援はOK(なりすまし・虚偽情報はNG)、メール送信は現行は候補者・政党のみ(2027年3月施行予定の改正で一般も可の見込み)。<br>
+          証紙ビラは街頭演説の場所で聴衆・通行人へ<b>手渡し</b>のみ(投函・かごへの配布はNG)。<br>
+          → 詳細は「📣 選挙運動」タブへ。
+        </div>
+      </div>
+
+    </div>
+
+    <div class="helpFoot">
+      🚫 <b>3つとも共通のNG(これだけは覚えて):</b> ①<b>買収・お金や物のやりとり</b>(受けても渡してもNG。運動員の違反で候補者が当選無効になる連座制も) ②<b>投票日当日の選挙運動</b>(SNS投稿もNG) ③<b>ウソ・なりすまし</b>。<br>
+      困ったら「これって大丈夫?」と<b>陣営・選管に一言確認</b>を。その一手間があなたと候補者を守ります。
+    </div>
+    <div class="more">📚 根拠: 公選法129条・142条・143条・164条の5/6・201条の5以下・221条・243条/刑法130条/軽犯罪法1条32号/郵便法4条。整理メモ: ポスティング留意事項・掲示物(のぼり)整理。数値・可否は目安、実務は所轄選管で確認を。</div>
+  </section>
+
+  <!-- ===== S6 活動スケジュール ===== -->
+  <section class="panel p6" id="s6">
+    <h2>🗓️ 活動スケジュールをつくる</h2>
+    <span class="period">統一選準備の基本モデル+あなたの計画表</span>
+    <p>実施内容のタグをクリックして時期を決めると、下のスケジュール表に自動で行が追加されます(時期順に自動ソート・No自動採番)。担当は右の「👥 メンバー」を表の行へドラッグして追加します。入力内容はこのブラウザ内(localStorage)にのみ保存されます。</p>
+
+    <h3>⚙️ 選挙の予定日</h3>
+    <div class="settings">
+      <div><label for="kokujiDate">告示日(予定)</label><input type="date" id="kokujiDate"></div>
+      <div><label for="voteDate">投票日(予定)</label><input type="date" id="voteDate"></div>
+      <div class="countdown" id="countdown"></div>
+      <div class="todayLabel" id="todayLabel"></div>
+    </div>
+    <p class="help">※ 投票日を入れると告示日に自動で7日前が入ります(市区議選・市長選の目安。都道府県議は9日前、町村は5日前など選挙により異なるので修正してください)。</p>
+
+    <h3>🏷️ 実施内容(タグをクリックして予定に追加)</h3>
+    <p class="help">クリックすると「いつからいつまで」を入力できます。✓付きは配置済み(クリックで修正・削除)。</p>
+    <div id="palette"></div>
+    <div class="newitem">
+      <b style="font-size:13px;">➕ 新しい項目:</b>
+      <input type="text" id="newName" placeholder="例)公開討論会の申込み" maxlength="30">
+      <select id="newCat"></select>
+      <button class="btn" id="addItemBtn">追加</button>
+    </div>
+
+    <div class="memberPanel">
+      <div class="mpTitle">👥 メンバー</div>
+      <div id="memberList" class="mplist"></div>
+      <div class="memberAddRow" id="memberAddRow" style="display:none;">
+        <input type="text" id="memberName" placeholder="名前" maxlength="12">
+        <button class="btn" id="memberOk" style="padding:4px 10px; background:#0d9488;">OK</button>
+      </div>
+      <button class="btn" id="addMemberBtn" style="width:100%; background:#0d9488;">＋ 追加</button>
+      <div class="mphelp">名前をスケジュール表の行へドラッグ&ドロップすると担当に追加できます(詳細な日時を指定可・複数人OK)</div>
+    </div>
+
+    <h3>📋 スケジュール表(あなたの予定)</h3>
+    <div class="tablewrap">
+      <table class="schedtable">
+        <thead><tr><th>No</th><th>時期</th><th>目安の月日</th><th>実施内容</th><th>担当</th></tr></thead>
+        <tbody id="schedBody"></tbody>
+      </table>
+    </div>
+    <div class="legend">実施内容チップをクリックすると時期・No(並び順)を修正できます。担当は右の👥メンバーを行へドラッグ(詳細日時付き)、×で外せます。Noは時期順に自動採番 — 並びを変えたいときだけ修正画面でNoを入力してください。</div>
+
+    <details class="modelref">
+      <summary>📎 基本モデル(参考)を表示</summary>
+      <div class="tablewrap">
+        <table class="schedtable">
+          <thead><tr><th>時期</th><th>目安の月日</th><th>基本モデル(参考)</th></tr></thead>
+          <tbody id="modelBody"></tbody>
+        </table>
+      </div>
+    </details>
+
+    <div class="exportbar">
+      <button class="btn gsheet" id="sheetBtn">📤 Googleスプレッドに出力</button>
+      <button class="btn gray" id="xlsxBtn">📥 Excelダウンロード</button>
+      <button class="btn gray" id="resetBtn" style="margin-left:auto;">入力内容をリセット</button>
+    </div>
+    <div class="exporthint" id="exportHint"></div>
+    <p class="help" style="margin-top:6px;">「Googleスプレッドに出力」は表をコピーして新規スプレッドシート(sheets.new)を開きます。開いたシートのA1セルで貼り付け(Ctrl+V)してください。「Excelダウンロード」は .xlsx ファイルを保存します。</p>
+    <div class="more">📚 基本モデルの出典: 統一選準備スケジュール(内部資料)。時期・内容は一例です — 必ず選管の日程・説明会で確認を。</div>
+  </section>
+
+  <footer>
+    出典ベース: 選挙政治資金KB(Notion)・公職選挙法・政治資金規正法(条文突合は未実施)。<br>
+    本資料は下書きです。公開前に legal-officer による法務レビューと選管Q&A・最新条文との突合を行ってください。<br>
+    作成日: 2026-07-12 ／ 最終更新日: 2026-08-10(📮ポスティング留意事項を追加+🤝支援者ガイド[ポスティング/辻立ち/街頭演説・かんたん⇄くわしく切替]を新設) ／ 作成: JARVIS ／ 原本: Notion 選挙政治資金KB — 更新時は「歩き方HTMLを作り直して」でJARVISが再生成します。<br>
+    機密度: _C2(下書き・法務レビュー前のため社内限定。公開・外部共有は不可)
+  </footer>
+</div>
+
+<!-- スケジュール入力モーダル -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="mTitle"></h3>
+    <div class="catname" id="mCat"></div>
+    <div class="mrow"><label for="mStart">開始時期</label><select id="mStart"></select></div>
+    <div class="mrow"><label for="mEnd">終了時期(単発なら開始と同じ)</label><select id="mEnd"></select></div>
+    <div class="mrow"><label for="mNo">No(並び順) — 空欄なら時期で自動。順番を調整したい場合のみ入力</label><input type="text" id="mNo" inputmode="numeric" placeholder="自動"></div>
+    <div class="mrow">
+      <label>担当メンバー</label>
+      <div class="mmembers" id="mMembers"></div>
+      <div class="maddrow"><select id="mAddSel"></select><button class="btn" id="mAddBtn" style="background:#0d9488;">追加</button></div>
+      <div class="help" style="margin:4px 0 0;">※ 詳細な日時付きで入れたいときは、画面右の「👥 メンバー」をスケジュール表の行へドラッグ</div>
+    </div>
+    <div class="btns">
+      <button class="btn danger" id="mDelete" style="margin-right:auto;">予定から外す</button>
+      <button class="btn gray" id="mCancel">キャンセル</button>
+      <button class="btn" id="mSave" style="background:#0d9488;">スケジュールに配置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ドラッグイン(担当追加)モーダル -->
+<div class="overlay" id="dropOverlay">
+  <div class="modal">
+    <h3 id="dTitle"></h3>
+    <div class="catname">実施する詳細な日時を入力してください(目安の月日から自動入力済み)</div>
+    <div class="mrow"><label for="dDate">実施日(詳細)</label><input type="date" id="dDate"></div>
+    <div class="mrow"><label for="dTime">時刻(任意)</label><input type="time" id="dTime"></div>
+    <div class="btns">
+      <button class="btn gray" id="dCancel">キャンセル</button>
+      <button class="btn" id="dSave" style="background:#0d9488;">担当に追加</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function clearActive(){
+    document.querySelectorAll('.stop').forEach(function(b){b.classList.remove('active');});
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+    document.querySelectorAll('.ctaBtn').forEach(function(b){b.classList.remove('active');});
+  }
+  document.querySelectorAll('.stop').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      clearActive();
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.p).classList.add('active');
+      document.getElementById(btn.dataset.p).scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  });
+  function ctaOpen(btnId, panelId){
+    document.getElementById(btnId).addEventListener('click', function(){
+      clearActive();
+      this.classList.add('active');
+      document.getElementById(panelId).classList.add('active');
+      document.getElementById(panelId).scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+  ctaOpen('openSched','s6');
+  ctaOpen('openHelp','sHelp');
+
+  /* 🤝 支援者ガイド: かんたん/くわしく トグル */
+  (function(){
+    var help = document.getElementById('sHelp');
+    document.querySelectorAll('.helpToggle .htBtn').forEach(function(b){
+      b.addEventListener('click', function(){
+        document.querySelectorAll('.helpToggle .htBtn').forEach(function(x){x.classList.remove('on');});
+        b.classList.add('on');
+        if(b.dataset.mode === 'detail'){ help.classList.add('showDetail'); }
+        else { help.classList.remove('showDetail'); }
+      });
+    });
+  })();
+
+  /* 受け皿別スイッチャー(💴タブ) — JS無効時は全カード縦積み表示(=フォールバック) */
+  (function(){
+    var kzBtns = document.querySelectorAll('.kzBtn');
+    var kzCards = document.querySelectorAll('.kzCard');
+    if(!kzBtns.length || !kzCards.length) return;
+    function kzShow(k){
+      kzCards.forEach(function(c){ c.style.display = (c.id===k) ? 'block' : 'none'; });
+      kzBtns.forEach(function(b){ b.classList.toggle('active', b.dataset.k===k); });
+    }
+    kzBtns.forEach(function(b){ b.addEventListener('click', function(){ kzShow(b.dataset.k); }); });
+    kzShow(kzBtns[0].dataset.k);
+  })();
+</script>
+
+<script>
+/* ===== 🗓️ 活動スケジュール ===== */
+(function(){
+"use strict";
+const LS_KEY = "arukikata_schedule_v1";
+const DAY = 86400000;
+
+const BUCKETS = [
+  {id:"pre",   label:"それ以前",   days:430},
+  {id:"m12",   label:"1年前",     days:365},
+  {id:"m11",   label:"11ヶ月前",  days:334},
+  {id:"m10",   label:"10ヶ月前",  days:304},
+  {id:"m9",    label:"9ヶ月前",   days:273},
+  {id:"m8",    label:"8ヶ月前",   days:243},
+  {id:"m7",    label:"7ヶ月前",   days:212},
+  {id:"m6",    label:"半年前",    days:182},
+  {id:"m5",    label:"5ヶ月前",   days:152},
+  {id:"m4",    label:"4ヶ月前",   days:121},
+  {id:"m3",    label:"3ヶ月前",   days:91},
+  {id:"m2",    label:"2ヶ月前",   days:61},
+  {id:"m15",   label:"1ヶ月半前", days:45},
+  {id:"m1",    label:"1ヶ月前",   days:30},
+  {id:"w3",    label:"3週前",     days:21},
+  {id:"w2",    label:"2週前",     days:14},
+  {id:"w1",    label:"1週前",     days:7},
+  {id:"preK",  label:"告示日前",  days:null},
+  {id:"kokuji",label:"告示日",    days:null},
+  {id:"last",  label:"最終日",    days:1},
+  {id:"vote",  label:"投票日",    days:0},
+];
+
+const MODEL = {
+  pre:   "確認団体ポスターはずっと貼れる/本人ポスターを貼る/地域課題の調査開始/意見交換会開催/自治会や地元の行事に参加/ホームページ作成",
+  m12:   "政策決め/街宣車の予約/資金調達計画スタート(選挙ドットコム等)",
+  m11:   "ボランティア募集",
+  m10:   "辻立ち/支援者100人",
+  m8:    "選対本部発足・コアスタッフ決定",
+  m6:    "2連ポスター(本人ポスター👉2連に貼替)/SNS毎日更新/告示ポスター予約",
+  m5:    "宛名転記",
+  m4:    "宛名データ化/ウグイス・運転手打診/政策発表会会場予約/街宣車看板・選挙広報・証紙ビラのデザインたたき台",
+  m3:    "(宛名)目視確認/事務所探し/⚠️運動員説明会をやるならこの頃",
+  m2:    "事前準備/政策発表会/選挙事務所契約/⚠️立候補予定者事前説明会 — これを待っているとだいたい遅い",
+  m15:   "説明会後は資材デザインの最終確認だけで、すぐ発注できる状態にしておく",
+  m1:    "事務所開き/最終確認",
+  w1:    "すべての書類チェック",
+  preK:  "2連ポスター👉政党用に貼替/ポスティング最終日/告示後注意発信",
+  kokuji:"街宣スタート/⚠️葉書・折込・街宣メンバーはトラブル多数のため注意",
+  last:  "投票日注意発信",
+  vote:  "—",
+};
+
+const CATS = [
+  {id:"poster", name:"ポスター"},
+  {id:"pr",     name:"広報・発信"},
+  {id:"vol",    name:"ボランティア・支援者"},
+  {id:"office", name:"事務・手続"},
+  {id:"fund",   name:"資金"},
+  {id:"policy", name:"政策"},
+  {id:"misc",   name:"その他"},
+];
+
+const SEED_ITEMS = [
+  ["本人ポスター掲示","poster"],["確認団体ポスター掲示","poster"],["2連ポスターに貼替","poster"],
+  ["告示ポスター予約","poster"],["政党用ポスターに貼替","poster"],
+  ["ホームページ作成","pr"],["SNS毎日更新","pr"],["辻立ち","pr"],["街宣","pr"],["ポスティング","pr"],
+  ["政策発表会","pr"],["意見交換会","pr"],["地元行事への参加","pr"],
+  ["ボランティア募集","vol"],["支援者100人づくり","vol"],["ウグイス・運転手打診","vol"],["運動員説明会","vol"],
+  ["街宣車の予約","office"],["選対本部発足","office"],["宛名転記","office"],["宛名データ化","office"],
+  ["宛名の目視確認","office"],["事務所探し","office"],["選挙事務所契約","office"],["事務所開き","office"],
+  ["政策発表会の会場予約","office"],["資材デザインたたき台","office"],["資材発注","office"],
+  ["立候補予定者事前説明会","office"],["書類チェック","office"],
+  ["資金調達計画","fund"],
+  ["地域課題の調査","policy"],["政策決め","policy"],
+];
+
+function migrate(st){
+  if(!st.members || !st.members.length) st.members = ["本人"];
+  Object.keys(st.assign||{}).forEach(function(k){
+    const a = st.assign[k];
+    if(!a.members){
+      a.members = a.actor ? [{name:a.actor, date:"", time:""}] : [];
+      delete a.actor;
+    }
+    if(a.no===undefined) a.no=null;
+  });
+  return st;
+}
+let state = load();
+function load(){
+  try{
+    const st = JSON.parse(localStorage.getItem(LS_KEY));
+    if(st && st.items) return migrate(st);
+  }catch(e){}
+  return {
+    voteDate: "2027-04-25",
+    kokujiDate: "",
+    items: SEED_ITEMS.map(function(x,i){return {id:"i"+i, name:x[0], cat:x[1]};}),
+    assign: {},
+    members: ["本人"],
+    nextId: SEED_ITEMS.length,
+  };
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+function pDate(v){ const a=v.split("-").map(Number); return new Date(a[0],a[1]-1,a[2]); }
+function fmtMD(d){ return (d.getMonth()+1)+"/"+d.getDate(); }
+function fmtYM(d){ return d.getFullYear()+"年"+(d.getMonth()+1)+"月頃"; }
+function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function bucketDate(b){
+  const vote = pDate(state.voteDate);
+  const kokuji = state.kokujiDate ? pDate(state.kokujiDate) : new Date(vote.getTime()-7*DAY);
+  if(b.id==="kokuji") return kokuji;
+  if(b.id==="preK")   return new Date(kokuji.getTime()-DAY);
+  return new Date(vote.getTime()-b.days*DAY);
+}
+function bucketMonthLabel(b){
+  const d = bucketDate(b);
+  if(b.id==="pre") return "—";
+  if(["preK","kokuji","last","vote"].indexOf(b.id)>=0) return fmtMD(d);
+  if(b.days<=30) return fmtMD(d)+"頃";
+  return fmtYM(d);
+}
+function nowBucketIndex(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  for(let i=0;i<BUCKETS.length;i++){
+    const start = bucketDate(BUCKETS[i]);
+    const end = i+1<BUCKETS.length ? bucketDate(BUCKETS[i+1]) : new Date(pDate(state.voteDate).getTime()+DAY);
+    if(i===0 && today<end) return 0;
+    if(today>=start && today<end) return i;
+  }
+  return -1;
+}
+function escHtml(v){ return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+const $ = function(id){ return document.getElementById(id); };
+
+function renderSettings(){
+  $("voteDate").value = state.voteDate;
+  $("kokujiDate").value = state.kokujiDate || toISO(new Date(pDate(state.voteDate).getTime()-7*DAY));
+  const today = new Date(); today.setHours(0,0,0,0);
+  const left = Math.round((pDate(state.voteDate)-today)/DAY);
+  $("countdown").textContent = left>=0 ? "投票日まであと "+left+" 日" : "投票日から "+(-left)+" 日経過";
+  $("todayLabel").textContent = "本日: "+today.getFullYear()+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
+}
+
+function renderPalette(){
+  const pal = $("palette"); pal.innerHTML="";
+  CATS.forEach(function(c){
+    const items = state.items.filter(function(it){return it.cat===c.id;});
+    if(!items.length) return;
+    const blk = document.createElement("div"); blk.className="catblock";
+    const t = document.createElement("div"); t.className="cattitle"; t.textContent=c.name; blk.appendChild(t);
+    const tags = document.createElement("div"); tags.className="tags";
+    items.forEach(function(it){
+      const b = document.createElement("button");
+      b.className = "tag cat-"+it.cat + (state.assign[it.id] ? " assigned":"");
+      b.textContent = it.name;
+      b.onclick = function(){ openModal(it.id); };
+      tags.appendChild(b);
+    });
+    blk.appendChild(tags); pal.appendChild(blk);
+  });
+}
+
+/* 予定エントリ: 時期で自動ソート、手動Noは指定位置に挿入 */
+function sortedEntries(){
+  const es=[];
+  state.items.forEach(function(it){
+    const a=state.assign[it.id]; if(!a) return;
+    es.push({it:it, a:a, s:Math.min(a.start,a.end), e:Math.max(a.start,a.end)});
+  });
+  const auto=es.filter(function(x){return x.a.no==null;});
+  auto.sort(function(p,q){ return p.s-q.s || p.e-q.e || p.it.name.localeCompare(q.it.name,"ja"); });
+  const man=es.filter(function(x){return x.a.no!=null;});
+  man.sort(function(p,q){ return p.a.no-q.a.no; });
+  const out=auto.slice();
+  man.forEach(function(m){
+    const pos=Math.max(0, Math.min(out.length, m.a.no-1));
+    out.splice(pos,0,m);
+  });
+  return out;
+}
+function entryWhenLabel(en){
+  return en.s===en.e ? BUCKETS[en.s].label : BUCKETS[en.s].label+"〜"+BUCKETS[en.e].label;
+}
+function entryMonthLabel(en){
+  return en.s===en.e ? bucketMonthLabel(BUCKETS[en.s]) : bucketMonthLabel(BUCKETS[en.s])+"〜"+bucketMonthLabel(BUCKETS[en.e]);
+}
+function fmtMemberDate(m){
+  if(!m.date) return "";
+  return fmtMD(pDate(m.date))+(m.time?" "+m.time:"");
+}
+
+function renderTable(){
+  const tb = $("schedBody"); tb.innerHTML="";
+  const entries = sortedEntries();
+  if(!entries.length){
+    const tr=document.createElement("tr");
+    const td=document.createElement("td"); td.colSpan=5; td.style.color="#6b7280";
+    td.textContent="まだ予定がありません。上のタグをクリックして追加してください。";
+    tr.appendChild(td); tb.appendChild(tr); return;
+  }
+  entries.forEach(function(en,idx){
+    const tr=document.createElement("tr");
+    tr.addEventListener("dragover",function(ev){ ev.preventDefault(); ev.dataTransfer.dropEffect="copy"; tr.classList.add("dropTarget"); });
+    tr.addEventListener("dragleave",function(){ tr.classList.remove("dropTarget"); });
+    tr.addEventListener("drop",function(ev){
+      ev.preventDefault(); tr.classList.remove("dropTarget");
+      const name=ev.dataTransfer.getData("text/plain"); if(!name) return;
+      openDrop(en.it.id, name);
+    });
+    const tdNo=document.createElement("td"); tdNo.className="no"; tdNo.textContent=idx+1;
+    const tdW=document.createElement("td"); tdW.className="when"; tdW.textContent=entryWhenLabel(en);
+    const tdM=document.createElement("td"); tdM.className="month"; tdM.textContent=entryMonthLabel(en);
+    const tdI=document.createElement("td");
+    const chip=document.createElement("span"); chip.className="chip cat-"+en.it.cat;
+    chip.textContent=en.it.name; chip.onclick=function(){ openModal(en.it.id); };
+    tdI.appendChild(chip);
+    const tdT=document.createElement("td");
+    en.a.members.forEach(function(m,mi){
+      const mc=document.createElement("span"); mc.className="mchip";
+      const dtxt=fmtMemberDate(m);
+      mc.innerHTML=escHtml(m.name)+(dtxt?' <span class="mdate">('+escHtml(dtxt)+')</span>':"");
+      const x=document.createElement("button"); x.className="mdel"; x.textContent="×"; x.title="担当から外す";
+      x.onclick=function(){ en.a.members.splice(mi,1); save(); renderAll(); };
+      mc.appendChild(x); tdT.appendChild(mc);
+    });
+    if(!en.a.members.length){
+      const hint=document.createElement("span"); hint.className="drophint"; hint.textContent="👥メンバーをここへドラッグ";
+      tdT.appendChild(hint);
+    }
+    tr.appendChild(tdNo); tr.appendChild(tdW); tr.appendChild(tdM); tr.appendChild(tdI); tr.appendChild(tdT);
+    tb.appendChild(tr);
+  });
+}
+
+function renderModelTable(){
+  const tb = $("modelBody"); tb.innerHTML="";
+  const nowIdx = nowBucketIndex();
+  BUCKETS.forEach(function(b,idx){
+    const tr=document.createElement("tr");
+    if(idx===nowIdx) tr.classList.add("now");
+    if(b.id==="kokuji"||b.id==="last"||b.id==="preK") tr.classList.add("kokuji");
+    if(b.id==="vote") tr.classList.add("vote");
+    const tdW=document.createElement("td"); tdW.className="when"; tdW.textContent=b.label;
+    const tdM=document.createElement("td"); tdM.className="month"; tdM.textContent=bucketMonthLabel(b);
+    const tdMo=document.createElement("td"); tdMo.className="model"; tdMo.textContent=MODEL[b.id]||"";
+    tr.appendChild(tdW); tr.appendChild(tdM); tr.appendChild(tdMo);
+    tb.appendChild(tr);
+  });
+}
+
+function renderMembers(){
+  const list=$("memberList"); list.innerHTML="";
+  state.members.forEach(function(name,i){
+    const mc=document.createElement("span"); mc.className="pmember"; mc.draggable=true; mc.title="スケジュール表の行へドラッグ";
+    const nm=document.createElement("span"); nm.textContent=name; mc.appendChild(nm);
+    mc.addEventListener("dragstart",function(ev){
+      ev.dataTransfer.setData("text/plain",name);
+      ev.dataTransfer.effectAllowed="copy";
+    });
+    const x=document.createElement("button"); x.className="mdel"; x.textContent="×"; x.title="メンバー削除";
+    x.onclick=function(){ state.members.splice(i,1); save(); renderMembers(); };
+    mc.appendChild(x);
+    list.appendChild(mc);
+  });
+}
+
+function renderAll(){ renderSettings(); renderPalette(); renderTable(); renderModelTable(); renderMembers(); }
+
+/* ===== 実施内容モーダル ===== */
+let editingId=null, tempMembers=null;
+function fillBucketSelect(sel){
+  sel.innerHTML="";
+  BUCKETS.forEach(function(b,i){
+    const o=document.createElement("option"); o.value=i;
+    o.textContent=b.label+"("+bucketMonthLabel(b)+")";
+    sel.appendChild(o);
+  });
+}
+function renderModalMembers(){
+  const box=$("mMembers"); box.innerHTML="";
+  tempMembers.forEach(function(m,mi){
+    const mc=document.createElement("span"); mc.className="mchip";
+    const dtxt=fmtMemberDate(m);
+    mc.innerHTML=escHtml(m.name)+(dtxt?' <span class="mdate">('+escHtml(dtxt)+')</span>':"");
+    const x=document.createElement("button"); x.className="mdel"; x.textContent="×";
+    x.onclick=function(){ tempMembers.splice(mi,1); renderModalMembers(); };
+    mc.appendChild(x); box.appendChild(mc);
+  });
+  if(!tempMembers.length){
+    const sp=document.createElement("span"); sp.className="drophint"; sp.textContent="(未定)";
+    box.appendChild(sp);
+  }
+}
+function openModal(itemId){
+  editingId=itemId;
+  const it=state.items.find(function(x){return x.id===itemId;});
+  $("mTitle").textContent="🏷️ "+it.name;
+  const cat=CATS.find(function(c){return c.id===it.cat;});
+  $("mCat").textContent="カテゴリ: "+(cat?cat.name:"");
+  fillBucketSelect($("mStart")); fillBucketSelect($("mEnd"));
+  const a=state.assign[itemId];
+  $("mStart").value=a?a.start:10; $("mEnd").value=a?a.end:10;
+  $("mNo").value=(a && a.no!=null)?a.no:"";
+  tempMembers = a ? JSON.parse(JSON.stringify(a.members||[])) : [];
+  renderModalMembers();
+  const sel=$("mAddSel"); sel.innerHTML="";
+  state.members.forEach(function(n){ const o=document.createElement("option"); o.value=n; o.textContent=n; sel.appendChild(o); });
+  $("mDelete").style.display=a?"":"none";
+  $("overlay").classList.add("open");
+}
+function closeModal(){ $("overlay").classList.remove("open"); editingId=null; tempMembers=null; }
+$("mAddBtn").onclick=function(){
+  const n=$("mAddSel").value; if(!n) return;
+  tempMembers.push({name:n, date:"", time:""}); renderModalMembers();
+};
+$("mSave").onclick=function(){
+  if(editingId===null) return;
+  const nv=$("mNo").value.trim();
+  const no = nv==="" ? null : Math.max(1, parseInt(nv,10)||1);
+  state.assign[editingId]={start:+$("mStart").value, end:+$("mEnd").value, no:no, members:tempMembers};
+  save(); closeModal(); renderAll();
+};
+$("mDelete").onclick=function(){ if(editingId!==null){ delete state.assign[editingId]; save(); } closeModal(); renderAll(); };
+$("mCancel").onclick=closeModal;
+$("overlay").onclick=function(e){ if(e.target===$("overlay")) closeModal(); };
+
+/* ===== ドラッグイン(担当追加)モーダル ===== */
+let dropCtx=null;
+function openDrop(itemId, name){
+  const a=state.assign[itemId]; if(!a) return;
+  const it=state.items.find(function(x){return x.id===itemId;});
+  dropCtx={itemId:itemId, name:name};
+  $("dTitle").textContent="「"+it.name+"」の担当に「"+name+"」を追加";
+  $("dDate").value=toISO(bucketDate(BUCKETS[Math.min(a.start,a.end)]));
+  $("dTime").value="";
+  $("dropOverlay").classList.add("open");
+}
+function closeDrop(){ $("dropOverlay").classList.remove("open"); dropCtx=null; }
+$("dSave").onclick=function(){
+  if(!dropCtx) return;
+  state.assign[dropCtx.itemId].members.push({name:dropCtx.name, date:$("dDate").value||"", time:$("dTime").value||""});
+  save(); closeDrop(); renderAll();
+};
+$("dCancel").onclick=closeDrop;
+$("dropOverlay").onclick=function(e){ if(e.target===$("dropOverlay")) closeDrop(); };
+
+/* ===== メンバー管理 ===== */
+$("addMemberBtn").onclick=function(){
+  const row=$("memberAddRow");
+  row.style.display = row.style.display==="none" ? "flex" : "none";
+  if(row.style.display==="flex") $("memberName").focus();
+};
+$("memberOk").onclick=function(){
+  const n=$("memberName").value.trim();
+  if(n && state.members.indexOf(n)<0){ state.members.push(n); save(); renderMembers(); }
+  $("memberName").value=""; $("memberAddRow").style.display="none";
+};
+$("memberName").addEventListener("keydown",function(e){ if(e.key==="Enter") $("memberOk").click(); });
+
+/* ===== 設定・新規項目・リセット ===== */
+$("voteDate").onchange=function(e){
+  if(!e.target.value) return;
+  state.voteDate=e.target.value;
+  state.kokujiDate=toISO(new Date(pDate(state.voteDate).getTime()-7*DAY));
+  save(); renderAll();
+};
+$("kokujiDate").onchange=function(e){ if(!e.target.value) return; state.kokujiDate=e.target.value; save(); renderAll(); };
+$("addItemBtn").onclick=function(){
+  const name=$("newName").value.trim(); if(!name) return;
+  state.items.push({id:"i"+(state.nextId++), name:name, cat:$("newCat").value});
+  $("newName").value=""; save(); renderAll();
+};
+$("newName").addEventListener("keydown",function(e){ if(e.key==="Enter") $("addItemBtn").click(); });
+let resetArmed=false;
+$("resetBtn").onclick=function(){
+  if(!resetArmed){ resetArmed=true; $("resetBtn").textContent="もう一度押すとリセットします⚠️"; setTimeout(function(){resetArmed=false; $("resetBtn").textContent="入力内容をリセット";},3000); return; }
+  localStorage.removeItem(LS_KEY); state=load(); resetArmed=false; $("resetBtn").textContent="入力内容をリセット"; renderAll();
+};
+CATS.forEach(function(c){ const o=document.createElement("option"); o.value=c.id; o.textContent=c.name; $("newCat").appendChild(o); });
+
+/* ===== 出力(共通の行データ) ===== */
+function entryRows(){
+  const rows=[["No","時期","目安の月日","実施内容","担当"]];
+  sortedEntries().forEach(function(en,idx){
+    const tanto=en.a.members.map(function(m){
+      const d=fmtMemberDate(m); return m.name+(d?"("+d+")":"");
+    }).join("、");
+    rows.push([String(idx+1), entryWhenLabel(en), entryMonthLabel(en), en.it.name, tanto]);
+  });
+  return rows;
+}
+function modelTableRows(){
+  const rows=[["時期","目安の月日","基本モデル(参考)"]];
+  BUCKETS.forEach(function(b){ rows.push([b.label, bucketMonthLabel(b), MODEL[b.id]||""]); });
+  return rows;
+}
+function metaRows(){
+  const k = state.kokujiDate || toISO(new Date(pDate(state.voteDate).getTime()-7*DAY));
+  return [["活動スケジュール(選挙と政治活動の歩き方)"],["告示日", k, "投票日", state.voteDate],[""]];
+}
+function allRows(){
+  return metaRows().concat(entryRows(), [[""]], modelTableRows());
+}
+
+/* ===== Googleスプレッド出力 ===== */
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(text).then(function(){return true;}, function(){return copyFallback(text);});
+  }
+  return Promise.resolve(copyFallback(text));
+}
+function copyFallback(text){
+  const ta=document.createElement("textarea"); ta.value=text;
+  ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select();
+  let ok=false; try{ ok=document.execCommand("copy"); }catch(e){}
+  ta.remove(); return ok;
+}
+$("sheetBtn").onclick=function(){
+  const tsv = allRows().map(function(r){return r.join("\t");}).join("\n");
+  copyText(tsv).then(function(ok){
+    if(ok){
+      $("exportHint").textContent="✅ 表をコピーしました。開いた新規スプレッドシートのA1セルで貼り付け(Ctrl+V)してください。";
+      window.open("https://sheets.new","_blank");
+    }else{
+      $("exportHint").textContent="⚠️ コピーに失敗しました。「Excelダウンロード」をお使いください(Googleスプレッドにもインポートできます)。";
+    }
+  });
+};
+
+/* ===== Excel(.xlsx)ダウンロード(ライブラリ不使用の最小xlsx生成) ===== */
+function xmlesc(v){ return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function colName(n){ let out=""; n++; while(n>0){ n--; out=String.fromCharCode(65+n%26)+out; n=Math.floor(n/26); } return out; }
+function sheetXml(rows){
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>';
+  rows.forEach(function(r,ri){
+    x+='<row r="'+(ri+1)+'">';
+    r.forEach(function(c,ci){
+      if(c==="" || c==null) return;
+      x+='<c r="'+colName(ci)+(ri+1)+'" t="inlineStr"><is><t xml:space="preserve">'+xmlesc(c)+'</t></is></c>';
+    });
+    x+='</row>';
+  });
+  return x+'</sheetData></worksheet>';
+}
+const CRC_T=(function(){ const t=new Uint32Array(256); for(let i=0;i<256;i++){ let c=i; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[i]=c>>>0; } return t; })();
+function crc32(u8){ let c=0xFFFFFFFF; for(let i=0;i<u8.length;i++) c=CRC_T[(c^u8[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function makeZip(files){
+  const parts=[], central=[]; let offset=0;
+  files.forEach(function(f){
+    const d=f.data, nameB=f.nameB, crc=crc32(d);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true);
+    lh.setUint16(8,0,true); lh.setUint16(10,0,true); lh.setUint16(12,0,true);
+    lh.setUint32(14,crc,true); lh.setUint32(18,d.length,true); lh.setUint32(22,d.length,true);
+    lh.setUint16(26,nameB.length,true); lh.setUint16(28,0,true);
+    parts.push(new Uint8Array(lh.buffer), nameB, d);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true);
+    ch.setUint16(10,0,true); ch.setUint16(12,0,true); ch.setUint16(14,0,true);
+    ch.setUint32(16,crc,true); ch.setUint32(20,d.length,true); ch.setUint32(24,d.length,true);
+    ch.setUint16(28,nameB.length,true);
+    ch.setUint32(42,offset,true);
+    central.push(new Uint8Array(ch.buffer), nameB);
+    offset += 30 + nameB.length + d.length;
+  });
+  let cdSize=0; central.forEach(function(u){ cdSize+=u.length; });
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true);
+  eo.setUint16(8,files.length,true); eo.setUint16(10,files.length,true);
+  eo.setUint32(12,cdSize,true); eo.setUint32(16,offset,true);
+  return new Blob(parts.concat(central,[new Uint8Array(eo.buffer)]),
+    {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function xlsxBlob(rows){
+  const enc=new TextEncoder();
+  const mk=function(name,xml){ return {nameB:enc.encode(name), data:enc.encode(xml)}; };
+  return makeZip([
+    mk("[Content_Types].xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'),
+    mk("_rels/.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'),
+    mk("xl/workbook.xml",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="スケジュール" sheetId="1" r:id="rId1"/></sheets></workbook>'),
+    mk("xl/_rels/workbook.xml.rels",'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'),
+    mk("xl/worksheets/sheet1.xml", sheetXml(rows)),
+  ]);
+}
+$("xlsxBtn").onclick=function(){
+  const blob=xlsxBlob(allRows());
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="活動スケジュール.xlsx";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(a.href);
+  $("exportHint").textContent="✅ Excelファイル(活動スケジュール.xlsx)を保存しました。";
+};
+
+renderAll();
+})();
+</script>
+</body>
+</html>
