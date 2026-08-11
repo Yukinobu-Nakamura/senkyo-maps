@@ -237,17 +237,11 @@
   .zoomBox table{width:100%; font-size:15px;}
   .zoomClose{position:fixed; top:14px; right:16px; z-index:201; background:#fff; color:#111; border:none; border-radius:99px; width:42px; height:42px; font-size:22px; font-weight:bold; line-height:1; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.35);}
   .zoomTip{display:none;}
-  /* 携帯(縦)では横長の図を90°回転して画面いっぱいに拡大(枠内に収める) */
+  /* 携帯: 図は縦(正立)のまま拡大。横長の図は横スクロールで全体を見る(回転しない) */
   @media(max-width:700px){
-    .zoomOverlay.rot .zoomBox{background:transparent; padding:0; width:auto; max-width:none; max-height:none; overflow:visible; box-shadow:none;}
-    .zoomOverlay.rot svg{
-      position:fixed; top:50%; left:50%;
-      transform:translate(-50%,-50%) rotate(90deg);
-      width:88vh !important; max-width:88vh !important; height:auto !important;
-      background:#fff; border-radius:12px; padding:12px;
-      box-shadow:0 6px 24px rgba(0,0,0,.45);
-    }
-    .zoomOverlay.rot .zoomTip{display:block; position:fixed; left:0; right:0; bottom:14px; z-index:201; text-align:center; color:#fff; font-size:12.5px; padding:0 16px; line-height:1.5;}
+    .zoomOverlay.fig .zoomBox{overflow:auto; -webkit-overflow-scrolling:touch;}
+    .zoomOverlay.fig .zoomBox svg{width:230vw !important; max-width:none !important; height:auto !important;}
+    .zoomOverlay.fig .zoomTip{display:block; position:fixed; left:0; right:0; bottom:14px; z-index:201; text-align:center; color:#fff; font-size:12.5px; padding:0 16px; line-height:1.5;}
   }
 </style>
 </head>
@@ -881,7 +875,7 @@
 <div class="zoomOverlay" id="zoomOverlay" aria-hidden="true">
   <button class="zoomClose" id="zoomClose" aria-label="閉じる">×</button>
   <div class="zoomBox" id="zoomBox"></div>
-  <div class="zoomTip">📱 スマホを横向きにすると、図が正しい向きで大きく表示されます</div>
+  <div class="zoomTip">👉 図は左右にスクロールすると全体を見られます</div>
 </div>
 
 <script>
@@ -889,12 +883,12 @@
   (function(){
     var ov = document.getElementById('zoomOverlay');
     var box = document.getElementById('zoomBox');
-    function close(){ ov.classList.remove('open'); ov.classList.remove('rot'); box.innerHTML=''; document.body.style.overflow=''; }
+    function close(){ ov.classList.remove('open'); ov.classList.remove('fig'); box.innerHTML=''; document.body.style.overflow=''; }
     document.querySelectorAll('.zoomable').forEach(function(el){
       el.addEventListener('click', function(){
         box.innerHTML = this.innerHTML;
-        // 横長の図(svg)は携帯で回転拡大するため rot を付与
-        ov.classList.toggle('rot', !!this.querySelector('svg'));
+        // 横長の図(svg)は携帯で正立のまま拡大+横スクロール。fig を付与
+        ov.classList.toggle('fig', !!this.querySelector('svg'));
         ov.classList.add('open');
         document.body.style.overflow='hidden';
       });
