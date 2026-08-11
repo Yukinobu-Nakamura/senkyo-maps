@@ -226,23 +226,22 @@
   @media(max-width:700px){
     .ngItem{display:block; margin-top:8px;}
   }
-  /* 🔍 図表のタップ拡大(lightbox) — この機能はPCでも有効(除外指定) */
-  .zoomable{cursor:zoom-in;}
-  .zoomHint{display:none; font-size:11.5px; color:var(--muted); text-align:center; margin-top:-8px; margin-bottom:8px;}
-  @media(max-width:700px){ .zoomHint{display:block;} }
-  .zoomOverlay{display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.86); padding:16px; align-items:center; justify-content:center;}
-  .zoomOverlay.open{display:flex;}
-  .zoomBox{background:#fff; border-radius:12px; padding:14px; width:100%; max-width:1040px; max-height:92vh; overflow:auto;}
-  .zoomBox svg{width:100%; height:auto;}
-  .zoomBox table{width:100%; font-size:15px;}
-  .zoomClose{position:fixed; top:14px; right:16px; z-index:201; background:#fff; color:#111; border:none; border-radius:99px; width:42px; height:42px; font-size:22px; font-weight:bold; line-height:1; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.35);}
-  .zoomTip{display:none;}
-  /* 携帯: 図は縦(正立)のまま拡大。横長の図は横スクロールで全体を見る(回転しない) */
+  /* ===== ⏱️ タイムライン: PCは横SVG / 携帯は大きな文字の縦レイアウト(スクロール不要) ===== */
+  .tlMobile{display:none;}
   @media(max-width:700px){
-    .zoomOverlay.fig .zoomBox{overflow:auto; -webkit-overflow-scrolling:touch;}
-    .zoomOverlay.fig .zoomBox svg{width:230vw !important; max-width:none !important; height:auto !important;}
-    .zoomOverlay.fig .zoomTip{display:block; position:fixed; left:0; right:0; bottom:14px; z-index:201; text-align:center; color:#fff; font-size:12.5px; padding:0 16px; line-height:1.5;}
+    .figDesktop{display:none;}            /* 携帯では横長SVGを隠す */
+    .tlMobile{display:block; margin:14px 0 6px;}
   }
+  .tlMobile .tlLead{font-size:13px; color:var(--muted); text-align:center; margin-bottom:10px;}
+  .tlPhase{border:2px solid #d3d7e3; border-radius:14px; padding:12px 14px; background:#fff;}
+  .tlPhase.hot{border-color:var(--ng); background:#fff5f5;}
+  .tlWhen{font-size:15px; font-weight:bold; color:var(--ink); margin-bottom:8px;}
+  .tlPhase.hot .tlWhen{color:var(--ng);}
+  .tlRow{font-size:15px; line-height:1.5; padding:5px 0; display:flex; gap:6px; align-items:baseline; flex-wrap:wrap;}
+  .tlRow.pol{color:#047857;} .tlRow.ele{color:#b91c1c;}
+  .tlRow b{font-size:15.5px;}
+  .tlMark{text-align:center; font-size:14.5px; font-weight:bold; color:var(--ng); padding:8px 0;}
+  .tlMark small{display:block; font-size:12px; color:var(--muted); font-weight:normal;}
 </style>
 </head>
 <body>
@@ -298,7 +297,7 @@
     </table>
     <p style="font-size:12.5px; color:var(--muted);">※ よくある誤解: 「政治活動＝政治資金規正法だけ」ではありません。<b>政治活動も公職選挙法の規制を一定程度受けます</b>(特に <b>時期</b>[事前運動の禁止]と <b>文書図画</b>[のぼり・ポスター・あいさつ状]、<b>寄附</b>、<b>選挙期間中の活動制限</b>)。両法は重なって適用されると理解してください。</p>
     <p>👉 「こんなまちにしたい」と語るのは<b>政治活動</b>(平時OK)。「〇〇選挙で私に投票を」は<b>選挙運動</b>(期間外は事前運動でNG)。</p>
-    <div class="zoomable" style="margin:14px 0 4px; text-align:center;">
+    <div class="figDesktop" style="margin:14px 0 18px; text-align:center;">
       <svg viewBox="0 0 900 280" role="img" aria-label="時間の流れで見る政治活動と選挙運動の違いのタイムライン図。政治活動は常時できるが、選挙運動期間中だけは一部制限される(点線で表示)。選挙運動は告示日から投票日前日までの選挙運動期間だけでき、期間外は事前運動としてNG。" style="width:100%; height:auto;">
         <!-- 時間軸 -->
         <line x1="170" y1="42" x2="860" y2="42" stroke="#6b7280" stroke-width="2.5"/>
@@ -330,7 +329,27 @@
         <text x="775" y="217" text-anchor="middle" font-size="14" fill="#dc2626" opacity="0.75">✕ できない</text>
       </svg>
     </div>
-    <div class="zoomHint">🔍 図をタップすると拡大できます</div>
+    <!-- 携帯用: 大きな文字の縦タイムライン(SVGの内容と同じ・スクロール不要) -->
+    <div class="tlMobile">
+      <div class="tlLead">⏱️ 時間の流れ（上から下へ）</div>
+      <div class="tlPhase">
+        <div class="tlWhen">① 平時（告示日より前）</div>
+        <div class="tlRow pol">🌱 政治活動：<b>自由にできる</b></div>
+        <div class="tlRow ele">📣 選挙運動：<b>できない</b>（事前運動でNG）</div>
+      </div>
+      <div class="tlMark">▼ 告示日<small>（立候補の届出）</small></div>
+      <div class="tlPhase hot">
+        <div class="tlWhen">② 選挙運動期間（告示日〜投票日の前日）</div>
+        <div class="tlRow pol">🌱 政治活動：<b>一部制限あり</b></div>
+        <div class="tlRow ele">📣 選挙運動：<b>この期間だけOK</b></div>
+      </div>
+      <div class="tlMark">▼ 投票日</div>
+      <div class="tlPhase">
+        <div class="tlWhen">③ 投票日以降</div>
+        <div class="tlRow pol">🌱 政治活動：<b>自由にできる</b></div>
+        <div class="tlRow ele">📣 選挙運動：<b>できない</b></div>
+      </div>
+    </div>
     <h3>時期を問わず、ずっと禁止の3つ</h3>
     <ul>
       <li>🚫 <b>寄附の禁止</b> — 政治家・候補者(になろうとする人)が選挙区内の人にお金や物を贈ること(お祭りへの差し入れ、香典・お中元なども原則NG)。※逆に<b>受け取る</b>寄附のルールと支援者の税控除は「💴 寄附とお金」タブへ</li>
@@ -870,34 +889,6 @@
     </div>
   </div>
 </div>
-
-<!-- 🔍 図表拡大オーバーレイ -->
-<div class="zoomOverlay" id="zoomOverlay" aria-hidden="true">
-  <button class="zoomClose" id="zoomClose" aria-label="閉じる">×</button>
-  <div class="zoomBox" id="zoomBox"></div>
-  <div class="zoomTip">👉 図は左右にスクロールすると全体を見られます</div>
-</div>
-
-<script>
-  /* 🔍 図表のタップ拡大 */
-  (function(){
-    var ov = document.getElementById('zoomOverlay');
-    var box = document.getElementById('zoomBox');
-    function close(){ ov.classList.remove('open'); ov.classList.remove('fig'); box.innerHTML=''; document.body.style.overflow=''; }
-    document.querySelectorAll('.zoomable').forEach(function(el){
-      el.addEventListener('click', function(){
-        box.innerHTML = this.innerHTML;
-        // 横長の図(svg)は携帯で正立のまま拡大+横スクロール。fig を付与
-        ov.classList.toggle('fig', !!this.querySelector('svg'));
-        ov.classList.add('open');
-        document.body.style.overflow='hidden';
-      });
-    });
-    ov.addEventListener('click', function(e){ if(e.target===ov || e.target.id==='zoomClose') close(); });
-    document.getElementById('zoomClose').addEventListener('click', close);
-    document.addEventListener('keydown', function(e){ if(e.key==='Escape') close(); });
-  })();
-</script>
 
 <script>
   function clearActive(){
