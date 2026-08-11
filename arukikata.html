@@ -236,6 +236,19 @@
   .zoomBox svg{width:100%; height:auto;}
   .zoomBox table{width:100%; font-size:15px;}
   .zoomClose{position:fixed; top:14px; right:16px; z-index:201; background:#fff; color:#111; border:none; border-radius:99px; width:42px; height:42px; font-size:22px; font-weight:bold; line-height:1; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.35);}
+  .zoomTip{display:none;}
+  /* 携帯(縦)では横長の図を90°回転して画面いっぱいに拡大(枠内に収める) */
+  @media(max-width:700px){
+    .zoomOverlay.rot .zoomBox{background:transparent; padding:0; width:auto; max-width:none; max-height:none; overflow:visible; box-shadow:none;}
+    .zoomOverlay.rot svg{
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%) rotate(90deg);
+      width:88vh !important; max-width:88vh !important; height:auto !important;
+      background:#fff; border-radius:12px; padding:12px;
+      box-shadow:0 6px 24px rgba(0,0,0,.45);
+    }
+    .zoomOverlay.rot .zoomTip{display:block; position:fixed; left:0; right:0; bottom:14px; z-index:201; text-align:center; color:#fff; font-size:12.5px; padding:0 16px; line-height:1.5;}
+  }
 </style>
 </head>
 <body>
@@ -287,8 +300,9 @@
       <tr class="cmpHead"><th></th><th>🌱 政治活動</th><th>📣 選挙運動</th></tr>
       <tr><td class="rowlabel"><b>なに?</b></td><td class="pol" data-c="🌱 政治活動">政策の発信・後援会づくりなど、政治上の主張を広める活動全般</td><td class="ele" data-c="📣 選挙運動">特定の選挙で特定の候補者への<b>投票を呼びかける</b>行為</td></tr>
       <tr><td class="rowlabel"><b>いつできる?</b></td><td class="pol" data-c="🌱 政治活動">平時は自由(選挙期間中は一部制限)</td><td class="ele" data-c="📣 選挙運動"><b>告示日の立候補届出後〜投票日の前日</b>だけ</td></tr>
-      <tr><td class="rowlabel"><b>主なルール</b></td><td class="pol" data-c="🌱 政治活動">政治資金規正法(お金の透明化)</td><td class="ele" data-c="📣 選挙運動">公職選挙法(やり方を細かく規定)</td></tr>
+      <tr><td class="rowlabel"><b>主なルール</b></td><td class="pol" data-c="🌱 政治活動"><b>政治資金規正法</b>(お金の透明化)が中心。<b>加えて公職選挙法の規制も受ける</b> — 事前運動の禁止/のぼり・ポスター等の文書図画の制限/あいさつ状・寄附の禁止/選挙期間中の政治活動の制限(確認団体制度)など</td><td class="ele" data-c="📣 選挙運動"><b>公職選挙法</b>(やり方を細かく規定)。運動費用は収支報告の対象</td></tr>
     </table>
+    <p style="font-size:12.5px; color:var(--muted);">※ よくある誤解: 「政治活動＝政治資金規正法だけ」ではありません。<b>政治活動も公職選挙法の規制を一定程度受けます</b>(特に <b>時期</b>[事前運動の禁止]と <b>文書図画</b>[のぼり・ポスター・あいさつ状]、<b>寄附</b>、<b>選挙期間中の活動制限</b>)。両法は重なって適用されると理解してください。</p>
     <p>👉 「こんなまちにしたい」と語るのは<b>政治活動</b>(平時OK)。「〇〇選挙で私に投票を」は<b>選挙運動</b>(期間外は事前運動でNG)。</p>
     <div class="zoomable" style="margin:14px 0 4px; text-align:center;">
       <svg viewBox="0 0 900 280" role="img" aria-label="時間の流れで見る政治活動と選挙運動の違いのタイムライン図。政治活動は常時できるが、選挙運動期間中だけは一部制限される(点線で表示)。選挙運動は告示日から投票日前日までの選挙運動期間だけでき、期間外は事前運動としてNG。" style="width:100%; height:auto;">
@@ -867,6 +881,7 @@
 <div class="zoomOverlay" id="zoomOverlay" aria-hidden="true">
   <button class="zoomClose" id="zoomClose" aria-label="閉じる">×</button>
   <div class="zoomBox" id="zoomBox"></div>
+  <div class="zoomTip">📱 スマホを横向きにすると、図が正しい向きで大きく表示されます</div>
 </div>
 
 <script>
@@ -874,10 +889,12 @@
   (function(){
     var ov = document.getElementById('zoomOverlay');
     var box = document.getElementById('zoomBox');
-    function close(){ ov.classList.remove('open'); box.innerHTML=''; document.body.style.overflow=''; }
+    function close(){ ov.classList.remove('open'); ov.classList.remove('rot'); box.innerHTML=''; document.body.style.overflow=''; }
     document.querySelectorAll('.zoomable').forEach(function(el){
       el.addEventListener('click', function(){
         box.innerHTML = this.innerHTML;
+        // 横長の図(svg)は携帯で回転拡大するため rot を付与
+        ov.classList.toggle('rot', !!this.querySelector('svg'));
         ov.classList.add('open');
         document.body.style.overflow='hidden';
       });
