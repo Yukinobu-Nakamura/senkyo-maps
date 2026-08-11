@@ -206,6 +206,36 @@
   .panel.showDetail li.detailOnly{display:flex;}
   .helpFoot{background:#fef2f2; border:2px solid var(--ng); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-top:14px; line-height:1.7;}
   .helpFoot b{color:var(--ng);}
+
+  /* ===== 📱 携帯向け改善(PC[>700px]のビューは不変) ===== */
+  /* 比較表: 携帯だけカード化。PCは通常の表のまま */
+  @media(max-width:700px){
+    .cmpTable{border:0; display:block;}
+    .cmpTable tbody{display:block;}
+    .cmpTable tr.cmpHead{display:none;}
+    .cmpTable tr{display:block; border:2px solid #c7d2fe; border-radius:14px; padding:8px 14px 12px; margin-bottom:14px; background:#fff;}
+    .cmpTable td{display:block; border:0; padding:0;}
+    .cmpTable td.rowlabel{font-size:15.5px; font-weight:bold; color:var(--ink); padding:4px 0 6px; margin-bottom:6px; border-bottom:2px solid #eef2ff;}
+    .cmpTable td.pol,.cmpTable td.ele{padding:8px 0;}
+    .cmpTable td.pol{border-bottom:1px dashed #e5e7eb;}
+    .cmpTable td[data-c]::before{content:attr(data-c); display:block; font-size:12.5px; font-weight:bold; margin-bottom:2px;}
+    .cmpTable td.pol[data-c]::before{color:#059669;}
+    .cmpTable td.ele[data-c]::before{color:#dc2626;}
+  }
+  /* 箇条(①②③)などを携帯では改行して縦積み。PCは従来どおりinline */
+  @media(max-width:700px){
+    .ngItem{display:block; margin-top:8px;}
+  }
+  /* 🔍 図表のタップ拡大(lightbox) — この機能はPCでも有効(除外指定) */
+  .zoomable{cursor:zoom-in;}
+  .zoomHint{display:none; font-size:11.5px; color:var(--muted); text-align:center; margin-top:-8px; margin-bottom:8px;}
+  @media(max-width:700px){ .zoomHint{display:block;} }
+  .zoomOverlay{display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.86); padding:16px; align-items:center; justify-content:center;}
+  .zoomOverlay.open{display:flex;}
+  .zoomBox{background:#fff; border-radius:12px; padding:14px; width:100%; max-width:1040px; max-height:92vh; overflow:auto;}
+  .zoomBox svg{width:100%; height:auto;}
+  .zoomBox table{width:100%; font-size:15px;}
+  .zoomClose{position:fixed; top:14px; right:16px; z-index:201; background:#fff; color:#111; border:none; border-radius:99px; width:42px; height:42px; font-size:22px; font-weight:bold; line-height:1; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.35);}
 </style>
 </head>
 <body>
@@ -253,14 +283,14 @@
         <li><b>投票依頼</b> — 投票を得る(得させる)ことを目的とした働きかけ</li>
       </ol>
     </div>
-    <table>
-      <tr><th></th><th>🌱 政治活動</th><th>📣 選挙運動</th></tr>
-      <tr><td><b>なに?</b></td><td>政策の発信・後援会づくりなど、政治上の主張を広める活動全般</td><td>特定の選挙で特定の候補者への<b>投票を呼びかける</b>行為</td></tr>
-      <tr><td><b>いつできる?</b></td><td>平時は自由(選挙期間中は一部制限)</td><td><b>告示日の立候補届出後〜投票日の前日</b>だけ</td></tr>
-      <tr><td><b>主なルール</b></td><td>政治資金規正法(お金の透明化)</td><td>公職選挙法(やり方を細かく規定)</td></tr>
+    <table class="cmpTable">
+      <tr class="cmpHead"><th></th><th>🌱 政治活動</th><th>📣 選挙運動</th></tr>
+      <tr><td class="rowlabel"><b>なに?</b></td><td class="pol" data-c="🌱 政治活動">政策の発信・後援会づくりなど、政治上の主張を広める活動全般</td><td class="ele" data-c="📣 選挙運動">特定の選挙で特定の候補者への<b>投票を呼びかける</b>行為</td></tr>
+      <tr><td class="rowlabel"><b>いつできる?</b></td><td class="pol" data-c="🌱 政治活動">平時は自由(選挙期間中は一部制限)</td><td class="ele" data-c="📣 選挙運動"><b>告示日の立候補届出後〜投票日の前日</b>だけ</td></tr>
+      <tr><td class="rowlabel"><b>主なルール</b></td><td class="pol" data-c="🌱 政治活動">政治資金規正法(お金の透明化)</td><td class="ele" data-c="📣 選挙運動">公職選挙法(やり方を細かく規定)</td></tr>
     </table>
     <p>👉 「こんなまちにしたい」と語るのは<b>政治活動</b>(平時OK)。「〇〇選挙で私に投票を」は<b>選挙運動</b>(期間外は事前運動でNG)。</p>
-    <div style="margin:14px 0 18px; text-align:center;">
+    <div class="zoomable" style="margin:14px 0 4px; text-align:center;">
       <svg viewBox="0 0 900 280" role="img" aria-label="時間の流れで見る政治活動と選挙運動の違いのタイムライン図。政治活動は常時できるが、選挙運動期間中だけは一部制限される(点線で表示)。選挙運動は告示日から投票日前日までの選挙運動期間だけでき、期間外は事前運動としてNG。" style="width:100%; height:auto;">
         <!-- 時間軸 -->
         <line x1="170" y1="42" x2="860" y2="42" stroke="#6b7280" stroke-width="2.5"/>
@@ -292,6 +322,7 @@
         <text x="775" y="217" text-anchor="middle" font-size="14" fill="#dc2626" opacity="0.75">✕ できない</text>
       </svg>
     </div>
+    <div class="zoomHint">🔍 図をタップすると拡大できます</div>
     <h3>時期を問わず、ずっと禁止の3つ</h3>
     <ul>
       <li>🚫 <b>寄附の禁止</b> — 政治家・候補者(になろうとする人)が選挙区内の人にお金や物を贈ること(お祭りへの差し入れ、香典・お中元なども原則NG)。※逆に<b>受け取る</b>寄附のルールと支援者の税控除は「💴 寄附とお金」タブへ</li>
@@ -714,7 +745,10 @@
     </div>
 
     <div class="helpFoot">
-      🚫 <b>3つとも共通のNG(これだけは覚えて):</b> ①<b>買収・お金や物のやりとり</b>(受けても渡してもNG。運動員の違反で候補者が当選無効になる連座制も) ②<b>投票日当日の選挙運動</b>(SNS投稿もNG) ③<b>ウソ・なりすまし</b>。<br>
+      🚫 <b>3つとも共通のNG(これだけは覚えて):</b>
+      <span class="ngItem">①<b>買収・お金や物のやりとり</b>(受けても渡してもNG。運動員の違反で候補者が当選無効になる連座制も)</span>
+      <span class="ngItem">②<b>投票日当日の選挙運動</b>(SNS投稿もNG)</span>
+      <span class="ngItem">③<b>ウソ・なりすまし</b>。</span><br>
       困ったら「これって大丈夫?」と<b>陣営・選管に一言確認</b>を。その一手間があなたと候補者を守ります。
     </div>
     <div class="more">📚 根拠: 公選法129条・142条・143条・164条の5/6・201条の5以下・221条・243条/刑法130条/軽犯罪法1条32号/郵便法4条。整理メモ: ポスティング留意事項・掲示物(のぼり)整理。数値・可否は目安、実務は所轄選管で確認を。</div>
@@ -828,6 +862,31 @@
     </div>
   </div>
 </div>
+
+<!-- 🔍 図表拡大オーバーレイ -->
+<div class="zoomOverlay" id="zoomOverlay" aria-hidden="true">
+  <button class="zoomClose" id="zoomClose" aria-label="閉じる">×</button>
+  <div class="zoomBox" id="zoomBox"></div>
+</div>
+
+<script>
+  /* 🔍 図表のタップ拡大 */
+  (function(){
+    var ov = document.getElementById('zoomOverlay');
+    var box = document.getElementById('zoomBox');
+    function close(){ ov.classList.remove('open'); box.innerHTML=''; document.body.style.overflow=''; }
+    document.querySelectorAll('.zoomable').forEach(function(el){
+      el.addEventListener('click', function(){
+        box.innerHTML = this.innerHTML;
+        ov.classList.add('open');
+        document.body.style.overflow='hidden';
+      });
+    });
+    ov.addEventListener('click', function(e){ if(e.target===ov || e.target.id==='zoomClose') close(); });
+    document.getElementById('zoomClose').addEventListener('click', close);
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') close(); });
+  })();
+</script>
 
 <script>
   function clearActive(){
