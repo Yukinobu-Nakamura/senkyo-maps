@@ -861,6 +861,7 @@
     <div class="catname" id="mCat"></div>
     <div class="mrow"><label for="mStart">開始時期</label><select id="mStart"></select></div>
     <div class="mrow"><label for="mEnd">終了時期(単発なら開始と同じ)</label><select id="mEnd"></select></div>
+    <div class="help" id="mRecHint" style="margin:-4px 0 0; color:#0d9488;"></div>
     <div class="mrow"><label for="mNo">No(並び順) — 空欄なら時期で自動。順番を調整したい場合のみ入力</label><input type="text" id="mNo" inputmode="numeric" placeholder="自動"></div>
     <div class="mrow">
       <label>担当メンバー</label>
@@ -1016,6 +1017,26 @@ const SEED_ITEMS = [
   ["資金調達計画","fund"],
   ["地域課題の調査","policy"],["政策決め","policy"],
 ];
+
+/* 項目ごとの推奨時期(初期値の目安)。値は BUCKETS のindex [開始, 終了]。
+   基本モデル(MODEL)と整合。あくまで目安で、モーダルで自由に変更可。 */
+var REC_DEFAULT = [10,10]; // 該当がなければ「3ヶ月前」
+var REC = {
+  "本人ポスター掲示":[0,7], "確認団体ポスター掲示":[0,17], "2連ポスターに貼替":[7,7],
+  "告示ポスター予約":[7,7], "政党用ポスターに貼替":[17,17],
+  "ホームページ作成":[0,3], "SNS毎日更新":[7,20], "辻立ち":[3,20], "街宣":[18,20],
+  "ポスティング":[3,17], "政策発表会":[11,11], "意見交換会":[0,9], "地元行事への参加":[0,17],
+  "ボランティア募集":[2,9], "支援者100人づくり":[3,9], "ウグイス・運転手打診":[9,9], "運動員説明会":[10,10],
+  "街宣車の予約":[1,1], "選対本部発足":[5,5], "宛名転記":[8,8], "宛名データ化":[9,9],
+  "宛名の目視確認":[10,10], "事務所探し":[10,11], "選挙事務所契約":[11,11], "事務所開き":[13,13],
+  "政策発表会の会場予約":[9,9], "資材デザインたたき台":[9,9], "資材発注":[12,12],
+  "立候補予定者事前説明会":[11,11], "書類チェック":[16,16],
+  "資金調達計画":[1,1], "地域課題の調査":[0,9], "政策決め":[0,1],
+};
+function recFor(item){
+  var r = (item && REC[item.name]) ? REC[item.name] : REC_DEFAULT;
+  return { start: r[0], end: r[1] };
+}
 
 function migrate(st){
   if(!st.members || !st.members.length) st.members = ["本人"];
@@ -1245,7 +1266,11 @@ function openModal(itemId){
   $("mCat").textContent="カテゴリ: "+(cat?cat.name:"");
   fillBucketSelect($("mStart")); fillBucketSelect($("mEnd"));
   const a=state.assign[itemId];
-  $("mStart").value=a?a.start:10; $("mEnd").value=a?a.end:10;
+  const rec=recFor(it);
+  $("mStart").value=a?a.start:rec.start; $("mEnd").value=a?a.end:rec.end;
+  if($("mRecHint")){
+    $("mRecHint").textContent = a ? "" : "💡 初期値はこの項目の目安時期です（自由に変更できます）";
+  }
   $("mNo").value=(a && a.no!=null)?a.no:"";
   tempMembers = a ? JSON.parse(JSON.stringify(a.members||[])) : [];
   renderModalMembers();
