@@ -34,13 +34,14 @@
   <h1>📢 街宣マップ</h1>
   <div class="toolbar">
     <button id="addBtn" title="地図をタップして地点を追加">📍 地点を追加</button>
+    <button id="loadSuginami" title="同梱の杉並区データ(小中学校・幼稚園・保育園・病院ほか)を読み込む">🏫 杉並区データを読込</button>
     <label class="filebtn">📂 CSV読込<input type="file" id="csvIn" accept=".csv,text/csv"></label>
     <button id="csvOut">💾 CSV書出</button>
     <button id="resetBtn">状態リセット</button>
     <a href="index.html" style="align-self:center;">← トップ</a>
   </div>
 </header>
-<div class="samplebar" id="sampleBar">⚠️ 表示中は<b>杉並区のサンプル(ダミー)地点</b>です。実際の施設一覧は区の公表情報からCSVで読み込むか、「📍 地点を追加」で足してください。</div>
+<div class="samplebar" id="sampleBar">⚠️ 表示中は<b>杉並区のサンプル(ダミー)地点</b>です。上の「🏫 杉並区データを読込」で<b>実データ(小中学校・幼稚園・保育園・病院ほか約350件)</b>に切り替わります。他地域はCSVを「📂 CSV読込」で取り込むか、「📍 地点を追加」で足してください。</div>
 <div class="addbar" id="addBar">📍 追加モード：地図上のタップした場所に地点を追加します。もう一度ボタンを押すと解除します。</div>
 <div id="map"></div>
 
@@ -255,13 +256,14 @@ function parseCat(v){
   const hit = kw.find(k => s.indexOf(k[1])>=0);
   return hit ? hit[0] : "spot";
 }
-onFileSelected(document.getElementById("csvIn"), (text) => {
+/* CSVテキスト → 地点配列(座標が無効な行は除外)。エラー時は null(alert済) */
+function csvToPoints(text){
   const rows = parseCsv(text);
-  if(rows.length < 2) return alert("CSVにデータ行がありません");
+  if(rows.length < 2){ alert("CSVにデータ行がありません"); return null; }
   const head = rows[0];
   const ix = {};
   for(const k in COL) ix[k] = findCol(head, COL[k]);
-  if(ix.lat < 0 || ix.long < 0) return alert("緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。");
+  if(ix.lat < 0 || ix.long < 0){ alert("緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。"); return null; }
   const loaded = [];
   rows.slice(1).forEach((r,i) => {
     const lat = parseFloat(r[ix.lat]), long = parseFloat(r[ix.long]);
@@ -275,22 +277,47 @@ onFileSelected(document.getElementById("csvIn"), (text) => {
       note: ix.note>=0 ? (r[ix.note]||"") : "",
     });
   });
-  if(!loaded.length) return alert("有効な座標の行がありません");
-  const add = usingSample ? confirm("読み込んだ地点を現在のサンプルに『追加』しますか?\n[キャンセル]を押すと、サンプルを置き換えて読み込みます。") : true;
-  if(usingSample && !add){
-    points = loaded;
-  } else if(usingSample && add){
-    points = points.concat(loaded);
-  } else {
-    if(!confirm("読み込んだ地点を現在のマップに追加します。よろしいですか?")) return;
-    points = points.concat(loaded);
-  }
+  if(!loaded.length){ alert("有効な座標の行がありません"); return null; }
+  return loaded;
+}
+/* 読み込んだ地点を反映。mode: "append"=追加 / "replace"=置換 */
+function applyLoaded(loaded, mode){
+  points = (mode==="replace") ? loaded : points.concat(loaded);
   usingSample = false;
   saveLocal(KEY_POINTS, points);
   document.getElementById("sampleBar").style.display = "none";
   map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
   renderPoints();
+}
+
+onFileSelected(document.getElementById("csvIn"), (text) => {
+  const loaded = csvToPoints(text);
+  if(!loaded) return;
+  if(usingSample){
+    const add = confirm("読み込んだ地点を現在のサンプルに『追加』しますか?\n[キャンセル]を押すと、サンプルを置き換えて読み込みます。");
+    applyLoaded(loaded, add ? "append" : "replace");
+  } else {
+    if(!confirm("読み込んだ地点を現在のマップに追加します。よろしいですか?")) return;
+    applyLoaded(loaded, "append");
+  }
 });
+
+/* ワンクリック: 同梱の杉並区データを読み込む */
+const suginamiBtn = document.getElementById("loadSuginami");
+if(suginamiBtn) suginamiBtn.onclick = async () => {
+  if(!usingSample && !confirm("現在の地点に杉並区の音声配慮施設データを『追加』します。よろしいですか?")) return;
+  if(usingSample && !confirm("杉並区の音声配慮施設データ(小中学校・幼稚園・保育園・病院ほか)を読み込みます。サンプルは置き換えられます。よろしいですか?")) return;
+  try{
+    const res = await fetch("data/suginami_gaisen.csv");
+    if(!res.ok) throw new Error(res.status);
+    const text = await res.text();
+    const loaded = csvToPoints(text);
+    if(!loaded) return;
+    applyLoaded(loaded, usingSample ? "replace" : "append");
+  }catch(e){
+    alert("杉並区データの読み込みに失敗しました。オンライン環境で再度お試しください。("+e.message+")");
+  }
+};
 
 document.getElementById("csvOut").onclick = () => {
   const rows = [["id","name","address","lat","long","cat","catLabel","care","note"]];
