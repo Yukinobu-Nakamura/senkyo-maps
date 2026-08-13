@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="assets/common.css?v=10">
+<style>
+  /* 種別ピン(絵文字divIcon) */
+  .gm-pin{
+    width:30px; height:30px; border-radius:50%;
+    background:#fff; border:3px solid var(--c,#546e7a);
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; line-height:1; box-shadow:0 1px 4px rgba(0,0,0,.4);
+  }
+  /* 音声配慮地点は赤ハローで目立たせる(静穏配慮の合図) */
+  .gm-care{
+    border-width:4px;
+    box-shadow:0 0 0 4px rgba(229,57,53,.30), 0 1px 5px rgba(0,0,0,.45);
+  }
+  .leaflet-div-icon.gm-wrap{ background:transparent; border:none; }
+  .legend .grp{ font-weight:700; margin:6px 0 2px; display:block; }
+  .legend .care-note{ color:#c62828; font-size:11px; }
+  .legend i.dot{ width:12px; height:12px; border-radius:50%; border:2px solid #333; display:inline-block; margin-right:6px; vertical-align:-1px; }
+  .addbar{ display:none; background:#c62828; color:#fff; text-align:center; padding:6px 10px; font-size:13px; font-weight:700; }
+  .addbar.on{ display:block; }
+  #addBtn.on{ background:#c62828; color:#fff; }
+  .pcaution{ color:#c62828; font-size:12px; margin-top:4px; }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <h1>📢 街宣マップ</h1>
+  <div class="toolbar">
+    <button id="addBtn" title="地図をタップして地点を追加">📍 地点を追加</button>
+    <label class="filebtn">📂 CSV読込<input type="file" id="csvIn" accept=".csv,text/csv"></label>
+    <button id="csvOut">💾 CSV書出</button>
+    <button id="resetBtn">状態リセット</button>
+    <a href="index.html" style="align-self:center;">← トップ</a>
+  </div>
+</header>
+<div class="samplebar" id="sampleBar">⚠️ 表示中は<b>杉並区のサンプル(ダミー)地点</b>です。実際の施設一覧は区の公表情報からCSVで読み込むか、「📍 地点を追加」で足してください。</div>
+<div class="addbar" id="addBar">📍 追加モード：地図上のタップした場所に地点を追加します。もう一度ボタンを押すと解除します。</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="assets/common.js?v=10"></script>
+<script>
+"use strict";
+
+/* ===== 種別定義 =====
+   care:true = 音声配慮地点(拡声機の音量・時間に配慮すべき場所)。赤ハローで強調。
+   公選法140条の2: 学校・病院等の周辺では静穏の保持に努める。 */
+const CATS = [
+  // 🔇 音声配慮地点(静穏に配慮 — 目立たせる)
+  { id:"youchien", label:"幼稚園",         emoji:"🧒", color:"#e53935", care:true },
+  { id:"hoiku",    label:"保育園",         emoji:"👶", color:"#fb8c00", care:true },
+  { id:"school",   label:"学校(小中高)",   emoji:"🏫", color:"#8e24aa", care:true },
+  { id:"hospital", label:"病院",           emoji:"🏥", color:"#c62828", care:true },
+  { id:"medical",  label:"医療・福祉施設", emoji:"⚕️", color:"#00897b", care:true },
+  { id:"yobiko",   label:"予備校・学習塾", emoji:"📚", color:"#3949ab", care:true },
+  // 📢 街宣好適地点(人の滞留 — 公共空間が主軸)
+  { id:"station",  label:"駅前",           emoji:"🚉", color:"#1e88e5", care:false },
+  { id:"shoten",   label:"商店街",         emoji:"🛍️", color:"#00acc1", care:false },
+  { id:"park",     label:"公園",           emoji:"🌳", color:"#43a047", care:false },
+  { id:"store",    label:"大型店前",       emoji:"🏬", color:"#7cb342", care:false },
+  { id:"spot",     label:"その他の滞留地点", emoji:"📍", color:"#546e7a", care:false },
+  // 参考(私有地・要配慮)
+  { id:"mansion",  label:"マンション(参考)", emoji:"🏢", color:"#9e9e9e", care:false,
+    caution:"敷地内は私有地です。管理者の許可なく敷地内での街宣・立入はできません。前面の公道からの配慮に留めてください。" },
+];
+const CARE_GROUP = ["youchien","hoiku","school","hospital","medical","yobiko"];
+const SPOT_GROUP = ["station","shoten","park","store","spot"];
+const REF_GROUP  = ["mansion"];
+
+const KEY_POINTS = "gaisenMap.points"; // 読込/追加した地点一式
+const KEY_EDITS  = "gaisenMap.edits";  // サンプルへの編集差分 {id:{cat,name,note,lat,long,deleted}}
+
+function catOf(id){ return CATS.find(c => c.id === id) || CATS.find(c=>c.id==="spot"); }
+function esc(v){ return (v==null?"":String(v)).replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ===== 地図 ===== */
+const map = L.map("map", { preferCanvas:false }).setView([35.6994, 139.6363], 14); // 杉並区役所付近
+const baseLayers = createBaseLayers();
+baseLayers["地理院地図(淡色)"].addTo(map);
+
+/* 種別ごとのレイヤ(グループ見出し付きで切替) */
+const catLayers = {};
+CATS.forEach(c => { catLayers[c.id] = L.layerGroup().addTo(map); });
+const overlays = {};
+CATS.forEach(c => {
+  const grp = c.care ? "🔇 " : (REF_GROUP.indexOf(c.id)>=0 ? "🏢 " : "📢 ");
+  overlays[grp + c.emoji + " " + c.label] = catLayers[c.id];
+});
+L.control.layers(baseLayers, overlays, { collapsed:true }).addTo(map);
+addLocateControl(map);
+L.control.scale({ imperial:false }).addTo(map);
+
+addGuideControl(map, "📢 街宣マップの使い方",
+  `<ol>
+    <li><b>音声配慮地点を表示</b> — 🧒幼稚園・👶保育園・🏫学校・🏥病院・⚕️医療福祉・📚予備校/塾は<b style="color:#c62828">赤いふちで強調</b>。街宣車の音量・時間に配慮する目印です(公選法140条の2)。</li>
+    <li><b>街宣好適地点を足す</b> — 🚉駅前・🛍️商店街・🌳公園・🏬大型店前など<b>人が滞留する公共空間</b>を「📍地点を追加」で登録。</li>
+    <li><b>地点をタップ</b> — 種別・名称・メモを編集/削除できます。</li>
+    <li><b>共有・バックアップ</b> — 「💾CSV書出」で保存し、メンバーはそのCSVを「📂読込」すると同じ地点を再現できます。</li>
+    <li><b>区の情報から一括で入れる</b> — 施設名・住所・緯度経度・種別の列を持つCSVを「📂読込」で取り込めます。</li>
+  </ol>
+  <div class="gNote">🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。データはこの端末(ブラウザ)内にのみ保存されます。</div>`,
+  "gaisenMap");
+
+/* 凡例 */
+const legendCtl = L.control({ position:"bottomright" });
+legendCtl.onAdd = () => {
+  const div = L.DomUtil.create("div", "legend");
+  const row = c => `<i class="dot" style="background:${c.color}${c.care?';box-shadow:0 0 0 2px rgba(229,57,53,.35)':''}"></i>${c.emoji} ${c.label}`;
+  div.innerHTML =
+    `<span class="grp">🔇 音声配慮地点</span>` + CARE_GROUP.map(id=>row(catOf(id))).join("<br>") +
+    `<br><span class="care-note">▲ 赤ふち＝静穏に配慮</span>` +
+    `<span class="grp">📢 街宣好適地点</span>` + SPOT_GROUP.map(id=>row(catOf(id))).join("<br>") +
+    `<span class="grp">🏢 参考</span>` + REF_GROUP.map(id=>row(catOf(id))).join("<br>");
+  return div;
+};
+legendCtl.addTo(map);
+
+/* 件数ボックス */
+const statCtl = L.control({ position:"topright" });
+let statDiv;
+statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return statDiv; };
+statCtl.addTo(map);
+
+let points = [];
+let usingSample = true;
+let addMode = false;
+
+function renderStats(){
+  const care = points.filter(p => catOf(p.cat).care).length;
+  const spot = points.length - care;
+  statDiv.innerHTML = `地点 <b>${points.length}</b> 件<br>🔇 配慮 ${care} ・ 📢 好適/参考 ${spot}`;
+}
+
+function markerFor(p){
+  const c = catOf(p.cat);
+  const icon = L.divIcon({
+    className: "gm-wrap",
+    html: `<div class="gm-pin ${c.care?'gm-care':''}" style="--c:${c.color}"><span>${c.emoji}</span></div>`,
+    iconSize: [30,30], iconAnchor: [15,15], popupAnchor: [0,-14],
+  });
+  return L.marker([p.lat, p.long], { icon });
+}
+
+function popupHtml(p){
+  const c = catOf(p.cat);
+  const opts = CATS.map(x => `<option value="${x.id}" ${x.id===p.cat?"selected":""}>${x.emoji} ${x.label}</option>`).join("");
+  const caution = c.caution ? `<div class="pcaution">⚠️ ${c.caution}</div>` : "";
+  return `<b>${esc(p.name)||"(名称未設定)"}</b><br>${esc(p.address)||""}` +
+    (p.address?"<br>":"") +
+    `<a href="https://www.google.com/maps/search/${p.lat},+${p.long}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
+    `種別:<select id="pCat">${opts}</select>` +
+    `名称:<input type="text" id="pName" value="${esc(p.name)}" maxlength="60">` +
+    `メモ:<input type="text" id="pNote" value="${esc(p.note)}" maxlength="100" placeholder="例)8-9時は避ける／人通り多い">` +
+    caution +
+    `<button class="popupSave" id="pSave">保存</button><button class="popupDel" id="pDel">削除</button>`;
+}
+
+function renderPoints(){
+  Object.values(catLayers).forEach(l => l.clearLayers());
+  points.forEach(p => {
+    const m = markerFor(p).addTo(catLayers[catOf(p.cat).id]);
+    m.bindPopup(() => popupHtml(p));
+    m.on("popupopen", (e) => {
+      const node = e.popup.getElement();
+      node.querySelector("#pSave").onclick = () => {
+        p.cat  = node.querySelector("#pCat").value;
+        p.name = node.querySelector("#pName").value.trim();
+        p.note = node.querySelector("#pNote").value.trim();
+        persist();
+        map.closePopup();
+        renderPoints();
+      };
+      node.querySelector("#pDel").onclick = () => {
+        if(!confirm("この地点を削除しますか?")) return;
+        p._deleted = true;
+        points = points.filter(x => x !== p);
+        persist();
+        map.closePopup();
+        renderPoints();
+      };
+    });
+  });
+  renderStats();
+}
+
+function persist(){
+  if(usingSample){
+    // サンプル運用中は差分のみ保存(編集・追加・削除)
+    const edits = {};
+    points.forEach(p => {
+      if(p._added) edits[p.id] = { added:true, cat:p.cat, name:p.name, note:p.note, address:p.address||"", lat:p.lat, long:p.long };
+      else edits[p.id] = { cat:p.cat, name:p.name, note:p.note, lat:p.lat, long:p.long };
+    });
+    // 削除されたサンプルidを記録
+    (window.__sampleIds||[]).forEach(id => {
+      if(!points.some(p => p.id===id)) edits[id] = { deleted:true };
+    });
+    saveLocal(KEY_EDITS, edits);
+  } else {
+    saveLocal(KEY_POINTS, points);
+  }
+}
+
+/* ===== 追加モード ===== */
+let addSeq = 0;
+document.getElementById("addBtn").onclick = () => {
+  addMode = !addMode;
+  document.getElementById("addBtn").classList.toggle("on", addMode);
+  document.getElementById("addBar").classList.toggle("on", addMode);
+  map.getContainer().style.cursor = addMode ? "crosshair" : "";
+};
+map.on("click", (e) => {
+  if(!addMode) return;
+  const id = usingSample ? ("add"+(Date.now())+"_"+(addSeq++)) : ("p"+(Date.now())+"_"+(addSeq++));
+  const p = { id, name:"", address:"", lat:+e.latlng.lat.toFixed(6), long:+e.latlng.lng.toFixed(6), cat:"spot", note:"", _added: usingSample ? true : undefined };
+  points.push(p);
+  persist();
+  renderPoints();
+  // 追加直後にポップアップを開いて種別・名称を入力してもらう
+  const c = catOf(p.cat);
+  catLayers[c.id].eachLayer(l => {
+    const ll = l.getLatLng();
+    if(Math.abs(ll.lat-p.lat)<1e-6 && Math.abs(ll.lng-p.long)<1e-6) l.openPopup();
+  });
+});
+
+/* ===== CSV ===== */
+const COL = {
+  id:["id","ID","番号"],
+  name:["name","名称","施設名","名前","地点名"],
+  address:["address","住所","所在地"],
+  lat:["lat","latitude","緯度"],
+  long:["long","lng","longitude","経度"],
+  cat:["cat","category","種別","分類","カテゴリ","type"],
+  note:["note","メモ","備考"],
+};
+function findCol(head, keys){ return head.findIndex(h => keys.includes((h||"").trim())); }
+/* 種別セルは id / ラベル / 部分一致 で解釈。空欄は spot。 */
+function parseCat(v){
+  if(!v) return "spot";
+  const s = String(v).trim();
+  let c = CATS.find(x => x.id===s || x.label===s);
+  if(c) return c.id;
+  c = CATS.find(x => s.indexOf(x.label)>=0 || x.label.indexOf(s)>=0);
+  if(c) return c.id;
+  // ざっくりキーワード
+  const kw = [["hospital","病院"],["hoiku","保育"],["youchien","幼稚"],["school","学校"],["school","小学"],["school","中学"],["school","高校"],["medical","診療"],["medical","クリニック"],["medical","医院"],["medical","介護"],["medical","福祉"],["yobiko","予備校"],["yobiko","塾"],["station","駅"],["shoten","商店"],["park","公園"],["store","店"],["mansion","マンション"]];
+  const hit = kw.find(k => s.indexOf(k[1])>=0);
+  return hit ? hit[0] : "spot";
+}
+onFileSelected(document.getElementById("csvIn"), (text) => {
+  const rows = parseCsv(text);
+  if(rows.length < 2) return alert("CSVにデータ行がありません");
+  const head = rows[0];
+  const ix = {};
+  for(const k in COL) ix[k] = findCol(head, COL[k]);
+  if(ix.lat < 0 || ix.long < 0) return alert("緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。");
+  const loaded = [];
+  rows.slice(1).forEach((r,i) => {
+    const lat = parseFloat(r[ix.lat]), long = parseFloat(r[ix.long]);
+    if(!isFinite(lat) || !isFinite(long)) return;
+    loaded.push({
+      id: ix.id>=0 && r[ix.id] ? r[ix.id] : ("R"+(i+1)),
+      name: ix.name>=0 ? (r[ix.name]||"") : "",
+      address: ix.address>=0 ? (r[ix.address]||"") : "",
+      lat, long,
+      cat: ix.cat>=0 ? parseCat(r[ix.cat]) : "spot",
+      note: ix.note>=0 ? (r[ix.note]||"") : "",
+    });
+  });
+  if(!loaded.length) return alert("有効な座標の行がありません");
+  const add = usingSample ? confirm("読み込んだ地点を現在のサンプルに『追加』しますか?\n[キャンセル]を押すと、サンプルを置き換えて読み込みます。") : true;
+  if(usingSample && !add){
+    points = loaded;
+  } else if(usingSample && add){
+    points = points.concat(loaded);
+  } else {
+    if(!confirm("読み込んだ地点を現在のマップに追加します。よろしいですか?")) return;
+    points = points.concat(loaded);
+  }
+  usingSample = false;
+  saveLocal(KEY_POINTS, points);
+  document.getElementById("sampleBar").style.display = "none";
+  map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
+  renderPoints();
+});
+
+document.getElementById("csvOut").onclick = () => {
+  const rows = [["id","name","address","lat","long","cat","catLabel","care","note"]];
+  points.forEach(p => {
+    const c = catOf(p.cat);
+    rows.push([p.id, p.name, p.address||"", p.lat, p.long, c.id, c.label, c.care?"配慮":"", p.note||""]);
+  });
+  downloadFile(`gaisen_points_${todayStamp()}.csv`, "﻿" + toCsv(rows), "text/csv;charset=utf-8");
+};
+
+document.getElementById("resetBtn").onclick = () => {
+  if(!confirm("追加・編集した地点をすべて消去してサンプルに戻します。よろしいですか?\n(必要ならまず「CSV書出」でバックアップしてください)")) return;
+  localStorage.removeItem(KEY_POINTS);
+  localStorage.removeItem(KEY_EDITS);
+  location.reload();
+};
+
+/* ===== 杉並区サンプル(ダミー) ===== */
+const SAMPLE = [
+  { id:"s1",  name:"杉並区役所(サンプル)",        address:"杉並区阿佐谷南1", lat:35.6994, long:139.6363, cat:"spot",     note:"" },
+  { id:"s2",  name:"阿佐ケ谷駅前(サンプル)",       address:"杉並区阿佐谷南",  lat:35.7046, long:139.6360, cat:"station",  note:"人通り多い" },
+  { id:"s3",  name:"荻窪駅前(サンプル)",           address:"杉並区上荻",      lat:35.7047, long:139.6199, cat:"station",  note:"" },
+  { id:"s4",  name:"高円寺駅前(サンプル)",         address:"杉並区高円寺北",  lat:35.7053, long:139.6497, cat:"station",  note:"" },
+  { id:"s5",  name:"阿佐谷パールセンター(サンプル)", address:"杉並区阿佐谷南",  lat:35.7028, long:139.6360, cat:"shoten",   note:"商店街・滞留あり" },
+  { id:"s6",  name:"○○病院(サンプル)",           address:"杉並区阿佐谷北",  lat:35.7060, long:139.6470, cat:"hospital", note:"静穏配慮" },
+  { id:"s7",  name:"○○小学校(サンプル)",         address:"杉並区阿佐谷南",  lat:35.7010, long:139.6335, cat:"school",   note:"下校時間に注意" },
+  { id:"s8",  name:"○○保育園(サンプル)",         address:"杉並区成田東",    lat:35.6975, long:139.6395, cat:"hoiku",    note:"午睡時間に配慮" },
+  { id:"s9",  name:"○○幼稚園(サンプル)",         address:"杉並区天沼",      lat:35.7080, long:139.6300, cat:"youchien", note:"" },
+  { id:"s10", name:"○○クリニック(サンプル)",     address:"杉並区荻窪",      lat:35.7035, long:139.6215, cat:"medical",  note:"" },
+  { id:"s11", name:"○○予備校 阿佐ケ谷校(サンプル)", address:"杉並区阿佐谷南", lat:35.7040, long:139.6352, cat:"yobiko",   note:"自習室あり・静穏配慮" },
+  { id:"s12", name:"○○公園(サンプル)",           address:"杉並区成田西",    lat:35.6960, long:139.6320, cat:"park",     note:"" },
+];
+
+/* ===== 起動 ===== */
+(function init(){
+  const saved = loadLocal(KEY_POINTS, null);
+  if(saved && Array.isArray(saved) && saved.length){
+    points = saved;
+    usingSample = false;
+    document.getElementById("sampleBar").style.display = "none";
+    map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
+  } else {
+    window.__sampleIds = SAMPLE.map(s => s.id);
+    const edits = loadLocal(KEY_EDITS, {});
+    // サンプル + 差分(編集/削除) を適用
+    points = SAMPLE
+      .filter(s => !(edits[s.id] && edits[s.id].deleted))
+      .map(s => {
+        const e = edits[s.id];
+        return e ? Object.assign({}, s, { cat:e.cat||s.cat, name:e.name!=null?e.name:s.name, note:e.note!=null?e.note:s.note, lat:e.lat||s.lat, long:e.long||s.long }) : Object.assign({}, s);
+      });
+    // 追加された地点(added)を復元
+    Object.keys(edits).forEach(id => {
+      const e = edits[id];
+      if(e && e.added){
+        points.push({ id, name:e.name||"", address:e.address||"", lat:e.lat, long:e.long, cat:e.cat||"spot", note:e.note||"", _added:true });
+      }
+    });
+  }
+  renderPoints();
+})();
+</script>
+</body>
+</html>
