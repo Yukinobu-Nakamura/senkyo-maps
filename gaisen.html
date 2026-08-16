@@ -67,12 +67,16 @@ const CATS = [
   { id:"park",     label:"公園",           emoji:"🌳", color:"#43a047", care:false },
   { id:"store",    label:"大型店前",       emoji:"🏬", color:"#7cb342", care:false },
   { id:"spot",     label:"その他の滞留地点", emoji:"📍", color:"#546e7a", care:false },
+  // 🗳️ 投票所(選挙時の人の流れの目印)
+  { id:"kijitsumae", label:"期日前投票所",   emoji:"🗳️", color:"#6d4c41", care:false,
+    caution:"投票所の入口を含む建物・敷地内やその近接では選挙運動が制限されます(公選法)。近づく際は距離・音量に配慮してください。" },
   // 参考(私有地・要配慮)
   { id:"mansion",  label:"マンション(参考)", emoji:"🏢", color:"#9e9e9e", care:false,
     caution:"敷地内は私有地です。管理者の許可なく敷地内での街宣・立入はできません。前面の公道からの配慮に留めてください。" },
 ];
 const CARE_GROUP = ["youchien","hoiku","school","hospital","medical","yobiko"];
 const SPOT_GROUP = ["station","shoten","park","store","spot"];
+const VOTE_GROUP = ["kijitsumae"];
 const REF_GROUP  = ["mansion"];
 
 const KEY_POINTS = "gaisenMap.points"; // 読込/追加した地点一式(この端末に保存)
@@ -90,7 +94,7 @@ const catLayers = {};
 CATS.forEach(c => { catLayers[c.id] = L.layerGroup().addTo(map); });
 const overlays = {};
 CATS.forEach(c => {
-  const grp = c.care ? "🔇 " : (REF_GROUP.indexOf(c.id)>=0 ? "🏢 " : "📢 ");
+  const grp = c.care ? "🔇 " : (REF_GROUP.indexOf(c.id)>=0 ? "🏢 " : VOTE_GROUP.indexOf(c.id)>=0 ? "🗳️ " : "📢 ");
   overlays[grp + c.emoji + " " + c.label] = catLayers[c.id];
 });
 L.control.layers(baseLayers, overlays, { collapsed:true }).addTo(map);
@@ -117,6 +121,7 @@ legendCtl.onAdd = () => {
     `<span class="grp">🔇 音声配慮地点</span>` + CARE_GROUP.map(id=>row(catOf(id))).join("<br>") +
     `<br><span class="care-note">▲ 赤ふち＝静穏に配慮</span>` +
     `<span class="grp">📢 街宣好適地点</span>` + SPOT_GROUP.map(id=>row(catOf(id))).join("<br>") +
+    `<span class="grp">🗳️ 投票所</span>` + VOTE_GROUP.map(id=>row(catOf(id))).join("<br>") +
     `<span class="grp">🏢 参考</span>` + REF_GROUP.map(id=>row(catOf(id))).join("<br>");
   return div;
 };
@@ -242,7 +247,7 @@ function parseCat(v){
   c = CATS.find(x => s.indexOf(x.label)>=0 || x.label.indexOf(s)>=0);
   if(c) return c.id;
   // ざっくりキーワード
-  const kw = [["hospital","病院"],["hoiku","保育"],["youchien","幼稚"],["school","学校"],["school","小学"],["school","中学"],["school","高校"],["medical","診療"],["medical","クリニック"],["medical","医院"],["medical","介護"],["medical","福祉"],["yobiko","予備校"],["yobiko","塾"],["station","駅"],["shoten","商店"],["park","公園"],["store","店"],["mansion","マンション"]];
+  const kw = [["kijitsumae","期日前"],["kijitsumae","投票所"],["hospital","病院"],["hoiku","保育"],["youchien","幼稚"],["school","学校"],["school","小学"],["school","中学"],["school","高校"],["medical","診療"],["medical","クリニック"],["medical","医院"],["medical","介護"],["medical","福祉"],["yobiko","予備校"],["yobiko","塾"],["station","駅"],["shoten","商店"],["park","公園"],["store","店"],["mansion","マンション"]];
   const hit = kw.find(k => s.indexOf(k[1])>=0);
   return hit ? hit[0] : "spot";
 }
