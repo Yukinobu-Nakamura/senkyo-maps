@@ -34,14 +34,14 @@
   <h1>📢 街宣マップ</h1>
   <div class="toolbar">
     <button id="addBtn" title="地図をタップして地点を追加">📍 地点を追加</button>
-    <button id="loadSuginami" title="同梱の杉並区データ(小中学校・幼稚園・保育園・病院ほか)を読み込む">🏫 杉並区データを読込</button>
+    <button id="loadSuginami" title="使い方の見本として、同梱の杉並区データ(小中学校・幼稚園・保育園・病院ほか)を読み込む">🏫 例として杉並区データを見る</button>
     <label class="filebtn">📂 CSV読込<input type="file" id="csvIn" accept=".csv,text/csv"></label>
     <button id="csvOut">💾 CSV書出</button>
     <button id="resetBtn">状態リセット</button>
     <a href="index.html" style="align-self:center;">← トップ</a>
   </div>
 </header>
-<div class="samplebar" id="sampleBar">⚠️ 表示中は<b>杉並区のサンプル(ダミー)地点</b>です。上の「🏫 杉並区データを読込」で<b>実データ(小中学校・幼稚園・保育園・病院ほか約350件)</b>に切り替わります。他地域はCSVを「📂 CSV読込」で取り込むか、「📍 地点を追加」で足してください。</div>
+<div class="samplebar" id="sampleBar">📍 まだ地点がありません。<b>「📂 CSV読込」で自分の地域の施設データ</b>(施設名・住所・緯度経度・種別の列)を取り込むか、<b>「🏫 例として杉並区データを見る」</b>で使い方の見本を表示できます。街宣好適地点は「📍 地点を追加」で足せます。</div>
 <div class="addbar" id="addBar">📍 追加モード：地図上のタップした場所に地点を追加します。もう一度ボタンを押すと解除します。</div>
 <div id="map"></div>
 
@@ -75,8 +75,7 @@ const CARE_GROUP = ["youchien","hoiku","school","hospital","medical","yobiko"];
 const SPOT_GROUP = ["station","shoten","park","store","spot"];
 const REF_GROUP  = ["mansion"];
 
-const KEY_POINTS = "gaisenMap.points"; // 読込/追加した地点一式
-const KEY_EDITS  = "gaisenMap.edits";  // サンプルへの編集差分 {id:{cat,name,note,lat,long,deleted}}
+const KEY_POINTS = "gaisenMap.points"; // 読込/追加した地点一式(この端末に保存)
 
 function catOf(id){ return CATS.find(c => c.id === id) || CATS.find(c=>c.id==="spot"); }
 function esc(v){ return (v==null?"":String(v)).replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -130,13 +129,17 @@ statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return sta
 statCtl.addTo(map);
 
 let points = [];
-let usingSample = true;
 let addMode = false;
 
 function renderStats(){
   const care = points.filter(p => catOf(p.cat).care).length;
   const spot = points.length - care;
   statDiv.innerHTML = `地点 <b>${points.length}</b> 件<br>🔇 配慮 ${care} ・ 📢 好適/参考 ${spot}`;
+}
+/* 地点ゼロのときだけ案内バーを表示 */
+function updateEmptyBar(){
+  const bar = document.getElementById("sampleBar");
+  if(bar) bar.style.display = points.length ? "none" : "";
 }
 
 function markerFor(p){
@@ -189,24 +192,11 @@ function renderPoints(){
     });
   });
   renderStats();
+  updateEmptyBar();
 }
 
 function persist(){
-  if(usingSample){
-    // サンプル運用中は差分のみ保存(編集・追加・削除)
-    const edits = {};
-    points.forEach(p => {
-      if(p._added) edits[p.id] = { added:true, cat:p.cat, name:p.name, note:p.note, address:p.address||"", lat:p.lat, long:p.long };
-      else edits[p.id] = { cat:p.cat, name:p.name, note:p.note, lat:p.lat, long:p.long };
-    });
-    // 削除されたサンプルidを記録
-    (window.__sampleIds||[]).forEach(id => {
-      if(!points.some(p => p.id===id)) edits[id] = { deleted:true };
-    });
-    saveLocal(KEY_EDITS, edits);
-  } else {
-    saveLocal(KEY_POINTS, points);
-  }
+  saveLocal(KEY_POINTS, points);
 }
 
 /* ===== 追加モード ===== */
@@ -219,8 +209,8 @@ document.getElementById("addBtn").onclick = () => {
 };
 map.on("click", (e) => {
   if(!addMode) return;
-  const id = usingSample ? ("add"+(Date.now())+"_"+(addSeq++)) : ("p"+(Date.now())+"_"+(addSeq++));
-  const p = { id, name:"", address:"", lat:+e.latlng.lat.toFixed(6), long:+e.latlng.lng.toFixed(6), cat:"spot", note:"", _added: usingSample ? true : undefined };
+  const id = "p"+(Date.now())+"_"+(addSeq++);
+  const p = { id, name:"", address:"", lat:+e.latlng.lat.toFixed(6), long:+e.latlng.lng.toFixed(6), cat:"spot", note:"" };
   points.push(p);
   persist();
   renderPoints();
@@ -283,37 +273,36 @@ function csvToPoints(text){
 /* 読み込んだ地点を反映。mode: "append"=追加 / "replace"=置換 */
 function applyLoaded(loaded, mode){
   points = (mode==="replace") ? loaded : points.concat(loaded);
-  usingSample = false;
   saveLocal(KEY_POINTS, points);
-  document.getElementById("sampleBar").style.display = "none";
-  map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
+  if(points.length) map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
   renderPoints();
 }
 
 onFileSelected(document.getElementById("csvIn"), (text) => {
   const loaded = csvToPoints(text);
   if(!loaded) return;
-  if(usingSample){
-    const add = confirm("読み込んだ地点を現在のサンプルに『追加』しますか?\n[キャンセル]を押すと、サンプルを置き換えて読み込みます。");
-    applyLoaded(loaded, add ? "append" : "replace");
-  } else {
+  if(points.length){
     if(!confirm("読み込んだ地点を現在のマップに追加します。よろしいですか?")) return;
     applyLoaded(loaded, "append");
+  } else {
+    applyLoaded(loaded, "replace");
   }
 });
 
-/* ワンクリック: 同梱の杉並区データを読み込む */
+/* 例示: 同梱の杉並区データを読み込む(使い方の見本) */
 const suginamiBtn = document.getElementById("loadSuginami");
 if(suginamiBtn) suginamiBtn.onclick = async () => {
-  if(!usingSample && !confirm("現在の地点に杉並区の音声配慮施設データを『追加』します。よろしいですか?")) return;
-  if(usingSample && !confirm("杉並区の音声配慮施設データ(小中学校・幼稚園・保育園・病院ほか)を読み込みます。サンプルは置き換えられます。よろしいですか?")) return;
+  const msg = points.length
+    ? "現在の地点に、例として杉並区の音声配慮施設データを『追加』します。よろしいですか?"
+    : "例として杉並区の音声配慮施設データ(小中学校・幼稚園・保育園・病院ほか)を読み込みます。\n※自分の地域で使うときは「📂 CSV読込」でご自身の施設データを取り込んでください。";
+  if(!confirm(msg)) return;
   try{
     const res = await fetch("data/suginami_gaisen.csv");
     if(!res.ok) throw new Error(res.status);
     const text = await res.text();
     const loaded = csvToPoints(text);
     if(!loaded) return;
-    applyLoaded(loaded, usingSample ? "replace" : "append");
+    applyLoaded(loaded, points.length ? "append" : "replace");
   }catch(e){
     alert("杉並区データの読み込みに失敗しました。オンライン環境で再度お試しください。("+e.message+")");
   }
@@ -329,53 +318,19 @@ document.getElementById("csvOut").onclick = () => {
 };
 
 document.getElementById("resetBtn").onclick = () => {
-  if(!confirm("追加・編集した地点をすべて消去してサンプルに戻します。よろしいですか?\n(必要ならまず「CSV書出」でバックアップしてください)")) return;
+  if(!confirm("この端末に保存した地点をすべて消去して空に戻します。よろしいですか?\n(必要ならまず「CSV書出」でバックアップしてください)")) return;
   localStorage.removeItem(KEY_POINTS);
-  localStorage.removeItem(KEY_EDITS);
   location.reload();
 };
 
-/* ===== 杉並区サンプル(ダミー) ===== */
-const SAMPLE = [
-  { id:"s1",  name:"杉並区役所(サンプル)",        address:"杉並区阿佐谷南1", lat:35.6994, long:139.6363, cat:"spot",     note:"" },
-  { id:"s2",  name:"阿佐ケ谷駅前(サンプル)",       address:"杉並区阿佐谷南",  lat:35.7046, long:139.6360, cat:"station",  note:"人通り多い" },
-  { id:"s3",  name:"荻窪駅前(サンプル)",           address:"杉並区上荻",      lat:35.7047, long:139.6199, cat:"station",  note:"" },
-  { id:"s4",  name:"高円寺駅前(サンプル)",         address:"杉並区高円寺北",  lat:35.7053, long:139.6497, cat:"station",  note:"" },
-  { id:"s5",  name:"阿佐谷パールセンター(サンプル)", address:"杉並区阿佐谷南",  lat:35.7028, long:139.6360, cat:"shoten",   note:"商店街・滞留あり" },
-  { id:"s6",  name:"○○病院(サンプル)",           address:"杉並区阿佐谷北",  lat:35.7060, long:139.6470, cat:"hospital", note:"静穏配慮" },
-  { id:"s7",  name:"○○小学校(サンプル)",         address:"杉並区阿佐谷南",  lat:35.7010, long:139.6335, cat:"school",   note:"下校時間に注意" },
-  { id:"s8",  name:"○○保育園(サンプル)",         address:"杉並区成田東",    lat:35.6975, long:139.6395, cat:"hoiku",    note:"午睡時間に配慮" },
-  { id:"s9",  name:"○○幼稚園(サンプル)",         address:"杉並区天沼",      lat:35.7080, long:139.6300, cat:"youchien", note:"" },
-  { id:"s10", name:"○○クリニック(サンプル)",     address:"杉並区荻窪",      lat:35.7035, long:139.6215, cat:"medical",  note:"" },
-  { id:"s11", name:"○○予備校 阿佐ケ谷校(サンプル)", address:"杉並区阿佐谷南", lat:35.7040, long:139.6352, cat:"yobiko",   note:"自習室あり・静穏配慮" },
-  { id:"s12", name:"○○公園(サンプル)",           address:"杉並区成田西",    lat:35.6960, long:139.6320, cat:"park",     note:"" },
-];
-
 /* ===== 起動 ===== */
+/* 本番は「空」から開始。ユーザーは「📂CSV読込」で自分の地域データを取り込む。
+   杉並区データは「🏫 例として杉並区データを見る」で読める見本(同梱)。 */
 (function init(){
   const saved = loadLocal(KEY_POINTS, null);
-  if(saved && Array.isArray(saved) && saved.length){
-    points = saved;
-    usingSample = false;
-    document.getElementById("sampleBar").style.display = "none";
+  points = (saved && Array.isArray(saved)) ? saved : [];
+  if(points.length){
     map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
-  } else {
-    window.__sampleIds = SAMPLE.map(s => s.id);
-    const edits = loadLocal(KEY_EDITS, {});
-    // サンプル + 差分(編集/削除) を適用
-    points = SAMPLE
-      .filter(s => !(edits[s.id] && edits[s.id].deleted))
-      .map(s => {
-        const e = edits[s.id];
-        return e ? Object.assign({}, s, { cat:e.cat||s.cat, name:e.name!=null?e.name:s.name, note:e.note!=null?e.note:s.note, lat:e.lat||s.lat, long:e.long||s.long }) : Object.assign({}, s);
-      });
-    // 追加された地点(added)を復元
-    Object.keys(edits).forEach(id => {
-      const e = edits[id];
-      if(e && e.added){
-        points.push({ id, name:e.name||"", address:e.address||"", lat:e.lat, long:e.long, cat:e.cat||"spot", note:e.note||"", _added:true });
-      }
-    });
   }
   renderPoints();
 })();
