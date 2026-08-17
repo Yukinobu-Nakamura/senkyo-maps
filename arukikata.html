@@ -839,11 +839,12 @@
 
     <div class="exportbar">
       <button class="btn gsheet" id="sheetBtn">📤 Googleスプレッドに出力</button>
+      <button class="btn gsheet" id="csvBtn">📄 スプレッド用CSV</button>
       <button class="btn gray" id="xlsxBtn">📥 Excelダウンロード</button>
       <button class="btn gray" id="resetBtn" style="margin-left:auto;">入力内容をリセット</button>
     </div>
     <div class="exporthint" id="exportHint"></div>
-    <p class="help" style="margin-top:6px;">「Googleスプレッドに出力」は表をコピーして新規スプレッドシート(sheets.new)を開きます。開いたシートのA1セルで貼り付け(Ctrl+V)してください。「Excelダウンロード」は .xlsx ファイルを保存します。</p>
+    <p class="help" style="margin-top:6px;">Googleスプレッドシートに入れる方法は2通り。<b>①「Googleスプレッドに出力」</b>=表をコピーして新規シート(sheets.new)を開き、A1で貼り付け(Ctrl+V)。<b>②「スプレッド用CSV」</b>=CSVを保存し、スプレッドシートの［ファイル］▶［インポート］▶［アップロード］で読み込み(スマホでも確実)。「Excelダウンロード」は .xlsx を保存します。</p>
     <div class="more">📚 基本モデルの出典: 統一選準備スケジュール(内部資料)。時期・内容は一例です — 必ず選管の日程・説明会で確認を。</div>
   </section>
 
@@ -1462,6 +1463,25 @@ $("xlsxBtn").onclick=function(){
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(a.href);
   $("exportHint").textContent="✅ Excelファイル(活動スケジュール.xlsx)を保存しました。";
+};
+
+/* ===== Googleスプレッド用CSVダウンロード(認証不要・スマホ可) ===== */
+function toCsvText(rows){
+  return rows.map(function(r){
+    return r.map(function(c){
+      c=(c==null?"":String(c));
+      return /[",\n\r]/.test(c) ? '"'+c.replace(/"/g,'""')+'"' : c;
+    }).join(",");
+  }).join("\r\n");
+}
+$("csvBtn").onclick=function(){
+  const csv="﻿"+toCsvText(allRows()); // BOM付きで文字化け防止
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="活動スケジュール.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(a.href);
+  $("exportHint").innerHTML="✅ CSVを保存しました。Googleスプレッドシートで <b>［ファイル］▶［インポート］▶［アップロード］</b> からこのCSVを選ぶと、そのまま表になります(スマホのスプレッドシートアプリでも可)。";
 };
 
 renderAll();
