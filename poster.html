@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポスターマップ — 掲示板の貼付け管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="assets/common.css?v=10">
+<link rel="stylesheet" href="assets/common.css?v=11">
 </head>
 <body>
 <header class="appbar">
@@ -22,7 +22,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/common.js?v=10"></script>
+<script src="assets/common.js?v=11"></script>
 <script>
 "use strict";
 /* ステータス定義(ここを書き換えれば増減可能) */
@@ -131,27 +131,22 @@ const COL = {
   long: ["long", "lng", "longitude", "経度"], status: ["status", "ステータス", "状態"],
   note: ["note", "メモ", "備考"],
 };
-function findCol(header, keys) {
-  return header.findIndex(h => keys.includes(h.trim()));
-}
 onFileSelected(document.getElementById("csvIn"), (text) => {
-  const rows = parseCsv(text);
-  if (rows.length < 2) return alert("CSVにデータ行がありません");
-  const head = rows[0];
-  const ix = {};
-  for (const k in COL) ix[k] = findCol(head, COL[k]);
-  if (ix.lat < 0 || ix.long < 0) return alert("緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。");
+  const res = importCsv(text, COL, { require: ["lat", "long"],
+    requireMsg: "緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。" });
+  if (res.error) return alert(res.error);
+  const hasStatus = res.ix.status >= 0;
   const loaded = [];
-  rows.slice(1).forEach((r, i) => {
-    const lat = parseFloat(r[ix.lat]), long = parseFloat(r[ix.long]);
+  res.records.forEach((o, i) => {
+    const lat = parseFloat(o.lat), long = parseFloat(o.long);
     if (!isFinite(lat) || !isFinite(long)) return;
     loaded.push({
-      id: ix.id >= 0 && r[ix.id] ? r[ix.id] : `R${i + 1}`,
-      name: ix.name >= 0 ? r[ix.name] : `地点${i + 1}`,
-      address: ix.address >= 0 ? r[ix.address] : "",
+      id: o.id ? o.id : `R${i + 1}`,
+      name: o.name ? o.name : `地点${i + 1}`,
+      address: o.address || "",
       lat, long,
-      status: ix.status >= 0 ? (Number(r[ix.status]) || 0) : 0,
-      note: ix.note >= 0 ? r[ix.note] : "",
+      status: hasStatus ? (Number(o.status) || 0) : 0,
+      note: o.note || "",
     });
   });
   if (!loaded.length) return alert("有効な座標の行がありません");

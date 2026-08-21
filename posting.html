@@ -6,7 +6,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="assets/common.css?v=10">
+<link rel="stylesheet" href="assets/common.css?v=11">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -32,7 +32,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="assets/common.js?v=10"></script>
+<script src="assets/common.js?v=11"></script>
 <script>
 "use strict";
 const SHAPE_STATUSES = [
@@ -259,7 +259,6 @@ const MG_COL = {
   lat:   ["緯度","lat","latitude"],
   long:  ["経度","long","lng","longitude"],
 };
-function mgFind(head, keys){ return head.findIndex(h => keys.includes((h||"").trim())); }
 /* ステータス→色。既知の日本語を優先し、未知は自動割当(安定) */
 const MG_STATUS_RULES = [
   { kw:["完了","済","配布済","終了"],       color:"#8b5cf6" },
@@ -325,36 +324,18 @@ function renderManageLegend(){
 function mgSave(){ saveLocal(KEY_MANAGE, manageRows); }
 
 onFileSelected(document.getElementById("mgIn"), (text) => {
-  const rows = parseCsv(text);
-  if (rows.length < 2) return alert("CSVにデータ行がありません");
-  const head = rows[0], ix = {};
-  for (const k in MG_COL) ix[k] = mgFind(head, MG_COL[k]);
-  if (ix.lat < 0 || ix.long < 0) return alert("緯度・経度の列が見つかりません。\n管理表に「緯度」「経度」の列があるか確認してください。");
-  // name列が未特定なら、既知列・数値列を除いた最初のテキスト列を名前として採用
-  if (ix.name < 0){
-    const known = Object.keys(ix).filter(k => k!=="name").map(k => ix[k]);
-    const sample = rows[1] || [];
-    for (let i=0;i<head.length;i++){
-      if (known.indexOf(i) >= 0) continue;
-      const v = (sample[i]||"").trim();
-      if (v && !isFinite(Number(v.replace(/,/g,"")))){ ix.name = i; break; }
-    }
-  }
+  const res = importCsv(text, MG_COL, {
+    require: ["lat", "long"], nameFallback: true,
+    requireMsg: "緯度・経度の列が見つかりません。\n管理表に「緯度」「経度」の列があるか確認してください。",
+  });
+  if (res.error) return alert(res.error);
   const loaded = [];
-  rows.slice(1).forEach(r => {
-    const lat = parseFloat(r[ix.lat]), long = parseFloat(r[ix.long]);
+  res.records.forEach(o => {
+    const lat = parseFloat(o.lat), long = parseFloat(o.long);
     if (!isFinite(lat) || !isFinite(long)) return;
     loaded.push({
-      id:     ix.id>=0    ? r[ix.id]    : "",
-      name:   ix.name>=0  ? r[ix.name]  : "",
-      plan:   ix.plan>=0  ? r[ix.plan]  : "",
-      status: ix.status>=0? r[ix.status]: "",
-      who:    ix.who>=0   ? r[ix.who]   : "",
-      rdate:  ix.rdate>=0 ? r[ix.rdate] : "",
-      ddate:  ix.ddate>=0 ? r[ix.ddate] : "",
-      rid:    ix.rid>=0   ? r[ix.rid]   : "",
-      memo:   ix.memo>=0  ? r[ix.memo]  : "",
-      actual: ix.actual>=0? r[ix.actual]: "",
+      id: o.id, name: o.name, plan: o.plan, status: o.status, who: o.who,
+      rdate: o.rdate, ddate: o.ddate, rid: o.rid, memo: o.memo, actual: o.actual,
       lat, long,
     });
   });

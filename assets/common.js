@@ -208,6 +208,44 @@ function todayStamp() {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`;
 }
 
+/* ---- CSV取り込みの共通処理 ----
+   ヘッダー行の列名(別名可)から列位置を解決し、各データ行を {キー:値} の
+   オブジェクト配列にして返す。poster/posting/gaisen で共用。
+   spec  : { key: [別名, ...], ... }
+   opts.require     : ["lat","long"] 等。無い列があれば {error} を返す
+   opts.requireMsg  : require 不足時の alert 文言
+   opts.nameFallback: true かつ spec に name があり列が無いとき、
+                      既知列・数値列を除く最初のテキスト列を name に採用
+   戻り値: { head, ix, records } または { error } */
+function findCol(header, keys) {
+  return header.findIndex((h) => keys.includes((h || "").trim()));
+}
+function importCsv(text, spec, opts) {
+  opts = opts || {};
+  const rows = parseCsv(text);
+  if (rows.length < 2) return { error: "CSVにデータ行がありません" };
+  const head = rows[0], ix = {};
+  for (const k in spec) ix[k] = findCol(head, spec[k]);
+  for (const k of (opts.require || [])) {
+    if (ix[k] < 0) return { error: opts.requireMsg || ("必要な列が見つかりません: " + k) };
+  }
+  if (opts.nameFallback && ("name" in spec) && ix.name < 0) {
+    const known = Object.keys(ix).filter((k) => k !== "name").map((k) => ix[k]);
+    const sample = rows[1] || [];
+    for (let i = 0; i < head.length; i++) {
+      if (known.indexOf(i) >= 0) continue;
+      const v = (sample[i] || "").trim();
+      if (v && !isFinite(Number(v.replace(/,/g, "")))) { ix.name = i; break; }
+    }
+  }
+  const records = rows.slice(1).map((r, i) => {
+    const o = { _row: i };
+    for (const k in spec) o[k] = ix[k] >= 0 ? (r[ix[k]] != null ? r[ix[k]] : "") : "";
+    return o;
+  });
+  return { head, ix, records };
+}
+
 /* ---- GPX → GeoJSON ----
    トラック(<trk>/<trkseg>/<trkpt>)とルート(<rte>/<rtept>)を LineString に変換。
    1ファイルに複数の trk/rte を含む「結合GPX」もそれぞれ別ルートとして取り込む。
