@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="assets/common.css?v=10">
+<link rel="stylesheet" href="assets/common.css?v=11">
 <style>
   /* 種別ピン(絵文字divIcon) */
   .gm-pin{
@@ -46,7 +46,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/common.js?v=10"></script>
+<script src="assets/common.js?v=11"></script>
 <script>
 "use strict";
 
@@ -237,7 +237,6 @@ const COL = {
   cat:["cat","category","種別","分類","カテゴリ","type"],
   note:["note","メモ","備考"],
 };
-function findCol(head, keys){ return head.findIndex(h => keys.includes((h||"").trim())); }
 /* 種別セルは id / ラベル / 部分一致 で解釈。空欄は spot。 */
 function parseCat(v){
   if(!v) return "spot";
@@ -253,23 +252,21 @@ function parseCat(v){
 }
 /* CSVテキスト → 地点配列(座標が無効な行は除外)。エラー時は null(alert済) */
 function csvToPoints(text){
-  const rows = parseCsv(text);
-  if(rows.length < 2){ alert("CSVにデータ行がありません"); return null; }
-  const head = rows[0];
-  const ix = {};
-  for(const k in COL) ix[k] = findCol(head, COL[k]);
-  if(ix.lat < 0 || ix.long < 0){ alert("緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。"); return null; }
+  const res = importCsv(text, COL, { require:["lat","long"],
+    requireMsg:"緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。" });
+  if(res.error){ alert(res.error); return null; }
+  const hasCat = res.ix.cat >= 0;
   const loaded = [];
-  rows.slice(1).forEach((r,i) => {
-    const lat = parseFloat(r[ix.lat]), long = parseFloat(r[ix.long]);
+  res.records.forEach((o,i) => {
+    const lat = parseFloat(o.lat), long = parseFloat(o.long);
     if(!isFinite(lat) || !isFinite(long)) return;
     loaded.push({
-      id: ix.id>=0 && r[ix.id] ? r[ix.id] : ("R"+(i+1)),
-      name: ix.name>=0 ? (r[ix.name]||"") : "",
-      address: ix.address>=0 ? (r[ix.address]||"") : "",
+      id: o.id ? o.id : ("R"+(i+1)),
+      name: o.name || "",
+      address: o.address || "",
       lat, long,
-      cat: ix.cat>=0 ? parseCat(r[ix.cat]) : "spot",
-      note: ix.note>=0 ? (r[ix.note]||"") : "",
+      cat: hasCat ? parseCat(o.cat) : "spot",
+      note: o.note || "",
     });
   });
   if(!loaded.length){ alert("有効な座標の行がありません"); return null; }
