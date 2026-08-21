@@ -7,19 +7,27 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
 <link rel="stylesheet" href="assets/common.css?v=10">
+<style>
+  /* 管理表マーカーの実績枚数ラベル */
+  .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
+  .mglegend .mgrow{ display:flex; align-items:center; gap:6px; margin:2px 0; }
+  .mglegend i{ width:12px; height:12px; border-radius:50%; border:1px solid #333; display:inline-block; }
+  .mglegend .mgttl{ font-weight:700; margin-bottom:2px; }
+</style>
 </head>
 <body>
 <header class="appbar">
   <h1>📮 ポスティングマップ</h1>
   <div class="toolbar">
     <label class="filebtn">📂 読込(GeoJSON/GPX)<input type="file" id="gjIn" accept=".geojson,.json,application/geo+json,.gpx,application/gpx+xml"></label>
+    <label class="filebtn">📋 管理表CSV取込<input type="file" id="mgIn" accept=".csv,text/csv"></label>
     <button id="gjOut">💾 GeoJSON書出</button>
     <button id="resetBtn">全消去</button>
     <a class="dlbtn" href="dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="index.html" style="align-self:center;">← トップ</a>
   </div>
 </header>
-<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。</div>
+<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -146,7 +154,21 @@ function renderStats() {
   const counts = { plan: 0, doing: 0, done: 0 };
   shapesLayer.eachLayer(l => { counts[(l.feature?.properties?.status) || "plan"]++; });
   const total = counts.plan + counts.doing + counts.done;
-  statDiv.innerHTML = `区域/ルート <b>${total}</b> 件<br>済 ${counts.done} ・ 配布中 ${counts.doing} ・ 予定 ${counts.plan}`;
+  let html = `区域/ルート <b>${total}</b> 件<br>済 ${counts.done} ・ 配布中 ${counts.doing} ・ 予定 ${counts.plan}`;
+  if (typeof manageRows !== "undefined" && manageRows.length) {
+    let planned = 0, actual = 0; const byStatus = {};
+    manageRows.forEach(r => {
+      planned += Number(r.plan) || 0; actual += Number(r.actual) || 0;
+      const s = (r.status || "—"); byStatus[s] = (byStatus[s] || 0) + 1;
+    });
+    const stTxt = Object.keys(byStatus).map(s => `${s} ${byStatus[s]}`).join(" ・ ");
+    const pct = planned ? Math.round(actual / planned * 100) : 0;
+    html += `<hr style="margin:5px 0;border:none;border-top:1px solid #ddd;">`
+      + `📋 管理表 <b>${manageRows.length}</b> 丁目<br>`
+      + `予定 ${planned.toLocaleString()}枚 / 実績 ${actual.toLocaleString()}枚 (${pct}%)<br>`
+      + `<span style="font-size:11px">${stTxt}</span>`;
+  }
+  statDiv.innerHTML = html;
 }
 
 function persist() {
@@ -206,15 +228,149 @@ document.getElementById("gjOut").onclick = () => {
 };
 
 document.getElementById("resetBtn").onclick = () => {
-  if (!confirm("すべての図形を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+  if (!confirm("すべての図形と管理表データを消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
   shapesLayer.clearLayers();
   localStorage.removeItem(KEY_SHAPES);
+  manageRows = [];
+  manageLayer.clearLayers();
+  localStorage.removeItem(KEY_MANAGE);
   renderStats();
 };
+
+/* ===== ポスティング管理表(CSV)取り込み ===== */
+/* 「ポスティング管理表」(Googleフォーム→スプレッドシート)のCSVを取り込み、
+   丁目ごとの点マーカーをステータス色で表示。手描きの図形とは別レイヤで共存し、
+   保存はこの端末のlocalStorageのみ(他メンバーの環境に影響しない)。 */
+const KEY_MANAGE = "postingMap.manage";
+const manageLayer = L.layerGroup().addTo(map);
+let manageRows = loadLocal(KEY_MANAGE, []) || [];
+
+const MG_COL = {
+  id:    ["エリアID","ID","id","No","番号"],
+  name:  ["エリア名","地区","地区名","町丁目","町名","区域","エリア"],
+  plan:  ["配布予定枚数","予定枚数","予定"],
+  status:["ステータス","状態","status"],
+  who:   ["担当者","担当","who"],
+  rdate: ["予約日","予約"],
+  ddate: ["完了日","完了"],
+  rid:   ["予約ID"],
+  memo:  ["備考","メモ","note"],
+  actual:["配布実績枚数","実績枚数","実績"],
+  lat:   ["緯度","lat","latitude"],
+  long:  ["経度","long","lng","longitude"],
+};
+function mgFind(head, keys){ return head.findIndex(h => keys.includes((h||"").trim())); }
+/* ステータス→色。既知の日本語を優先し、未知は自動割当(安定) */
+const MG_STATUS_RULES = [
+  { kw:["完了","済","配布済","終了"],       color:"#8b5cf6" },
+  { kw:["配布中","実施中","進行中"],         color:"#fb8c00" },
+  { kw:["予約","予定"],                     color:"#1e88e5" },
+  { kw:["対象保留","保留","未着手","未対応","未"], color:"#9e9e9e" },
+  { kw:["対象外","除外","不可"],             color:"#cbd5e1" },
+];
+const MG_PALETTE = ["#16a34a","#e11d48","#0891b2","#7c3aed","#c2410c","#4d7c0f"];
+const mgColorMap = {};
+function mgColorFor(status){
+  const s = (status||"").trim();
+  if (mgColorMap[s]) return mgColorMap[s];
+  let c = null;
+  for (const r of MG_STATUS_RULES){ if (r.kw.some(k => s.indexOf(k) >= 0)){ c = r.color; break; } }
+  if (!c) c = MG_PALETTE[Object.keys(mgColorMap).length % MG_PALETTE.length];
+  mgColorMap[s] = c; return c;
+}
+function mgEsc(v){ return (v==null?"":String(v)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function mgNum(v){ const n = Number(String(v==null?"":v).replace(/,/g,"")); return isFinite(n) ? n : 0; }
+function mgPopup(r){
+  const L2 = [];
+  L2.push(`<b>${mgEsc(r.name)||"(エリア名なし)"}</b>`);
+  L2.push(`ステータス: <b style="color:${mgColorFor(r.status)}">${mgEsc(r.status)||"—"}</b>`);
+  L2.push(`担当: ${mgEsc(r.who)||"—"}`);
+  L2.push(`配布予定: ${mgNum(r.plan).toLocaleString()}枚 / 実績: ${mgNum(r.actual).toLocaleString()}枚`);
+  if (r.rdate) L2.push(`予約日: ${mgEsc(r.rdate)}`);
+  if (r.ddate) L2.push(`完了日: ${mgEsc(r.ddate)}`);
+  if (r.memo)  L2.push(`備考: ${mgEsc(r.memo)}`);
+  L2.push(`<a href="https://www.google.com/maps/search/${r.lat},+${r.long}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a>`);
+  L2.push(`<span style="color:#888;font-size:11px">※編集は「ポスティング管理表」側で。再取込で最新化されます。</span>`);
+  return L2.join("<br>");
+}
+function renderManage(){
+  manageLayer.clearLayers();
+  manageRows.forEach(r => {
+    const color = mgColorFor(r.status);
+    const m = L.circleMarker([r.lat, r.long], { radius:10, color:"#333", weight:1, fillColor:color, fillOpacity:0.92 });
+    m.bindTooltip(String(mgNum(r.actual)), { permanent:true, direction:"center", className:"mgcount" });
+    m.bindPopup(() => mgPopup(r));
+    m.addTo(manageLayer);
+  });
+  renderManageLegend();
+  renderStats();
+}
+/* 管理表の凡例(ステータス色) */
+let mgLegendCtl = null;
+function renderManageLegend(){
+  if (mgLegendCtl){ map.removeControl(mgLegendCtl); mgLegendCtl = null; }
+  if (!manageRows.length) return;
+  const statuses = [];
+  manageRows.forEach(r => { const s = r.status || "—"; if (statuses.indexOf(s) < 0) statuses.push(s); });
+  mgLegendCtl = L.control({ position:"bottomleft" });
+  mgLegendCtl.onAdd = () => {
+    const div = L.DomUtil.create("div", "legend mglegend");
+    div.innerHTML = `<div class="mgttl">📋 管理表ステータス</div>` +
+      statuses.map(s => `<div class="mgrow"><i style="background:${mgColorFor(s)}"></i>${mgEsc(s)}</div>`).join("") +
+      `<div style="font-size:10px;color:#888;margin-top:3px">数字=実績枚数</div>`;
+    return div;
+  };
+  mgLegendCtl.addTo(map);
+}
+function mgSave(){ saveLocal(KEY_MANAGE, manageRows); }
+
+onFileSelected(document.getElementById("mgIn"), (text) => {
+  const rows = parseCsv(text);
+  if (rows.length < 2) return alert("CSVにデータ行がありません");
+  const head = rows[0], ix = {};
+  for (const k in MG_COL) ix[k] = mgFind(head, MG_COL[k]);
+  if (ix.lat < 0 || ix.long < 0) return alert("緯度・経度の列が見つかりません。\n管理表に「緯度」「経度」の列があるか確認してください。");
+  // name列が未特定なら、既知列・数値列を除いた最初のテキスト列を名前として採用
+  if (ix.name < 0){
+    const known = Object.keys(ix).filter(k => k!=="name").map(k => ix[k]);
+    const sample = rows[1] || [];
+    for (let i=0;i<head.length;i++){
+      if (known.indexOf(i) >= 0) continue;
+      const v = (sample[i]||"").trim();
+      if (v && !isFinite(Number(v.replace(/,/g,"")))){ ix.name = i; break; }
+    }
+  }
+  const loaded = [];
+  rows.slice(1).forEach(r => {
+    const lat = parseFloat(r[ix.lat]), long = parseFloat(r[ix.long]);
+    if (!isFinite(lat) || !isFinite(long)) return;
+    loaded.push({
+      id:     ix.id>=0    ? r[ix.id]    : "",
+      name:   ix.name>=0  ? r[ix.name]  : "",
+      plan:   ix.plan>=0  ? r[ix.plan]  : "",
+      status: ix.status>=0? r[ix.status]: "",
+      who:    ix.who>=0   ? r[ix.who]   : "",
+      rdate:  ix.rdate>=0 ? r[ix.rdate] : "",
+      ddate:  ix.ddate>=0 ? r[ix.ddate] : "",
+      rid:    ix.rid>=0   ? r[ix.rid]   : "",
+      memo:   ix.memo>=0  ? r[ix.memo]  : "",
+      actual: ix.actual>=0? r[ix.actual]: "",
+      lat, long,
+    });
+  });
+  if (!loaded.length) return alert("有効な座標の行がありません(緯度・経度が数値の行がありません)");
+  if (manageRows.length && !confirm("管理表を取り込み直します。前回の管理表データは置き換えます。\n(手描きの区域・ルートはそのまま残ります)\nよろしいですか?")) return;
+  manageRows = loaded;
+  mgSave();
+  renderManage();
+  map.fitBounds(L.latLngBounds(manageRows.map(r => [r.lat, r.long])), { padding:[30,30] });
+  alert(loaded.length + " 件(丁目)の管理表データを地図に表示しました。");
+});
 
 /* 起動 */
 const saved = loadLocal(KEY_SHAPES, null);
 if (saved) loadGeoJson(saved, true);
+if (manageRows.length) renderManage();
 renderStats();
 </script>
 </body>
