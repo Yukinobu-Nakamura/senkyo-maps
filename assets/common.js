@@ -288,3 +288,21 @@ function gpxToGeoJSON(text) {
   }
   return { type: "FeatureCollection", features };
 }
+
+/* ---- 免責バー(全マップ共通・毎回表示・✕で閉じる) ----
+   常に表示し、ユーザー自身の操作で閉じる方式(「見ていない」を防ぐため保存しない)。 */
+(function () {
+  function addNoticeBar() {
+    const header = document.querySelector("header.appbar");
+    if (!header) return;
+    const bar = document.createElement("div");
+    bar.className = "noticebar";
+    bar.innerHTML =
+      '<span>⚠️ <b>ご利用にあたって:</b>本ツールは有志が無償で提供するものです。現状のまま提供し、不具合の修補や動作・内容の保証は行いません(MITライセンス)。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。</span>' +
+      '<button class="noticeClose" title="閉じる" aria-label="免責表示を閉じる">✕</button>';
+    header.insertAdjacentElement("afterend", bar);
+    bar.querySelector(".noticeClose").onclick = () => bar.remove();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addNoticeBar);
+  else addNoticeBar();
+})();

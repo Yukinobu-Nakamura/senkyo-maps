@@ -6,7 +6,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="assets/common.css?v=11">
+<link rel="stylesheet" href="assets/common.css?v=12">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -39,7 +39,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="assets/common.js?v=11"></script>
+<script src="assets/common.js?v=12"></script>
 <script>
 "use strict";
 const SHAPE_STATUSES = [
@@ -407,6 +407,8 @@ const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2
 const SETAI_SOURCES = [
   { code: "13116", label: "🏠 世帯数: 豊島区" },
   { code: "13115", label: "🏠 世帯数: 杉並区" },
+  { code: "13111", label: "🏠 世帯数: 大田区" },
+  { code: "27126", label: "🏠 世帯数: 大阪市平野区" },
 ];
 const setaiLayers = {};
 SETAI_SOURCES.forEach(s => {

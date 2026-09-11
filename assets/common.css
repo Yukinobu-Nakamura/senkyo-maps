@@ -53,3 +53,8 @@ header.appbar a:hover{text-decoration:underline;}
 .guideClose{position:absolute; top:8px; right:10px; border:none; background:none; font-size:18px; cursor:pointer; color:var(--muted); line-height:1;}
 .guideClose:hover{color:var(--ink);}
 @media (max-height:500px){ .guidePanel{max-height:calc(100% - 24px); overflow-y:auto;} }
+
+/* 免責バー */
+.noticebar{ display:flex; align-items:flex-start; gap:10px; background:#fef2f2; border-bottom:1.5px solid #ef4444; color:#7f1d1d; font-size:12px; line-height:1.6; padding:6px 12px; }
+.noticebar .noticeClose{ flex:none; margin-left:auto; align-self:center; width:24px; height:24px; border:1px solid #fca5a5; background:#fff; color:#b91c1c; border-radius:6px; cursor:pointer; font-size:12px; line-height:1; }
+.noticebar .noticeClose:hover{ background:#fee2e2; }
