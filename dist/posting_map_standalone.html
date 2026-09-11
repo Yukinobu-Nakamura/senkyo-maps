@@ -75,6 +75,8 @@ header.appbar a:hover{text-decoration:underline;}
   .cSw{ width:22px; height:22px; border-radius:6px; border:2px solid #d1d5db; cursor:pointer; padding:0; }
   .cSw.auto{ width:auto; padding:0 8px; font-size:11px; background:#f3f4f6; color:#374151; }
   .cSw.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
+  /* 世帯数レイヤの町丁目ラベル */
+  .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -88,7 +90,7 @@ header.appbar a:hover{text-decoration:underline;}
     </div>
 </header>
 <div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。</div>
-<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。</div>
+<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -398,7 +400,7 @@ const KEY_SHAPES = "postingMap.shapes";
 const map = L.map("map").setView([35.7295, 139.7109], 14);
 const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
-L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
+const layersCtl = L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 addLocateControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
@@ -733,6 +735,79 @@ onFileSelected(document.getElementById("mgIn"), (text) => {
   map.fitBounds(L.latLngBounds(manageRows.map(r => [r.lat, r.long])), { padding:[30,30] });
   alert(loaded.length + " 件(丁目)の管理表データを地図に表示しました。");
 });
+
+/* ===== 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
+   右上のレイヤボタンからON/OFF。データは data/setai_<市区町村コード>.geojson
+   (e-Stat 境界データを build/make_setai_geojson.py で変換したもの)。
+   手描き図形より下のペインに描くため、描画・クリック操作の邪魔をしない。 */
+map.createPane("setaiPane");
+map.getPane("setaiPane").style.zIndex = 350; /* overlayPane(400)より下 */
+const SETAI_BINS = [
+  { min: 5000, color: "#08519c", label: "5,000世帯〜" },
+  { min: 4000, color: "#3182bd", label: "4,000〜" },
+  { min: 3000, color: "#6baed6", label: "3,000〜" },
+  { min: 2000, color: "#9ecae1", label: "2,000〜" },
+  { min: 1000, color: "#c6dbef", label: "1,000〜" },
+  { min: 0,    color: "#eff3ff", label: "〜999世帯" },
+];
+function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
+const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データを加工して作成";
+const SETAI_SOURCES = [
+  { code: "13116", label: "🏠 世帯数: 豊島区" },
+  { code: "13115", label: "🏠 世帯数: 杉並区" },
+];
+const setaiLayers = {};
+SETAI_SOURCES.forEach(s => {
+  const grp = L.layerGroup();
+  setaiLayers[s.label] = { grp, code: s.code, loaded: false };
+  layersCtl.addOverlay(grp, s.label);
+});
+function setaiFill(ent, gj){
+  L.geoJSON(gj, {
+    pane: "setaiPane",
+    style: f => {
+      return { pane: "setaiPane", color: "#64748b", weight: 1, opacity: 0.55, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45 };
+    },
+    onEachFeature: (f, ly) => {
+      const p = f.properties;
+      ly.bindTooltip(`${p.setai.toLocaleString()}`, { permanent: true, direction: "center", className: "setaiLabel" });
+      ly.bindPopup(`<b>${p.name}</b><br>世帯数: <b>${p.setai.toLocaleString()}世帯</b><br>人口: ${p.jinko.toLocaleString()}人<br><span style="font-size:10.5px;color:#888">${SETAI_CREDIT}</span>`);
+    },
+  }).eachLayer(l => ent.grp.addLayer(l));
+}
+let setaiLegendCtl = null;
+function setaiLegendRefresh(){
+  const active = Object.values(setaiLayers).some(ent => map.hasLayer(ent.grp));
+  if (active && !setaiLegendCtl){
+    setaiLegendCtl = L.control({ position: "bottomright" });
+    setaiLegendCtl.onAdd = () => {
+      const div = L.DomUtil.create("div", "legend");
+      div.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
+        SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
+        `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>`;
+      return div;
+    };
+    setaiLegendCtl.addTo(map);
+  } else if (!active && setaiLegendCtl){
+    map.removeControl(setaiLegendCtl);
+    setaiLegendCtl = null;
+  }
+}
+map.on("overlayadd", (e) => {
+  const ent = setaiLayers[e.name];
+  if (!ent) return;
+  setaiLegendRefresh();
+  if (ent.loaded) return;
+  ent.loaded = true;
+  fetch("https://yukinobu-nakamura.github.io/senkyo-maps/data/setai_" + ent.code + ".geojson")
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(gj => setaiFill(ent, gj))
+    .catch(err => {
+      ent.loaded = false;
+      alert("世帯数データを読み込めませんでした(インターネット接続を確認してください): " + err.message);
+    });
+});
+map.on("overlayremove", (e) => { if (setaiLayers[e.name]) setaiLegendRefresh(); });
 
 /* 起動 */
 const saved = loadLocal(KEY_SHAPES, null);

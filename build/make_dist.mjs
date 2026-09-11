@@ -19,6 +19,8 @@ function build(src, out, extraHead) {
   html = html.replace(/<script src="assets\/common\.js[^"]*"><\/script>/,
     () => `<script>\n${js}\n<\/script>${extraHead}`);
   html = html.replace(/src="assets\/(\w+_demo\.mp4[^"]*)"/g, (_, p) => `src="${BASE}assets/${p}"`);
+  // 世帯数レイヤのデータは公開URLから取得(file:// では相対fetchが使えないため)
+  html = html.replace(/fetch\("data\/setai_/g, `fetch("${BASE}data/setai_`);
   // 配布版からは公開サイトへの可視リンクを全て除去(全体リリースまでURLを出さない方針)
   // - 「⬇️ アプリを保存」ボタン(受け取った人は既にファイルを持っている)
   html = html.replace(/<a class="dlbtn"[^>]*>[^<]*<\/a>\s*/g, "");
