@@ -135,9 +135,11 @@ header.appbar a:hover{text-decoration:underline;}
     <button id="nameBtn" title="自分の名前を設定(図形の「登録者」表示・チーム統合時の識別に使用)">👤 名前</button>
     <button id="syncBtn" title="チーム同期(任意)。チーム自身が設置したGoogle Apps Scriptと送受信します。設定変更はShift+クリックまたは長押し">☁️ 同期</button>
     <button id="resetBtn">全消去</button>
-    </div>
+    <a class="dlbtn" href="https://yukinobu-nakamura.github.io/senkyo-maps/dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
+    <a href="https://yukinobu-nakamura.github.io/senkyo-maps/" style="align-self:center;">← トップ</a>
+  </div>
 </header>
-<div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。</div>
+<div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。原本・最新版: <a href="https://yukinobu-nakamura.github.io/senkyo-maps/">https://yukinobu-nakamura.github.io/senkyo-maps/</a></div>
 <div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div>
 <div id="map"></div>
 

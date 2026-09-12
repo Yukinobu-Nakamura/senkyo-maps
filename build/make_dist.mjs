@@ -21,14 +21,13 @@ function build(src, out, extraHead) {
   html = html.replace(/src="assets\/(\w+_demo\.mp4[^"]*)"/g, (_, p) => `src="${BASE}assets/${p}"`);
   // 世帯数レイヤのデータは公開URLから取得(file:// では相対fetchが使えないため)
   html = html.replace(/fetch\("data\/setai_/g, `fetch("${BASE}data/setai_`);
-  // 配布版からは公開サイトへの可視リンクを全て除去(全体リリースまでURLを出さない方針)
-  // - 「⬇️ アプリを保存」ボタン(受け取った人は既にファイルを持っている)
-  html = html.replace(/<a class="dlbtn"[^>]*>[^<]*<\/a>\s*/g, "");
-  // - 「← トップ」リンク
-  html = html.replace(/<a href="index\.html"[^>]*>← トップ<\/a>\s*/g, "");
-  // 配布版の注記: サンプルバーの後ろに追記(URLは載せない)
+  // 配布版内の相対リンクは公開サイトの絶対URLへ(file:// で開かれるため)
+  // ※全体リリース(2026-09-12)以降は原本URLを表示する方針
+  html = html.replace(/href="dist\/([^"]+)"/g, (_, p) => `href="${BASE}dist/${p}"`);
+  html = html.replace(/href="index\.html"/g, `href="${BASE}"`);
+  // 配布版の注記: サンプルバーの後ろに追記(原本URLを明示)
   html = html.replace("</header>",
-    `</header>\n<div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。</div>`);
+    `</header>\n<div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。原本・最新版: <a href="${BASE}">${BASE}</a></div>`);
   writeFileSync(out, html);
   console.log(`${out}: ${(html.length / 1024).toFixed(0)}KB`);
 }
