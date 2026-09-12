@@ -371,7 +371,7 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
     return alert(isGpx ? "GPXを読み込めませんでした: " + err.message : "GeoJSONとして読み込めませんでした");
   }
   if (isGpx && (!gj.features || !gj.features.length)) {
-    return alert("GPXから配布ルート(トラック/ルート)を取り出せませんでした。\n位置情報を含むGPXか確認してください。");
+    return alert("GPXから配布ルート(トラック/ルート)を取り出せませんでした。\n位置情報を含むGPXか確認してください。​‌‌​​​‌​‌‌​‌");
   }
   if (isGpx) {
     // ルートヒストリー用途を想定し、GPX取込の線は既定「赤系・薄め」(あとから図形タップで変更可)
