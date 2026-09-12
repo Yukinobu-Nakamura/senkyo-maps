@@ -371,3 +371,4 @@ function addPlaceSearchControl(map) {
   };
   ctl.addTo(map);
 }
+/* origin-id: SENKYO-MAPS-ORIGIN-2609-XK47 */
