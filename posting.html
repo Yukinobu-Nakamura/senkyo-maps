@@ -22,6 +22,7 @@
   .cSwPick{ width:30px; height:24px; padding:0 2px; border:2px solid #d1d5db; border-radius:6px; cursor:pointer; background:#fff; }
   .cSwPick.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
   .sPlace{ font-weight:700; color:#1e3a5f; margin-bottom:2px; min-height:1em; }
+  .sOwner{ font-size:11px; color:#6b7280; margin-bottom:2px; }
   /* 世帯数レイヤの町丁目ラベル */
   .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
 </style>
@@ -33,6 +34,7 @@
     <label class="filebtn">📂 読込(GeoJSON/GPX)<input type="file" id="gjIn"></label>
     <label class="filebtn">📋 管理表CSV取込<input type="file" id="mgIn"></label>
     <button id="gjOut">💾 GeoJSON書出</button>
+    <button id="nameBtn" title="自分の名前を設定(図形の「登録者」表示・チーム統合時の識別に使用)">👤 名前</button>
     <button id="resetBtn">全消去</button>
     <a class="dlbtn" href="dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="index.html" style="align-self:center;">← トップ</a>
@@ -53,6 +55,26 @@ const SHAPE_STATUSES = [
 ];
 const GPX_DEFAULT_COLOR = "#e11d48"; /* GPX取込ルート(ルートヒストリー)の既定色=赤系(メンバー要望) */
 const KEY_SHAPES = "postingMap.shapes";
+const KEY_NAME = "postingMap.userName";
+
+/* ===== チーム統合(マージ)用のメタ情報 =====
+   fid   = 図形の一意ID(重複判定用)
+   owner = 登録者名(「誰の登録か」表示用)
+   mtime = 最終更新時刻(新しい方を採用するため) */
+function myName(promptIfEmpty) {
+  let n = localStorage.getItem(KEY_NAME) || "";
+  if (!n && promptIfEmpty) {
+    n = (prompt("あなたの名前を入力してください\n(図形の「登録者」表示と、チームでファイルを統合するときの識別に使います)") || "").trim();
+    if (n) localStorage.setItem(KEY_NAME, n);
+  }
+  return n;
+}
+function newFid() { return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
+function stampFeature(props) {
+  if (!props.fid) props.fid = newFid();
+  if (!props.owner) { const n = myName(false); if (n) props.owner = n; }
+  props.mtime = Date.now();
+}
 
 const map = L.map("map").setView([35.7295, 139.7109], 14);
 const baseLayers = createBaseLayers();
@@ -87,9 +109,9 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
   </div>
   <div class="gPane" id="gp3">
     <ol>
-      <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
-      <li>他のメンバーが<b>「💾GeoJSON書出」</b>で保存した<b>GeoJSONファイル</b>を選ぶ</li>
-      <li>確認 → 区域・ルートがまとめて追加。全員で同じデータを共有できます</li>
+      <li>まず上部の<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
+      <li>各メンバーが<b>「💾GeoJSON書出」</b>→ファイルを取りまとめ役に送る</li>
+      <li>取りまとめ役が<b>「📂読込」</b>で順に読み込む → <b>賢く統合</b>されます(同じ図形は更新が新しい方を採用・重複は増えない)。統合結果を書出して全員に配り直せば完了</li>
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
@@ -149,6 +171,7 @@ function popupHtml(props) {
     + SHAPE_PALETTE.map(c => `<button type="button" class="cSw ${props.color === c ? "sel" : ""}" data-color="${c}" style="background:${c}" title="${c}"></button>`).join("")
     + `<input type="color" id="sCustom" class="cSwPick ${props.color && !inPalette ? "sel" : ""}" value="${props.color && !inPalette ? props.color : "#e11d48"}" title="自由な色を選ぶ">`;
   return `<div class="sPlace" id="sPlace"></div>` +
+    (props.owner ? `<div class="sOwner">👤 登録: ${mgEsc(props.owner)}</div>` : "") +
     `状態:<select id="sStatus">${opts}</select>` +
     `色:<div class="cSwatches" id="sColors">${swatches}</div>` +
     `濃さ:<select id="sOpacity">${opOpts}</select>` +
@@ -192,6 +215,7 @@ function wireLayer(layer) {
       props.opacity = node.querySelector("#sOpacity").value;
       props.who = node.querySelector("#sWho").value.trim();
       props.memo = node.querySelector("#sMemo").value.trim();
+      stampFeature(props);
       if (layer.setStyle) layer.setStyle(styleFor(props));
       persist();
       map.closePopup();
@@ -211,6 +235,18 @@ function renderStats() {
   shapesLayer.eachLayer(l => { counts[(l.feature?.properties?.status) || "plan"]++; });
   const total = counts.plan + counts.doing + counts.done;
   let html = `区域/ルート <b>${total}</b> 件<br>済 ${counts.done} ・ 配布中 ${counts.doing} ・ 予定 ${counts.plan}`;
+  /* 登録者別の件数(名前が1人でも付いていれば表示) */
+  const byOwner = {};
+  shapesLayer.eachLayer(l => {
+    const o = (l.feature && l.feature.properties && l.feature.properties.owner) || "";
+    byOwner[o] = (byOwner[o] || 0) + 1;
+  });
+  const owners = Object.keys(byOwner).filter(o => o !== "");
+  if (owners.length) {
+    const parts = owners.map(o => `${mgEsc(o)} ${byOwner[o]}`);
+    if (byOwner[""]) parts.push(`(名前なし) ${byOwner[""]}`);
+    html += `<br><span style="font-size:11px">👥 ${parts.join(" ・ ")}</span>`;
+  }
   if (typeof manageRows !== "undefined" && manageRows.length) {
     let planned = 0, actual = 0; const byStatus = {};
     manageRows.forEach(r => {
@@ -246,19 +282,57 @@ function attachShape(layer) {
   layer.on("pm:dragend", onMoved);
 }
 
-function loadGeoJson(gj, fit) {
-  L.geoJSON(gj, {
+function addFeatureLayer(f) {
+  L.geoJSON(f, {
     onEachFeature: (feature, layer) => {
       layer.feature = feature;
       attachShape(layer);
     },
   });
+}
+
+function loadGeoJson(gj, fit) {
+  addFeatureLayer(gj);
   if (fit && shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
   renderStats();
 }
 
+/* ===== 賢い統合(マージ) =====
+   ・fidが同じ図形 → 更新時刻(mtime)の新しい方を採用
+   ・fidが無い図形(旧版ファイル) → 形が完全一致するものはスキップ(同じファイルの再読込で増殖しない)
+   ・それ以外 → 追加 */
+function geomKey(g) { return g ? g.type + ":" + JSON.stringify(g.coordinates) : ""; }
+function mergeGeoJson(gj) {
+  const byFid = {};
+  const geoKeys = new Set();
+  shapesLayer.eachLayer(l => {
+    const p = l.feature && l.feature.properties;
+    if (p && p.fid) byFid[p.fid] = l;
+    if (l.feature) geoKeys.add(geomKey(l.feature.geometry));
+  });
+  const r = { added: 0, updated: 0, skipped: 0 };
+  (gj.features || []).forEach(f => {
+    const p = f.properties = f.properties || {};
+    if (p.fid && byFid[p.fid]) {
+      const cur = byFid[p.fid].feature.properties;
+      if ((p.mtime || 0) > (cur.mtime || 0)) {
+        shapesLayer.removeLayer(byFid[p.fid]);
+        addFeatureLayer(f);
+        r.updated++;
+      } else r.skipped++;
+    } else if (!p.fid && geoKeys.has(geomKey(f.geometry))) {
+      r.skipped++;
+    } else {
+      addFeatureLayer(f);
+      r.added++;
+    }
+  });
+  return r;
+}
+
 map.on("pm:create", (e) => {
   attachShape(e.layer);
+  stampFeature(e.layer.feature.properties);
   persist();
   e.layer.openPopup();
 });
@@ -284,18 +358,43 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
       f.properties = f.properties || {};
       if (f.properties.opacity == null || f.properties.opacity === "") f.properties.opacity = "0.5";
       if (!f.properties.color) f.properties.color = GPX_DEFAULT_COLOR;
+      stampFeature(f.properties);
     });
+    if (!confirm(`GPXから ${gj.features.length} 本のルートを読み込みました。現在のマップに追加します。よろしいですか?`)) return;
+    loadGeoJson(gj, true);
+    persist();
+    return;
   }
-  const msg = isGpx
-    ? `GPXから ${gj.features.length} 本のルートを読み込みました。現在のマップに追加します。よろしいですか?`
-    : "読み込んだ図形を現在のマップに追加します。よろしいですか?";
-  if (!confirm(msg)) return;
-  loadGeoJson(gj, true);
+  /* GeoJSON: 賢い統合(重複は増やさず、同じ図形は新しい方を採用) */
+  if (!confirm("読み込んだ図形を現在のマップに統合します。\n(同じ図形は新しい方を採用し、重複は追加しません)\nよろしいですか?")) return;
+  const r = mergeGeoJson(gj);
+  if (shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
   persist();
+  alert(`統合しました: 追加 ${r.added} 件 ・ 更新 ${r.updated} 件 ・ 重複スキップ ${r.skipped} 件`);
 });
 
 document.getElementById("gjOut").onclick = () => {
+  /* 書出前に全図形へ fid と自分の名前(未設定なら入力を促す)を付与 → 統合時に「誰の登録か」が分かる */
+  const name = myName(true);
+  shapesLayer.eachLayer(l => {
+    const p = l.feature && l.feature.properties;
+    if (!p) return;
+    if (!p.fid) p.fid = newFid();
+    if (!p.owner && name) p.owner = name;
+    if (!p.mtime) p.mtime = Date.now();
+  });
+  persist();
   downloadFile(`posting_areas_${todayStamp()}.geojson`, JSON.stringify(shapesLayer.toGeoJSON(), null, 1), "application/geo+json");
+};
+
+document.getElementById("nameBtn").onclick = () => {
+  const cur = localStorage.getItem(KEY_NAME) || "";
+  const n = prompt("あなたの名前(図形の「登録者」表示・チーム統合時の識別に使います。空欄で解除)", cur);
+  if (n === null) return;
+  const v = n.trim();
+  if (v) localStorage.setItem(KEY_NAME, v);
+  else localStorage.removeItem(KEY_NAME);
+  alert(v ? `名前を「${v}」に設定しました。以後の新規図形と書出に付与されます。` : "名前を解除しました。");
 };
 
 document.getElementById("resetBtn").onclick = () => {
