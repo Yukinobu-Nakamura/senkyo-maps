@@ -68,5 +68,23 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 
 ## ライセンス
 
-MIT License(`LICENSE` 参照)。地図タイルは国土地理院・OpenStreetMap の利用規約に従います。
+**PolyForm Noncommercial License 1.0.0**(`LICENSE` 参照 / [全文](https://polyformproject.org/licenses/noncommercial/1.0.0/))。
+
+- **非商用**の目的であれば、候補者ご本人や政治活動のボランティアを含め、**誰でも無償で**複製・改変・再配布して利用できます
+- **商用(事業・営利目的)での利用および販売は許可していません**
+- 再配布・改変して配布する場合は、ライセンス全文(またはそのURL)と Required Notice(`Copyright (c) 2026 Yukinobu Nakamura`)を必ず添付してください
+
+### ライセンス変更の経緯(非遡及)
+
+LICENSE は 2026-09-12 に MIT License から PolyForm Noncommercial License 1.0.0 に変更しました(変更前の最終 MIT コミット: `3e4efeb`)。それ以前のバージョンを MIT License の下で取得された複製には、引き続き MIT License が適用されます(本変更は遡及しません)。以後のバージョン・更新分には PolyForm Noncommercial License 1.0.0 が適用されます。
+
+### 本ライセンスの対象外
+
+本ライセンスの対象は、本リポジトリのうち作成者が作成したコード・コンテンツです。以下は各提供元の利用規約・ライセンスに従い、原典からの取得・利用が本ライセンスによって制限されることはありません。
+
+- Leaflet / Leaflet-Geoman 等の外部ライブラリ(CDN参照・非同梱)
+- 地図タイル(国土地理院・OpenStreetMap)
+- `data/setai_*.geojson` の原データ(政府統計の総合窓口 e-Stat 国勢調査(2020年)小地域境界データ。商用利用可の政府標準利用規約系)
+- 国土地理院API(逆ジオコーダ・住所検索)
+
 チームみらい版 [team-mirai-volunteer/poster-map](https://github.com/team-mirai-volunteer/poster-map)(GPL-3.0)の仕組みを参考にした独自実装(コード非流用)。
