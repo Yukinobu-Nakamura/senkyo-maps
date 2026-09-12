@@ -97,6 +97,19 @@ header.appbar a:hover{text-decoration:underline;}
   .cSwPick.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
   .sPlace{ font-weight:700; color:#1e3a5f; margin-bottom:2px; min-height:1em; }
   .sOwner{ font-size:11px; color:#6b7280; margin-bottom:2px; }
+  /* オブジェクト一覧パネル */
+  .listBtn{ width:34px; height:34px; border:2px solid rgba(0,0,0,.2); background:#fff; border-radius:6px; cursor:pointer; font-size:16px; }
+  .listBtn.on{ background:#ede9fe; }
+  .listPanel{ position:absolute; top:12px; right:12px; z-index:1200; width:min(340px, calc(100% - 24px)); max-height:calc(100% - 24px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent, #8b5cf6); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.25); padding:10px 12px; font-size:12.5px; }
+  .listPanel h3{ font-size:13.5px; margin:4px 0 6px; }
+  .listPanel .lpClose{ float:right; border:1px solid #d1d5db; background:#fff; border-radius:6px; width:24px; height:24px; cursor:pointer; }
+  .lpRow{ display:flex; align-items:center; gap:6px; padding:4px 6px; border-radius:6px; cursor:pointer; }
+  .lpRow:hover{ background:#eef2ff; }
+  .lpChip{ flex:none; width:12px; height:12px; border-radius:3px; border:1px solid #333; }
+  .lpMain{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lpSub{ flex:none; font-size:11px; color:#6b7280; }
+  .lpEmpty{ color:#9ca3af; padding:4px 6px; }
+  .lpSection{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:11.5px; color:#374151; }
   /* 世帯数レイヤの町丁目ラベル */
   .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
 </style>
@@ -545,6 +558,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
       <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
       <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます。<b>色と濃さ</b>も図形ごとに指定できます(「自動」=状態の色、8色パレット、右端の<b>カラーピッカーで完全に自由な色</b>も可。ルートを目立たせない時は濃さを「薄め/最薄」に)</li>
       <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
+      <li><b>探す</b> — 左上の<b>📃で図形の一覧</b>を表示。行をタップするとその図形へジャンプします(取り込んだデータがどこにあるか分からない時に)</li>
     </ol>
     <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
     <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
@@ -1150,6 +1164,73 @@ map.on("overlayadd", (e) => {
     });
 });
 map.on("overlayremove", (e) => { if (setaiLayers[e.name]) setaiLegendRefresh(); });
+
+/* ===== 📃 オブジェクト一覧パネル =====
+   取り込んだ図形がどこにあるか分からない時のための一覧。行タップでズーム+ポップアップ。 */
+{
+  const container = map.getContainer();
+  const panel = document.createElement("div");
+  panel.className = "listPanel";
+  panel.style.display = "none";
+  container.appendChild(panel);
+  L.DomEvent.disableClickPropagation(panel);
+  L.DomEvent.disableScrollPropagation(panel);
+
+  let listBtn;
+  function renderList() {
+    const rows = [];
+    rows.push('<button class="lpClose" title="閉じる" aria-label="一覧を閉じる">✕</button><h3>📃 オブジェクト一覧</h3>');
+    const layers = [];
+    shapesLayer.eachLayer(l => layers.push(l));
+    if (!layers.length) {
+      rows.push('<div class="lpEmpty">図形はまだありません(左のツールで描くか、📂読込)</div>');
+    } else {
+      layers.forEach((l, i) => {
+        const p = (l.feature && l.feature.properties) || {};
+        const st = statusOf(p.status);
+        const color = p.color || st.color;
+        const icon = (l instanceof L.Polygon) ? "▰" : "〰"; /* 矩形はPolygonのサブクラス */
+        const name = p.place || p.memo || p.who || `図形 ${i + 1}`;
+        rows.push(`<div class="lpRow" data-i="${i}">` +
+          `<i class="lpChip" style="background:${color}"></i>` +
+          `<span class="lpMain">${icon} ${mgEsc(name)}</span>` +
+          `<span class="lpSub">${st.label}${p.owner ? "・" + mgEsc(p.owner) : ""}</span></div>`);
+      });
+    }
+    /* レイヤー状況 */
+    const layerInfo = [];
+    layerInfo.push(`手描き図形 ${layers.length} 件`);
+    if (manageRows.length) layerInfo.push(`📋 管理表 ${manageRows.length} 丁目`);
+    Object.keys(setaiLayers).forEach(label => { if (map.hasLayer(setaiLayers[label].grp)) layerInfo.push(label + " 表示中"); });
+    rows.push(`<div class="lpSection">レイヤー: ${layerInfo.join(" / ")}</div>`);
+    panel.innerHTML = rows.join("");
+    panel.querySelector(".lpClose").onclick = () => setListOpen(false);
+    panel.querySelectorAll(".lpRow").forEach(row => {
+      row.onclick = () => {
+        const l = layers[Number(row.dataset.i)];
+        if (!l) return;
+        if (l.getBounds) map.fitBounds(l.getBounds(), { padding: [60, 60], maxZoom: 17 });
+        else map.setView(l.getLatLng(), 16);
+        l.openPopup();
+      };
+    });
+  }
+  function setListOpen(open) {
+    panel.style.display = open ? "block" : "none";
+    if (listBtn) listBtn.classList.toggle("on", open);
+    if (open) renderList();
+  }
+  const ctl = L.control({ position: "topleft" });
+  ctl.onAdd = () => {
+    listBtn = L.DomUtil.create("button", "listBtn");
+    listBtn.textContent = "📃";
+    listBtn.title = "オブジェクト一覧(図形の場所へジャンプ)";
+    L.DomEvent.disableClickPropagation(listBtn);
+    listBtn.onclick = () => setListOpen(panel.style.display === "none");
+    return listBtn;
+  };
+  ctl.addTo(map);
+}
 
 /* 起動 */
 const saved = loadLocal(KEY_SHAPES, null);
