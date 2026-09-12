@@ -299,7 +299,7 @@ function gpxToGeoJSON(text) {
     bar.className = "noticebar";
     bar.innerHTML =
       '<span>⚠️ <b>ご利用にあたって:</b>本ツールは有志が無償で提供するものです。現状のまま提供し、不具合の修補や動作・内容の保証は行いません。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。​‌‌​​​‌​‌‌​‌' +
-      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で複製・利用できます。<b>商用(事業・営利目的)での利用・販売は許可していません</b>。再配布時はライセンス全文またはURLと著作権表示の添付が必要です — ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0/" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura</span></span>' +
+      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で複製・利用できます(再配布時はライセンス全文またはURLと著作権表示の添付が必要)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0/" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a>)に従います / Required Notice: Copyright (c) 2026 Yukinobu Nakamura</span></span>' +
       '<button class="noticeClose" title="閉じる" aria-label="免責表示を閉じる">✕</button>';
     header.insertAdjacentElement("afterend", bar);
     bar.querySelector(".noticeClose").onclick = () => bar.remove();
