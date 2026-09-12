@@ -80,6 +80,8 @@ header.appbar a:hover{text-decoration:underline;}
   .cSw{ width:22px; height:22px; border-radius:6px; border:2px solid #d1d5db; cursor:pointer; padding:0; }
   .cSw.auto{ width:auto; padding:0 8px; font-size:11px; background:#f3f4f6; color:#374151; }
   .cSw.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
+  .cSwPick{ width:30px; height:24px; padding:0 2px; border:2px solid #d1d5db; border-radius:6px; cursor:pointer; background:#fff; }
+  .cSwPick.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
   /* 世帯数レイヤの町丁目ラベル */
   .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
 </style>
@@ -415,9 +417,10 @@ function gpxToGeoJSON(text) {
 "use strict";
 const SHAPE_STATUSES = [
   { id: "plan",  label: "予定",   color: "#1e88e5" },
-  { id: "doing", label: "配布中", color: "#fb8c00" },
+  { id: "doing", label: "配布中", color: "#eab308" }, /* 黄色系(メンバー要望。白地図でも見える濃さ) */
   { id: "done",  label: "済",     color: "#8b5cf6" },
 ];
+const GPX_DEFAULT_COLOR = "#e11d48"; /* GPX取込ルート(ルートヒストリー)の既定色=赤系(メンバー要望) */
 const KEY_SHAPES = "postingMap.shapes";
 
 const map = L.map("map").setView([35.7295, 139.7109], 14);
@@ -435,7 +438,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
   <div class="gPane" id="gp1">
     <ol>
       <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
-      <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます。<b>色と濃さ</b>も図形ごとに指定できます(「自動」=状態の色。ルートを目立たせない時は濃さを「薄め/最薄」に)</li>
+      <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます。<b>色と濃さ</b>も図形ごとに指定できます(「自動」=状態の色、8色パレット、右端の<b>カラーピッカーで完全に自由な色</b>も可。ルートを目立たせない時は濃さを「薄め/最薄」に)</li>
       <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
     </ol>
     <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
@@ -445,7 +448,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     <ol>
       <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
       <li>スマホの記録アプリ等で保存した<b>GPXファイル</b>を選ぶ(複数をまとめた<b>結合GPX</b>も可)</li>
-      <li>「〇本のルートを読み込みました」の確認 → <b>配布ルート(線)</b>として地図に追加(履歴用に既定で薄め表示。図形タップで色・濃さ変更可)</li>
+      <li>「〇本のルートを読み込みました」の確認 → <b>配布ルート(線)</b>として地図に追加(履歴用に既定で<b>赤系・薄め</b>表示。図形タップで色・濃さ変更可)</li>
       <li>あとは通常どおり、線をタップして状態・担当・メモを記録</li>
     </ol>
     <div class="gPrep">🎬 GPX読み込みの操作デモ動画は準備中です。</div>
@@ -509,8 +512,10 @@ function popupHtml(props) {
   const curOp = (props.opacity == null || props.opacity === "") ? "1" : String(props.opacity);
   const opOpts = SHAPE_OPACITIES.map(o => `<option value="${o.v}" ${o.v === curOp ? "selected" : ""}>${o.label}</option>`).join("")
     + (SHAPE_OPACITIES.some(o => o.v === curOp) ? "" : `<option value="${esc(curOp)}" selected>カスタム(${curOp})</option>`);
+  const inPalette = SHAPE_PALETTE.includes(props.color);
   const swatches = `<button type="button" class="cSw auto ${props.color ? "" : "sel"}" data-color="" title="状態の色を使う">自動</button>`
-    + SHAPE_PALETTE.map(c => `<button type="button" class="cSw ${props.color === c ? "sel" : ""}" data-color="${c}" style="background:${c}" title="${c}"></button>`).join("");
+    + SHAPE_PALETTE.map(c => `<button type="button" class="cSw ${props.color === c ? "sel" : ""}" data-color="${c}" style="background:${c}" title="${c}"></button>`).join("")
+    + `<input type="color" id="sCustom" class="cSwPick ${props.color && !inPalette ? "sel" : ""}" value="${props.color && !inPalette ? props.color : "#e11d48"}" title="自由な色を選ぶ">`;
   return `状態:<select id="sStatus">${opts}</select>` +
     `色:<div class="cSwatches" id="sColors">${swatches}</div>` +
     `濃さ:<select id="sOpacity">${opOpts}</select>` +
@@ -527,16 +532,16 @@ function wireLayer(layer) {
   layer.bindPopup(() => popupHtml(props));
   layer.on("popupopen", (e) => {
     const node = e.popup.getElement();
-    node.querySelectorAll("#sColors .cSw").forEach(btn => {
-      btn.onclick = () => {
-        node.querySelectorAll("#sColors .cSw").forEach(b => b.classList.remove("sel"));
-        btn.classList.add("sel");
-      };
-    });
+    const colorEls = node.querySelectorAll("#sColors .cSw, #sColors .cSwPick");
+    const selectColor = (el) => { colorEls.forEach(b => b.classList.remove("sel")); el.classList.add("sel"); };
+    node.querySelectorAll("#sColors .cSw").forEach(btn => { btn.onclick = () => selectColor(btn); });
+    const pick = node.querySelector("#sCustom");
+    pick.oninput = () => selectColor(pick);
+    pick.onclick = () => selectColor(pick);
     node.querySelector("#sSave").onclick = () => {
       props.status = node.querySelector("#sStatus").value;
-      const selSw = node.querySelector("#sColors .cSw.sel");
-      props.color = selSw ? selSw.getAttribute("data-color") : (props.color || "");
+      const selEl = node.querySelector("#sColors .sel");
+      props.color = !selEl ? (props.color || "") : (selEl.id === "sCustom" ? selEl.value : selEl.getAttribute("data-color"));
       props.opacity = node.querySelector("#sOpacity").value;
       props.who = node.querySelector("#sWho").value.trim();
       props.memo = node.querySelector("#sMemo").value.trim();
@@ -620,10 +625,11 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
     return alert("GPXから配布ルート(トラック/ルート)を取り出せませんでした。\n位置情報を含むGPXか確認してください。");
   }
   if (isGpx) {
-    // ルートヒストリー用途を想定し、GPX取込の線は既定「薄め」(あとから図形タップで変更可)
+    // ルートヒストリー用途を想定し、GPX取込の線は既定「赤系・薄め」(あとから図形タップで変更可)
     gj.features.forEach(f => {
       f.properties = f.properties || {};
       if (f.properties.opacity == null || f.properties.opacity === "") f.properties.opacity = "0.5";
+      if (!f.properties.color) f.properties.color = GPX_DEFAULT_COLOR;
     });
   }
   const msg = isGpx
@@ -673,7 +679,7 @@ const MG_COL = {
 /* ステータス→色。既知の日本語を優先し、未知は自動割当(安定) */
 const MG_STATUS_RULES = [
   { kw:["完了","済","配布済","終了"],       color:"#8b5cf6" },
-  { kw:["配布中","実施中","進行中"],         color:"#fb8c00" },
+  { kw:["配布中","実施中","進行中"],         color:"#eab308" }, /* 手描き図形の「配布中」と同色に統一 */
   { kw:["予約","予定"],                     color:"#1e88e5" },
   { kw:["対象保留","保留","未着手","未対応","未"], color:"#9e9e9e" },
   { kw:["対象外","除外","不可"],             color:"#cbd5e1" },
