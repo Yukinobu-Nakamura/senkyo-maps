@@ -292,7 +292,10 @@ function attachShape(layer) {
   wireLayer(layer);
   const onMoved = () => {
     const p = layer.feature && layer.feature.properties;
-    if (p && p.place) delete p.place;
+    if (p) {
+      if (p.place) delete p.place; /* 位置が変わったので地名キャッシュを破棄 */
+      p.mtime = Date.now();        /* 統合・同期で「新しい方」と判定されるように */
+    }
     persist();
   };
   layer.on("pm:edit", onMoved);
@@ -372,15 +375,20 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
   }
   if (isGpx) {
     // ルートヒストリー用途を想定し、GPX取込の線は既定「赤系・薄め」(あとから図形タップで変更可)
+    // fidは付けずにマージに回す=同じGPXを再読込しても形一致で重複しない(fidは保存・書出時に付与される)
+    const name = myName(false);
     gj.features.forEach(f => {
-      f.properties = f.properties || {};
-      if (f.properties.opacity == null || f.properties.opacity === "") f.properties.opacity = "0.5";
-      if (!f.properties.color) f.properties.color = GPX_DEFAULT_COLOR;
-      stampFeature(f.properties);
+      const p = f.properties = f.properties || {};
+      if (p.opacity == null || p.opacity === "") p.opacity = "0.5";
+      if (!p.color) p.color = GPX_DEFAULT_COLOR;
+      if (!p.owner && name) p.owner = name;
+      p.mtime = Date.now();
     });
     if (!confirm(`GPXから ${gj.features.length} 本のルートを読み込みました。現在のマップに追加します。よろしいですか?`)) return;
-    loadGeoJson(gj, true);
+    const rg = mergeGeoJson(gj);
+    if (shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
     persist();
+    if (rg.skipped) alert(`追加 ${rg.added} 本(取込済みと同じルート ${rg.skipped} 本はスキップ)`);
     return;
   }
   /* GeoJSON: 賢い統合(重複は増やさず、同じ図形は新しい方を採用) */
