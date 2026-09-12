@@ -211,6 +211,13 @@ function wireLayer(layer) {
   if (!layer.feature) layer.feature = { type: "Feature", properties: {} };
   const props = layer.feature.properties;
   if (!props.status) props.status = "plan";
+  /* 取込ファイル由来の値を正規化(HTML/スタイルへ挿入されるためXSS対策の入口検証) */
+  if (props.color && !/^#[0-9a-fA-F]{3,8}$/.test(String(props.color))) delete props.color;
+  if (props.opacity != null && props.opacity !== "") {
+    const op = Number(props.opacity);
+    if (!isFinite(op) || op < 0 || op > 1) delete props.opacity;
+    else props.opacity = String(op);
+  }
   if (layer.setStyle) layer.setStyle(styleFor(props));
   layer.bindPopup(() => popupHtml(props));
   layer.on("popupopen", (e) => {
@@ -281,7 +288,7 @@ function renderStats() {
       planned += Number(r.plan) || 0; actual += Number(r.actual) || 0;
       const s = (r.status || "—"); byStatus[s] = (byStatus[s] || 0) + 1;
     });
-    const stTxt = Object.keys(byStatus).map(s => `${s} ${byStatus[s]}`).join(" ・ ");
+    const stTxt = Object.keys(byStatus).map(s => `${mgEsc(s)} ${byStatus[s]}`).join(" ・ ");
     const pct = planned ? Math.round(actual / planned * 100) : 0;
     html += `<hr style="margin:5px 0;border:none;border-top:1px solid #ddd;">`
       + `📋 管理表 <b>${manageRows.length}</b> 丁目<br>`

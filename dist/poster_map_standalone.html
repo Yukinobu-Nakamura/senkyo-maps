@@ -987,12 +987,13 @@ function renderStats() {
   statDiv.innerHTML = `完了率 <b>${pct}%</b><br>${done} / ${total} ヶ所(残り ${total - done})`;
 }
 
+function escT(v) { return (v == null ? "" : String(v)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 function popupHtml(b) {
   const opts = STATUSES.map(s => `<option value="${s.id}" ${s.id === b.status ? "selected" : ""}>${s.label}</option>`).join("");
-  return `<b>${b.name}</b><br>${b.address || ""}<br>` +
-    `<a href="https://www.google.com/maps/search/${b.lat},+${b.long}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
+  return `<b>${escT(b.name)}</b><br>${escT(b.address)}<br>` +
+    `<a href="https://www.google.com/maps/search/${Number(b.lat)},+${Number(b.long)}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
     `ステータス:<select id="pStatus">${opts}</select>` +
-    `メモ:<input type="text" id="pNote" value="${(b.note || "").replace(/"/g, "&quot;")}" maxlength="100">` +
+    `メモ:<input type="text" id="pNote" value="${escT(b.note)}" maxlength="100">` +
     `<button class="popupSave" id="pSave">保存</button>`;
 }
 
