@@ -306,3 +306,68 @@ function gpxToGeoJSON(text) {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addNoticeBar);
   else addNoticeBar();
 })();
+
+/* ---- 国土地理院API(無料・キー不要): 地名の逆引き・住所検索 ----
+   試験公開APIのため将来仕様変更の可能性あり。失敗時は静かに諦める設計にすること。 */
+function gsiPlaceName(lat, lng) {
+  return fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lng}`)
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(j => {
+      const nm = j && j.results && j.results.lv01Nm;
+      return (nm && nm !== "－") ? nm : "";
+    });
+}
+
+/* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。 */
+function addPlaceSearchControl(map) {
+  const ctl = L.control({ position: "topleft" });
+  let hitMarker = null;
+  ctl.onAdd = () => {
+    const div = L.DomUtil.create("div", "placeSearch");
+    div.innerHTML =
+      '<button class="psBtn" type="button" title="地名検索(全国)">🔍</button>' +
+      '<span class="psBody" style="display:none">' +
+      '<input class="psIn" type="text" placeholder="地名・住所(例: 池袋二丁目)">' +
+      '<button class="psGo" type="button">検索</button><div class="psList"></div></span>';
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+    const btn = div.querySelector(".psBtn"), body = div.querySelector(".psBody");
+    const input = div.querySelector(".psIn"), list = div.querySelector(".psList");
+    btn.onclick = () => {
+      const open = body.style.display === "none";
+      body.style.display = open ? "inline-flex" : "none";
+      if (open) input.focus();
+    };
+    async function run() {
+      const q = input.value.trim();
+      if (!q) return;
+      list.textContent = "検索中…";
+      try {
+        const r = await fetch("https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + encodeURIComponent(q));
+        const arr = await r.json();
+        if (!Array.isArray(arr) || !arr.length) { list.textContent = "見つかりませんでした"; return; }
+        list.innerHTML = "";
+        arr.slice(0, 8).forEach(a => {
+          const co = a.geometry && a.geometry.coordinates;
+          if (!co) return;
+          const item = document.createElement("div");
+          item.className = "psItem";
+          item.textContent = (a.properties && a.properties.title) || q;
+          item.onclick = () => {
+            if (hitMarker) map.removeLayer(hitMarker);
+            hitMarker = L.circleMarker([co[1], co[0]], { radius: 10, color: "#dc2626", weight: 3, fillOpacity: 0 }).addTo(map);
+            map.setView([co[1], co[0]], Math.max(map.getZoom(), 15));
+            list.innerHTML = "";
+          };
+          list.appendChild(item);
+        });
+      } catch (err) {
+        list.textContent = "検索に失敗しました(接続を確認してください)";
+      }
+    }
+    div.querySelector(".psGo").onclick = run;
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") run(); });
+    return div;
+  };
+  ctl.addTo(map);
+}

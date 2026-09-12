@@ -99,6 +99,7 @@ CATS.forEach(c => {
 });
 L.control.layers(baseLayers, overlays, { collapsed:true }).addTo(map);
 addLocateControl(map);
+addPlaceSearchControl(map);
 L.control.scale({ imperial:false }).addTo(map);
 
 addGuideControl(map, "📢 街宣マップの使い方",
@@ -109,7 +110,7 @@ addGuideControl(map, "📢 街宣マップの使い方",
     <li><b>共有・バックアップ</b> — 「💾CSV書出」で保存し、メンバーはそのCSVを「📂読込」すると同じ地点を再現できます。</li>
     <li><b>区の情報から一括で入れる</b> — 施設名・住所・緯度経度・種別の列を持つCSVを「📂読込」で取り込めます。</li>
   </ol>
-  <div class="gNote">🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。データはこの端末(ブラウザ)内にのみ保存されます。</div>`,
+  <div class="gNote">🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。左上の<b>🔍で全国の地名検索</b>ができます。データはこの端末(ブラウザ)内にのみ保存されます。</div>`,
   "gaisenMap");
 
 /* 凡例 */

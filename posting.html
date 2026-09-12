@@ -20,6 +20,7 @@
   .cSw.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
   .cSwPick{ width:30px; height:24px; padding:0 2px; border:2px solid #d1d5db; border-radius:6px; cursor:pointer; background:#fff; }
   .cSwPick.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
+  .sPlace{ font-weight:700; color:#1e3a5f; margin-bottom:2px; min-height:1em; }
   /* 世帯数レイヤの町丁目ラベル */
   .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
 </style>
@@ -57,6 +58,7 @@ const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 const layersCtl = L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 addLocateControl(map);
+addPlaceSearchControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
   `<div class="gTabs">
@@ -90,7 +92,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -145,7 +147,8 @@ function popupHtml(props) {
   const swatches = `<button type="button" class="cSw auto ${props.color ? "" : "sel"}" data-color="" title="状態の色を使う">自動</button>`
     + SHAPE_PALETTE.map(c => `<button type="button" class="cSw ${props.color === c ? "sel" : ""}" data-color="${c}" style="background:${c}" title="${c}"></button>`).join("")
     + `<input type="color" id="sCustom" class="cSwPick ${props.color && !inPalette ? "sel" : ""}" value="${props.color && !inPalette ? props.color : "#e11d48"}" title="自由な色を選ぶ">`;
-  return `状態:<select id="sStatus">${opts}</select>` +
+  return `<div class="sPlace" id="sPlace"></div>` +
+    `状態:<select id="sStatus">${opts}</select>` +
     `色:<div class="cSwatches" id="sColors">${swatches}</div>` +
     `濃さ:<select id="sOpacity">${opOpts}</select>` +
     `担当:<input type="text" id="sWho" value="${esc(props.who)}" maxlength="20" placeholder="例)佐藤">` +
@@ -161,6 +164,20 @@ function wireLayer(layer) {
   layer.bindPopup(() => popupHtml(props));
   layer.on("popupopen", (e) => {
     const node = e.popup.getElement();
+    /* 地名(丁目・字)表示: 国土地理院逆ジオコーダ。取得結果は図形に保存し再取得しない */
+    const placeDiv = node.querySelector("#sPlace");
+    if (props.place) {
+      placeDiv.textContent = "📍 " + props.place;
+    } else {
+      placeDiv.textContent = "📍 地名を取得中…";
+      const c = layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng();
+      gsiPlaceName(c.lat, c.lng)
+        .then(nm => {
+          if (nm) { props.place = nm; persist(); }
+          placeDiv.textContent = nm ? "📍 " + nm : "";
+        })
+        .catch(() => { placeDiv.textContent = ""; });
+    }
     const colorEls = node.querySelectorAll("#sColors .cSw, #sColors .cSwPick");
     const selectColor = (el) => { colorEls.forEach(b => b.classList.remove("sel")); el.classList.add("sel"); };
     node.querySelectorAll("#sColors .cSw").forEach(btn => { btn.onclick = () => selectColor(btn); });
@@ -214,14 +231,25 @@ function persist() {
   renderStats();
 }
 
+/* 図形をマップに載せる共通処理(手描き・読込の両方から使用)。
+   移動・頂点編集されたら保存済みの地名キャッシュを破棄する。 */
+function attachShape(layer) {
+  shapesLayer.addLayer(layer);
+  wireLayer(layer);
+  const onMoved = () => {
+    const p = layer.feature && layer.feature.properties;
+    if (p && p.place) delete p.place;
+    persist();
+  };
+  layer.on("pm:edit", onMoved);
+  layer.on("pm:dragend", onMoved);
+}
+
 function loadGeoJson(gj, fit) {
   L.geoJSON(gj, {
     onEachFeature: (feature, layer) => {
       layer.feature = feature;
-      shapesLayer.addLayer(layer);
-      wireLayer(layer);
-      layer.on("pm:edit", persist);
-      layer.on("pm:dragend", persist);
+      attachShape(layer);
     },
   });
   if (fit && shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
@@ -229,13 +257,9 @@ function loadGeoJson(gj, fit) {
 }
 
 map.on("pm:create", (e) => {
-  const layer = e.layer;
-  shapesLayer.addLayer(layer);
-  wireLayer(layer);
-  layer.on("pm:edit", persist);
-  layer.on("pm:dragend", persist);
+  attachShape(e.layer);
   persist();
-  layer.openPopup();
+  e.layer.openPopup();
 });
 map.on("pm:remove", (e) => {
   shapesLayer.removeLayer(e.layer);

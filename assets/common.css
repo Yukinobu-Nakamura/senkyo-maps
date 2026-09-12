@@ -58,3 +58,13 @@ header.appbar a:hover{text-decoration:underline;}
 .noticebar{ display:flex; align-items:flex-start; gap:10px; background:#fef2f2; border-bottom:1.5px solid #ef4444; color:#7f1d1d; font-size:12px; line-height:1.6; padding:6px 12px; }
 .noticebar .noticeClose{ flex:none; margin-left:auto; align-self:center; width:24px; height:24px; border:1px solid #fca5a5; background:#fff; color:#b91c1c; border-radius:6px; cursor:pointer; font-size:12px; line-height:1; }
 .noticebar .noticeClose:hover{ background:#fee2e2; }
+
+/* 地名検索コントロール */
+.placeSearch{ background:#fff; border-radius:8px; box-shadow:0 1px 5px rgba(0,0,0,.4); padding:2px; }
+.placeSearch .psBtn{ width:30px; height:30px; border:none; background:#fff; border-radius:6px; cursor:pointer; font-size:15px; }
+.placeSearch .psBody{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; padding:0 4px 4px; max-width:min(300px, 70vw); }
+.placeSearch .psIn{ flex:1; min-width:150px; border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; font-size:13px; }
+.placeSearch .psGo{ border:1px solid #d1d5db; background:#f3f4f6; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
+.placeSearch .psList{ width:100%; max-height:180px; overflow-y:auto; }
+.placeSearch .psItem{ padding:4px 6px; font-size:12.5px; cursor:pointer; border-radius:5px; }
+.placeSearch .psItem:hover{ background:#eef2ff; }
