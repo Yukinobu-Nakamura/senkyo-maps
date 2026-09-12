@@ -36,6 +36,16 @@
   .lpSub{ flex:none; font-size:11px; color:#6b7280; }
   .lpEmpty{ color:#9ca3af; padding:4px 6px; }
   .lpSection{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:11.5px; color:#374151; }
+  /* 自治体追加リクエストのモーダル */
+  .reqOverlay{ position:fixed; inset:0; z-index:3000; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
+  .reqBox{ background:#fff; border-radius:14px; max-width:520px; width:100%; max-height:90vh; overflow-y:auto; padding:18px 20px; font-size:13.5px; line-height:1.7; position:relative; }
+  .reqBox h3{ margin:0 0 8px; font-size:16px; }
+  .reqBox ol{ padding-left:20px; margin:6px 0; }
+  .reqClose{ position:absolute; top:10px; right:10px; width:28px; height:28px; border:1px solid #d1d5db; background:#fff; border-radius:8px; cursor:pointer; }
+  .reqCaution{ color:#b45309; font-size:12.5px; }
+  .reqBtns{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  .reqBtn{ display:block; text-align:center; padding:9px 12px; border-radius:9px; border:1.5px solid #d1d5db; background:#f9fafb; color:#111; text-decoration:none; cursor:pointer; font-size:13.5px; }
+  .reqBtn.main{ background:#8b5cf6; border-color:#8b5cf6; color:#fff; font-weight:700; }
   /* 世帯数レイヤの町丁目ラベル */
   .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
 </style>
@@ -46,6 +56,7 @@
   <div class="toolbar">
     <label class="filebtn">📂 読込(GeoJSON/GPX)<input type="file" id="gjIn"></label>
     <label class="filebtn">📋 管理表CSV取込<input type="file" id="mgIn"></label>
+    <label class="filebtn" title="自分の選挙区の世帯数一覧(スプレッドシートからCSV書き出し)を読み込んで地図に表示">🏠 世帯数CSV<input type="file" id="usIn"></label>
     <button id="gjOut">💾 GeoJSON書出</button>
     <button id="nameBtn" title="自分の名前を設定(図形の「登録者」表示・チーム統合時の識別に使用)">👤 名前</button>
     <button id="syncBtn" title="チーム同期(任意)。チーム自身が設置したGoogle Apps Scriptと送受信します。設定変更はShift+クリックまたは長押し">☁️ 同期</button>
@@ -54,7 +65,7 @@
     <a href="index.html" style="align-self:center;">← トップ</a>
   </div>
 </header>
-<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。</div>
+<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -131,7 +142,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -534,6 +545,10 @@ document.getElementById("resetBtn").onclick = () => {
   manageRows = [];
   manageLayer.clearLayers();
   localStorage.removeItem(KEY_MANAGE);
+  usRows = [];
+  usLayer.clearLayers();
+  localStorage.removeItem(KEY_USETAI);
+  setaiLegendRefresh();
   renderStats();
 };
 
@@ -691,23 +706,27 @@ function setaiFill(ent, gj){
 }
 let setaiLegendCtl = null;
 function setaiLegendRefresh(){
-  const active = Object.values(setaiLayers).some(ent => map.hasLayer(ent.grp));
+  const active = Object.values(setaiLayers).some(ent => map.hasLayer(ent.grp)) || (typeof usLayer !== "undefined" && map.hasLayer(usLayer));
   if (active && !setaiLegendCtl){
     setaiLegendCtl = L.control({ position: "bottomright" });
     setaiLegendCtl.onAdd = () => {
       const div = L.DomUtil.create("div", "legend");
       div.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
         SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
-        `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>`;
+        `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
+        `<div style="margin-top:3px"><a href="#" id="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
       return div;
     };
     setaiLegendCtl.addTo(map);
+    const rl = document.getElementById("setaiReqLink");
+    if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
   } else if (!active && setaiLegendCtl){
     map.removeControl(setaiLegendCtl);
     setaiLegendCtl = null;
   }
 }
 map.on("overlayadd", (e) => {
+  if (e.layer === usLayer) { setaiLegendRefresh(); return; }
   const ent = setaiLayers[e.name];
   if (!ent) return;
   setaiLegendRefresh();
@@ -721,7 +740,89 @@ map.on("overlayadd", (e) => {
       alert("世帯数データを読み込めませんでした(インターネット接続を確認してください): " + err.message);
     });
 });
-map.on("overlayremove", (e) => { if (setaiLayers[e.name]) setaiLegendRefresh(); });
+map.on("overlayremove", (e) => { if (setaiLayers[e.name] || e.layer === usLayer) setaiLegendRefresh(); });
+
+/* ===== 🏠 ユーザ任意の世帯数CSV取込 =====
+   自分の選挙区の世帯数一覧(スプレッドシート→CSV)を読み込んで点表示する。
+   列: 名称(町丁目等)・世帯数[必須]・人口[任意]・緯度/経度[任意]。
+   緯度経度が無い行は国土地理院の住所検索APIで自動的に位置を推定する。 */
+const KEY_USETAI = "postingMap.userSetai";
+const usLayer = L.layerGroup();
+layersCtl.addOverlay(usLayer, "🏠 世帯数: 取込CSV");
+let usRows = loadLocal(KEY_USETAI, []) || [];
+
+const US_COL = {
+  name:  ["名称","町丁目","町名","地区","地区名","エリア名","エリア","地域","区域"],
+  setai: ["世帯数","世帯"],
+  jinko: ["人口"],
+  lat:   ["緯度","lat","latitude"],
+  long:  ["経度","long","lng","longitude"],
+};
+function renderUserSetai() {
+  usLayer.clearLayers();
+  usRows.forEach(r => {
+    const n = mgNum(r.setai);
+    const m = L.circleMarker([r.lat, r.long], { radius: 11, color: "#333", weight: 1, fillColor: setaiColor(n), fillOpacity: 0.85 });
+    m.bindTooltip(n.toLocaleString(), { permanent: true, direction: "center", className: "setaiLabel" });
+    m.bindPopup(`<b>${mgEsc(r.name) || "(名称なし)"}</b><br>世帯数: <b>${n.toLocaleString()}世帯</b>` +
+      (r.jinko ? `<br>人口: ${mgNum(r.jinko).toLocaleString()}人` : "") +
+      `<br><span style="font-size:10.5px;color:#888">出典: 取り込んだCSV(利用チーム提供)` +
+      (r.geocoded ? "・位置は地名からの自動推定" : "") + `</span>`);
+    m.addTo(usLayer);
+  });
+  setaiLegendRefresh();
+}
+onFileSelected(document.getElementById("usIn"), async (text) => {
+  const res = importCsv(text, US_COL, {
+    require: ["setai"], nameFallback: true,
+    requireMsg: "「世帯数」の列が見つかりません。\nCSVに「名称(または町丁目)」「世帯数」の列があるか確認してください。",
+  });
+  if (res.error) return alert(res.error);
+  const withXY = [], noXY = [];
+  res.records.forEach(o => {
+    const lat = parseFloat(o.lat), long = parseFloat(o.long);
+    if (!o.name && !isFinite(lat)) return;
+    if (isFinite(lat) && isFinite(long)) withXY.push({ name: o.name, setai: o.setai, jinko: o.jinko, lat, long });
+    else if (o.name) noXY.push({ name: o.name, setai: o.setai, jinko: o.jinko });
+  });
+  if (!withXY.length && !noXY.length) return alert("有効な行がありません(名称+世帯数、または緯度経度+世帯数が必要です)");
+  if (noXY.length > 400) return alert("位置の自動推定は400行までです。緯度・経度の列を用意するか、行を分割してください。");
+  let muni = "";
+  if (noXY.length) {
+    muni = prompt(`緯度・経度のない ${noXY.length} 行は、地名から位置を自動推定します(国土地理院API)。\n精度を上げるため、頭に付ける自治体名を入力してください(例: 世田谷区、大阪市平野区)`, "");
+    if (muni === null) return;
+    muni = muni.trim();
+  }
+  const btn = document.querySelector('label[title^="自分の選挙区"]');
+  const failed = [];
+  for (let i = 0; i < noXY.length; i++) {
+    const r = noXY[i];
+    if (btn) btn.firstChild.textContent = `🏠 位置推定中 ${i + 1}/${noXY.length}`;
+    try {
+      const q = encodeURIComponent(muni + r.name);
+      const gr = await fetch("https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + q);
+      const arr = await gr.json();
+      if (Array.isArray(arr) && arr.length && arr[0].geometry) {
+        r.lat = arr[0].geometry.coordinates[1];
+        r.long = arr[0].geometry.coordinates[0];
+        r.geocoded = true;
+        withXY.push(r);
+      } else failed.push(r.name);
+    } catch (err) { failed.push(r.name); }
+    await new Promise(s => setTimeout(s, 120));
+  }
+  if (btn) btn.firstChild.textContent = "🏠 世帯数CSV";
+  if (!withXY.length) return alert("位置を特定できた行がありませんでした。自治体名の指定を見直すか、緯度・経度の列を用意してください。");
+  if (usRows.length && !confirm("取込済みの世帯数CSVを置き換えます。よろしいですか?")) return;
+  usRows = withXY;
+  saveLocal(KEY_USETAI, usRows);
+  renderUserSetai();
+  if (!map.hasLayer(usLayer)) map.addLayer(usLayer);
+  map.fitBounds(L.latLngBounds(usRows.map(r => [r.lat, r.long])), { padding: [30, 30] });
+  alert(`${withXY.length} 件を地図に表示しました。` +
+    (failed.length ? `\n位置を特定できなかった行(${failed.length}件): ${failed.slice(0, 10).join("、")}${failed.length > 10 ? " 他" : ""}\n※名称を選管資料どおりの表記にすると当たりやすくなります` : "") +
+    `\n※自動推定の位置は目安です(丁目の代表点)。レイヤボタンの「🏠 世帯数: 取込CSV」でON/OFFできます。`);
+});
 
 /* ===== 📃 オブジェクト一覧パネル =====
    取り込んだ図形がどこにあるか分からない時のための一覧。行タップでズーム+ポップアップ。 */
@@ -790,10 +891,60 @@ map.on("overlayremove", (e) => { if (setaiLayers[e.name]) setaiLegendRefresh(); 
   ctl.addTo(map);
 }
 
+/* ===== 🏠 自治体追加リクエスト(世帯数レイヤ) =====
+   受け口はGitHub Issue(定型文プリセット)。アカウントの無い人向けにテンプレコピーも用意。
+   将来フォームに切り替える場合は REQ_FORM_URL にURLを入れるだけ(空なら非表示)。 */
+const REQ_FORM_URL = ""; /* 例: Googleフォーム URL。設定すると「フォームで送る」ボタンが出る */
+const REQ_TEMPLATE = [
+  "【世帯数レイヤ 自治体追加リクエスト】",
+  "・都道府県: ",
+  "・対象自治体(市区町村名。政令市は「〇〇市△△区」まで): ",
+  "・選挙区が区割になっている場合の区割(対象の市区町村をすべて): ",
+  "・用途/急ぎ度(任意): ",
+].join("\n");
+function openReqModal() {
+  let m = document.getElementById("reqModal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "reqModal";
+    m.className = "reqOverlay";
+    const ghUrl = "https://github.com/Yukinobu-Nakamura/senkyo-maps/issues/new?title=" +
+      encodeURIComponent("【世帯数レイヤ】自治体追加リクエスト") + "&body=" + encodeURIComponent(REQ_TEMPLATE);
+    m.innerHTML = `<div class="reqBox">
+      <button class="reqClose" aria-label="閉じる">✕</button>
+      <h3>🏠 世帯数レイヤ 自治体追加リクエスト</h3>
+      <p>次の2点を<b>正確に</b>ご記載ください。</p>
+      <ol>
+        <li><b>都道府県</b></li>
+        <li><b>対象自治体</b>(市区町村名。政令市は「〇〇市△△区」まで)<br>
+        <span class="reqCaution">⚠️ 選挙区が<b>区割</b>になっている場合(衆議院小選挙区・都道府県議会の選挙区など)は、<b>選挙管理委員会の公表資料や選挙ドットコム等のサイトで区割を確認し、対象の市区町村をすべて正確に</b>書いてください。記載が不正確だと反映できない場合があります。</span></li>
+      </ol>
+      <p class="reqCaution">※反映は手作業のため、<b>タイムリーな反映や必ず反映することはお約束できません</b>。あらかじめご了承ください。</p>
+      <div class="reqBtns">
+        ${REQ_FORM_URL ? `<a class="reqBtn main" href="${REQ_FORM_URL}" target="_blank" rel="noopener noreferrer">📝 フォームで送る</a>` : ""}
+        <a class="reqBtn ${REQ_FORM_URL ? "" : "main"}" href="${ghUrl}" target="_blank" rel="noopener noreferrer">🐙 GitHubで送る(無料アカウントが必要)</a>
+        <button class="reqBtn" id="reqCopy">📋 記載テンプレートをコピー</button>
+      </div>
+      <p style="font-size:11px;color:#6b7280;margin-top:6px">GitHubアカウントが無い場合は、テンプレートをコピーして、本ツールを紹介してくれた方経由でお送りください。</p>
+    </div>`;
+    document.body.appendChild(m);
+    m.onclick = (ev) => { if (ev.target === m) m.style.display = "none"; };
+    m.querySelector(".reqClose").onclick = () => { m.style.display = "none"; };
+    m.querySelector("#reqCopy").onclick = () => {
+      navigator.clipboard.writeText(REQ_TEMPLATE).then(
+        () => alert("テンプレートをコピーしました。"),
+        () => prompt("以下をコピーしてください", REQ_TEMPLATE));
+    };
+  }
+  m.style.display = "flex";
+}
+document.getElementById("reqOpen").onclick = (ev) => { ev.preventDefault(); openReqModal(); };
+
 /* 起動 */
 const saved = loadLocal(KEY_SHAPES, null);
 if (saved) loadGeoJson(saved, true);
 if (manageRows.length) renderManage();
+if (usRows.length) { renderUserSetai(); map.addLayer(usLayer); }
 renderStats();
 </script>
 </body>
