@@ -35,6 +35,7 @@
     <label class="filebtn">📋 管理表CSV取込<input type="file" id="mgIn"></label>
     <button id="gjOut">💾 GeoJSON書出</button>
     <button id="nameBtn" title="自分の名前を設定(図形の「登録者」表示・チーム統合時の識別に使用)">👤 名前</button>
+    <button id="syncBtn" title="チーム同期(任意)。チーム自身が設置したGoogle Apps Scriptと送受信します。設定変更はShift+クリックまたは長押し">☁️ 同期</button>
     <button id="resetBtn">全消去</button>
     <a class="dlbtn" href="dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="index.html" style="align-self:center;">← トップ</a>
@@ -112,6 +113,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
       <li>まず上部の<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
       <li>各メンバーが<b>「💾GeoJSON書出」</b>→ファイルを取りまとめ役に送る</li>
       <li>取りまとめ役が<b>「📂読込」</b>で順に読み込む → <b>賢く統合</b>されます(同じ図形は更新が新しい方を採用・重複は増えない)。統合結果を書出して全員に配り直せば完了</li>
+      <li>(任意)ファイルの受け渡しなしでその場で共有したいチームは<b>「☁️ 同期」</b>も使えます。チーム自身のGoogleアカウントに同期先を設置する方式です(設置手順: GitHubの templates/team-sync)</li>
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
@@ -223,6 +225,7 @@ function wireLayer(layer) {
     };
     node.querySelector("#sDel").onclick = () => {
       if (!confirm("この図形を削除しますか?")) return;
+      recordTombstone(layer);
       shapesLayer.removeLayer(layer);
       persist();
       renderStats();
@@ -337,6 +340,7 @@ map.on("pm:create", (e) => {
   e.layer.openPopup();
 });
 map.on("pm:remove", (e) => {
+  recordTombstone(e.layer);
   shapesLayer.removeLayer(e.layer);
   persist();
 });
@@ -387,6 +391,109 @@ document.getElementById("gjOut").onclick = () => {
   downloadFile(`posting_areas_${todayStamp()}.geojson`, JSON.stringify(shapesLayer.toGeoJSON(), null, 1), "application/geo+json");
 };
 
+/* ===== ☁️ チーム同期(任意・チーム自身が設置するGASバックエンド) =====
+   仕組み・設置手順・データの置き場所は templates/team-sync/README.md 参照。
+   作成者はサーバを運営せず、データはチームのスプレッドシートにのみ保存される。 */
+const KEY_SYNC = "postingMap.sync";
+const KEY_TOMB = "postingMap.tombstones";
+
+function recordTombstone(layer) {
+  const p = layer.feature && layer.feature.properties;
+  if (!p || !p.fid) return;
+  const t = loadLocal(KEY_TOMB, []) || [];
+  t.push({ fid: p.fid, mtime: Date.now() });
+  saveLocal(KEY_TOMB, t.slice(-500));
+}
+
+function syncSetup() {
+  const cur = loadLocal(KEY_SYNC, null) || { url: "", token: "" };
+  const url = prompt("チーム同期のウェブアプリURL(空欄で解除)\n※設置手順: GitHubリポジトリの templates/team-sync/README.md", cur.url || "");
+  if (url === null) return null;
+  if (!url.trim()) {
+    localStorage.removeItem(KEY_SYNC);
+    alert("チーム同期を解除しました。");
+    return null;
+  }
+  const token = prompt("同期トークン(設置時に決めた文字列)", cur.token || "");
+  if (token === null) return null;
+  const cfg = { url: url.trim(), token: (token || "").trim() };
+  saveLocal(KEY_SYNC, cfg);
+  alert("チーム同期を設定しました。「☁️ 同期」を押すたびに送受信します。");
+  return cfg;
+}
+
+let syncBusy = false;
+async function teamSync() {
+  if (syncBusy) return;
+  let cfg = loadLocal(KEY_SYNC, null);
+  if (!cfg || !cfg.url) { cfg = syncSetup(); if (!cfg) return; }
+  const btn = document.getElementById("syncBtn");
+  syncBusy = true;
+  btn.textContent = "☁️ 同期中…";
+  try {
+    /* 送信前に全図形へ fid/owner/mtime を付与 */
+    const name = myName(true);
+    shapesLayer.eachLayer(l => {
+      const p = l.feature && l.feature.properties;
+      if (!p) return;
+      if (!p.fid) p.fid = newFid();
+      if (!p.owner && name) p.owner = name;
+      if (!p.mtime) p.mtime = Date.now();
+    });
+    persist();
+    const tombs = loadLocal(KEY_TOMB, []) || [];
+    /* 1) 送信(text/plainでプリフライト回避) */
+    const postRes = await fetch(cfg.url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ token: cfg.token, features: shapesLayer.toGeoJSON().features, deleted: tombs }),
+    });
+    const pr = await postRes.json();
+    if (pr.error) throw new Error(pr.error === "unauthorized" ? "トークンが一致しません" : pr.error);
+    saveLocal(KEY_TOMB, []); /* 削除記録はサーバに反映済み */
+    /* 2) 受信して統合 */
+    const getRes = await fetch(cfg.url + "?token=" + encodeURIComponent(cfg.token));
+    const gj = await getRes.json();
+    if (gj.error) throw new Error(gj.error === "unauthorized" ? "トークンが一致しません" : gj.error);
+    const r = mergeGeoJson(gj);
+    /* サーバ側で削除済みの図形をローカルからも削除(削除時刻がこちらの更新より新しい場合) */
+    let removed = 0;
+    if (Array.isArray(gj.deleted) && gj.deleted.length) {
+      const delMap = {};
+      gj.deleted.forEach(d => { if (d && d.fid) delMap[d.fid] = Number(d.mtime) || 0; });
+      const toRemove = [];
+      shapesLayer.eachLayer(l => {
+        const p = l.feature && l.feature.properties;
+        if (p && p.fid && delMap[p.fid] != null && delMap[p.fid] >= (p.mtime || 0)) toRemove.push(l);
+      });
+      toRemove.forEach(l => shapesLayer.removeLayer(l));
+      removed = toRemove.length;
+    }
+    persist();
+    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件`);
+  } catch (err) {
+    alert("同期に失敗しました: " + err.message + "\n(URL・トークン・インターネット接続を確認してください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
+  } finally {
+    syncBusy = false;
+    btn.textContent = "☁️ 同期";
+  }
+}
+
+{
+  const syncBtn = document.getElementById("syncBtn");
+  let pressTimer = null, longPressed = false;
+  syncBtn.onclick = (e) => {
+    if (longPressed) { longPressed = false; return; }
+    if (e.shiftKey) syncSetup();
+    else teamSync();
+  };
+  syncBtn.addEventListener("pointerdown", () => {
+    pressTimer = setTimeout(() => { longPressed = true; syncSetup(); }, 650);
+  });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(ev =>
+    syncBtn.addEventListener(ev, () => clearTimeout(pressTimer)));
+}
+
 document.getElementById("nameBtn").onclick = () => {
   const cur = localStorage.getItem(KEY_NAME) || "";
   const n = prompt("あなたの名前(図形の「登録者」表示・チーム統合時の識別に使います。空欄で解除)", cur);
@@ -401,6 +508,7 @@ document.getElementById("resetBtn").onclick = () => {
   if (!confirm("すべての図形と管理表データを消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
   shapesLayer.clearLayers();
   localStorage.removeItem(KEY_SHAPES);
+  localStorage.removeItem(KEY_TOMB);
   manageRows = [];
   manageLayer.clearLayers();
   localStorage.removeItem(KEY_MANAGE);
