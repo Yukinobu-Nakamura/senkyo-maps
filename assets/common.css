@@ -29,7 +29,7 @@ header.appbar a:hover{text-decoration:underline;}
 .locateBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer;}
 .guideBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer; font-weight:bold; color:var(--accent);}
 .guideBtn.on{background:var(--accent); color:#fff;}
-.guidePanel{position:absolute; top:12px; right:12px; z-index:1200; width:min(480px, calc(100% - 24px)); max-height:calc(100% - 24px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.25); padding:14px 16px 12px; font-size:13px; line-height:1.7;}
+.guidePanel{position:absolute; top:64px; right:12px; z-index:1200; width:min(480px, calc(100% - 24px)); max-height:calc(100% - 76px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.25); padding:14px 16px 12px; font-size:13px; line-height:1.7;}
 .guidePanel h2{font-size:14.5px; color:var(--accent); margin-bottom:8px; padding-right:28px;}
 .guidePanel ol{padding-left:20px; margin-bottom:8px;}
 .guidePanel ol li{margin-bottom:4px;}
