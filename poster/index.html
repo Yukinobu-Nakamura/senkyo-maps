@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="origin-id" content="SENKYO-MAPS-ORIGIN-2609-XK47">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポスターマップ — 掲示板の貼付け管理</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="../assets/common.css?v=13">
+</head>
+<body>
+<header class="appbar">
+  <h1>🗺️ ポスターマップ</h1>
+  <div class="toolbar">
+    <label class="filebtn">📂 CSV読込<input type="file" id="csvIn"></label>
+    <button id="csvOut">💾 CSV書出</button>
+    <button id="resetBtn">状態リセット</button>
+    <a class="dlbtn" href="../dist/poster_map_standalone.html" download="ポスターマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
+    <a href="../" style="align-self:center;">← トップ</a>
+  </div>
+</header>
+<div class="samplebar" id="sampleBar">⚠️ 表示中はサンプル(ダミー)データです。実際の掲示場一覧は選挙管理委員会の公表資料からCSVで読み込んでください。</div>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="../assets/common.js?v=13"></script>
+<script>
+"use strict";
+/* ステータス定義(ここを書き換えれば増減可能) */
+const STATUSES = [
+  { id: 0, label: "未",     color: "#1e88e5" },
+  { id: 1, label: "完了",   color: "#8b5cf6" },
+  { id: 2, label: "予約",   color: "#fdd835" },
+  { id: 3, label: "要確認", color: "#fb8c00" },
+  { id: 4, label: "異常",   color: "#e53935" },
+];
+const KEY_BOARDS = "posterMap.boards";   // CSV読込後のデータ一式
+const KEY_EDITS  = "posterMap.edits";    // サンプルデータへの編集差分 {id:{status,note}}
+
+const map = L.map("map", { preferCanvas: true }).setView([35.7295, 139.7109], 14);
+const baseLayers = createBaseLayers();
+baseLayers["地理院地図(淡色)"].addTo(map);
+const statusLayers = {};
+STATUSES.forEach(s => { statusLayers[s.label] = L.layerGroup().addTo(map); });
+L.control.layers(baseLayers, statusLayers, { collapsed: true }).addTo(map);
+addLocateControl(map);
+addPlaceSearchControl(map);
+L.control.scale({ imperial: false }).addTo(map);
+addGuideControl(map, "🗺️ ポスターマップの使い方",
+  `<ol>
+    <li><b>掲示場データを読み込む</b> — 右上「📂 CSV読込」で選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示はダミーのサンプル)</li>
+    <li><b>ピンをタップ</b> — ステータス(未/完了/予約/要確認/異常)とメモを保存。色が変わり右上の完了率も更新されます</li>
+    <li><b>表示を絞る</b> — 右上のレイヤボタンでステータス別に表示切替、左の📍で現在地表示</li>
+    <li><b>共有・バックアップ</b> — 「💾 CSV書出」で保存し、メンバーはそのCSVを「読込」すると同じ状態を再現できます</li>
+  </ol>
+  <video class="gVideo" src="../assets/poster_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ピンをタップしてステータスとメモを保存すると色と完了率が更新される"></video>
+  <div class="gVideoCap">▲ 操作デモ(ズーム→ピンをタップ→ステータス・メモを保存)</div>
+  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
+  "posterMap");
+
+/* 進捗ボックス */
+const statCtl = L.control({ position: "topright" });
+let statDiv;
+statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return statDiv; };
+statCtl.addTo(map);
+
+/* 凡例 */
+const legendCtl = L.control({ position: "bottomright" });
+legendCtl.onAdd = () => {
+  const div = L.DomUtil.create("div", "legend");
+  div.innerHTML = STATUSES.map(s => `<i style="background:${s.color}"></i>${s.label}`).join("<br>");
+  return div;
+};
+legendCtl.addTo(map);
+
+let boards = [];
+let usingSample = true;
+
+function statusOf(id) { return STATUSES.find(s => s.id === Number(id)) || STATUSES[0]; }
+
+function renderStats() {
+  const total = boards.length;
+  const done = boards.filter(b => b.status === 1).length;
+  const pct = total ? ((done / total) * 100).toFixed(1) : "0.0";
+  statDiv.innerHTML = `完了率 <b>${pct}%</b><br>${done} / ${total} ヶ所(残り ${total - done})`;
+}
+
+function escT(v) { return (v == null ? "" : String(v)).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function popupHtml(b) {
+  const opts = STATUSES.map(s => `<option value="${s.id}" ${s.id === b.status ? "selected" : ""}>${s.label}</option>`).join("");
+  return `<b>${escT(b.name)}</b><br>${escT(b.address)}<br>` +
+    `<a href="https://www.google.com/maps/search/${Number(b.lat)},+${Number(b.long)}" target="_blank" rel="noopener noreferrer">Googleマップで開く</a><br>` +
+    `ステータス:<select id="pStatus">${opts}</select>` +
+    `メモ:<input type="text" id="pNote" value="${escT(b.note)}" maxlength="100">` +
+    `<button class="popupSave" id="pSave">保存</button>`;
+}
+
+function renderBoards() {
+  Object.values(statusLayers).forEach(l => l.clearLayers());
+  boards.forEach(b => {
+    const st = statusOf(b.status);
+    const m = L.circleMarker([b.lat, b.long], {
+      radius: 9, color: "#333", weight: 1, fillColor: st.color, fillOpacity: 0.92,
+    }).addTo(statusLayers[st.label]);
+    m.bindPopup(() => popupHtml(b));
+    m.on("popupopen", (e) => {
+      const node = e.popup.getElement();
+      node.querySelector("#pSave").onclick = () => {
+        b.status = Number(node.querySelector("#pStatus").value);
+        b.note = node.querySelector("#pNote").value.trim();
+        persist();
+        map.closePopup();
+        renderBoards();
+      };
+    });
+  });
+  renderStats();
+}
+
+function persist() {
+  if (usingSample) {
+    const edits = {};
+    boards.forEach(b => { if (b.status !== 0 || b.note) edits[b.id] = { status: b.status, note: b.note }; });
+    saveLocal(KEY_EDITS, edits);
+  } else {
+    saveLocal(KEY_BOARDS, boards);
+  }
+}
+
+/* CSV読込: 列名で判定(name/名称, address/住所, lat/緯度, long|lng/経度, status, note/メモ) */
+const COL = {
+  id: ["id", "ID", "番号"], name: ["name", "名称", "掲示場名", "設置場所"],
+  address: ["address", "住所", "所在地"], lat: ["lat", "latitude", "緯度"],
+  long: ["long", "lng", "longitude", "経度"], status: ["status", "ステータス", "状態"],
+  note: ["note", "メモ", "備考"],
+};
+onFileSelected(document.getElementById("csvIn"), (text) => {
+  const res = importCsv(text, COL, { require: ["lat", "long"],
+    requireMsg: "緯度(lat)・経度(long)の列が見つかりません。ヘッダー行を確認してください。" });
+  if (res.error) return alert(res.error);
+  const hasStatus = res.ix.status >= 0;
+  const loaded = [];
+  res.records.forEach((o, i) => {
+    const lat = parseFloat(o.lat), long = parseFloat(o.long);
+    if (!isFinite(lat) || !isFinite(long)) return;
+    loaded.push({
+      id: o.id ? o.id : `R${i + 1}`,
+      name: o.name ? o.name : `地点${i + 1}`,
+      address: o.address || "",
+      lat, long,
+      status: hasStatus ? (Number(o.status) || 0) : 0,
+      note: o.note || "",
+    });
+  });
+  if (!loaded.length) return alert("有効な座標の行がありません");
+  boards = loaded;
+  usingSample = false;
+  persist();
+  document.getElementById("sampleBar").style.display = "none";
+  map.fitBounds(L.latLngBounds(boards.map(b => [b.lat, b.long])), { padding: [30, 30] });
+  renderBoards();
+});
+
+document.getElementById("csvOut").onclick = () => {
+  const rows = [["id", "name", "address", "lat", "long", "status", "statusLabel", "note"]];
+  boards.forEach(b => rows.push([b.id, b.name, b.address, b.lat, b.long, b.status, statusOf(b.status).label, b.note]));
+  downloadFile(`poster_boards_${todayStamp()}.csv`, "﻿" + toCsv(rows), "text/csv;charset=utf-8");
+};
+
+document.getElementById("resetBtn").onclick = () => {
+  if (!confirm("保存済みのステータス・メモ・読込データをすべて消去してサンプルに戻します。よろしいですか?\n(必要ならまず「CSV書出」でバックアップしてください)")) return;
+  localStorage.removeItem(KEY_BOARDS);
+  localStorage.removeItem(KEY_EDITS);
+  location.reload();
+};
+
+/* 起動: 保存済みデータ > サンプル+編集差分 */
+(async function init() {
+  const saved = loadLocal(KEY_BOARDS, null);
+  if (saved && Array.isArray(saved) && saved.length) {
+    boards = saved;
+    usingSample = false;
+    document.getElementById("sampleBar").style.display = "none";
+    map.fitBounds(L.latLngBounds(boards.map(b => [b.lat, b.long])), { padding: [30, 30] });
+  } else {
+    if (Array.isArray(window.EMBEDDED_BOARDS)) {
+      boards = window.EMBEDDED_BOARDS; // 配布用単一ファイル版はデータ同梱
+    } else {
+      const res = await fetch("../data/boards.sample.json");
+      boards = await res.json();
+    }
+    const edits = loadLocal(KEY_EDITS, {});
+    boards.forEach(b => { if (edits[b.id]) Object.assign(b, edits[b.id]); });
+  }
+  renderBoards();
+})();
+</script>
+</body>
+</html>

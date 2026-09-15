@@ -4,16 +4,24 @@
 GitHub Pages でホスティングしており、URL を開くだけで誰でも使えます。
 
 - **公開URL**: https://yukinobu-nakamura.github.io/senkyo-maps/
-- ポスターマップ: https://yukinobu-nakamura.github.io/senkyo-maps/poster.html
-- ポスティングマップ: https://yukinobu-nakamura.github.io/senkyo-maps/posting.html
+- 選挙と政治活動の歩き方: https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/
+- ポスターマップ: https://yukinobu-nakamura.github.io/senkyo-maps/poster/
+- ポスティングマップ: https://yukinobu-nakamura.github.io/senkyo-maps/posting/
+- 街宣マップ: https://yukinobu-nakamura.github.io/senkyo-maps/gaisen/
+
+4ページはそれぞれ独立した並列URLです(どれかの配下ではありません)。note 等では貼りたいページのURLを個別に貼ってください。
+旧URL(`/poster.html` 等)は新URLへリダイレクトするページを残してあります。
 
 ## 構成
 
 | ページ | 用途 |
 |---|---|
 | `index.html` | トップ(メニュー) |
-| `poster.html` | 選挙運動用ポスター掲示場の貼付け進捗管理(未/予約/完了/要確認/異常の色分けピン+完了率表示) |
-| `posting.html` | 政治活動用ビラのポスティング区域・ルート管理(ポリゴン/線を描画、予定/配布中/済で色分け) |
+| `arukikata/index.html` | 選挙と政治活動の歩き方(公選法・政治資金のすごろく解説) → `/arukikata/` |
+| `poster/index.html` | 選挙運動用ポスター掲示場の貼付け進捗管理(未/予約/完了/要確認/異常の色分けピン+完了率表示) → `/poster/` |
+| `posting/index.html` | 政治活動用ビラのポスティング区域・ルート管理(ポリゴン/線を描画、予定/配布中/済で色分け) → `/posting/` |
+| `gaisen/index.html` | 街宣の音声配慮地点・街宣好適地点の管理 → `/gaisen/` |
+| `poster.html` / `posting.html` / `gaisen.html` / `arukikata.html` | 旧URL用のリダイレクトページ(新URLへ転送。`?`クエリ・`#`ハッシュも引き継ぐ) |
 | `assets/` | 共通CSS/JS |
 | `data/boards.sample.json` | サンプル掲示場データ(**豊島区周辺のダミー座標**。実在の掲示場ではありません) |
 
@@ -57,7 +65,7 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 8. **🏠 世帯数CSV取込**: 自分の選挙区の世帯数一覧(スプレッドシート→CSV。列=名称・世帯数[必須]、人口・緯度・経度[任意])を取り込んで点表示。緯度経度が無い行は国土地理院の住所検索APIで位置を自動推定(400行まで・位置は目安)
 9. **➕ 自治体追加リクエスト**: 世帯数レイヤの凡例・画面上部のリンクから、未収録自治体の追加をGitHub Issueでリクエストできる(区割の正確な記載を依頼・反映は約束しない旨を明記)
    - データ: `data/setai_<市区町村コード>.geojson`(現在: 豊島区13116・杉並区13115・大田区13111・大阪市平野区27126)
-   - 追加方法: e-Stat 統計GISの境界データ(世界測地系緯度経度・shape形式)をDLし `python3 build/make_setai_geojson.py <r2kaXXXXX.shp> data/setai_<code>.geojson` → `posting.html` の `SETAI_SOURCES` に1行追加
+   - 追加方法: e-Stat 統計GISの境界データ(世界測地系緯度経度・shape形式)をDLし `python3 build/make_setai_geojson.py <r2kaXXXXX.shp> data/setai_<code>.geojson` → `posting/index.html` の `SETAI_SOURCES` に1行追加
    - クレジット: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データを加工して作成(画面の凡例・ポップアップに表示)
 
 ## 注意事項
@@ -69,7 +77,7 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 
 ## 残タスク(TODO)
 
-- [ ] **使い方ガイドのデモ動画(GPX/GeoJSONタブ)** — 現在 `posting.html` のガイドは3タブ(🖊️手描き登録=既存動画あり / 📮GPX読込 / 📂GeoJSON共有)。後者2つは手順のみで「🎬準備中」表示。実機で画面録画し `assets/posting_gpx_demo.mp4`・`assets/posting_geojson_demo.mp4` を追加 → 該当 `.gPane` に `<video class="gVideo" src="assets/xxx_demo.mp4" autoplay muted loop playsinline ...>` を入れる。`node build/make_dist.mjs` で配布版(`dist/`)にも自動反映(`*_demo.mp4` は絶対URL化される)。
+- [ ] **使い方ガイドのデモ動画(GPX/GeoJSONタブ)** — 現在 `posting/index.html` のガイドは3タブ(🖊️手描き登録=既存動画あり / 📮GPX読込 / 📂GeoJSON共有)。後者2つは手順のみで「🎬準備中」表示。実機で画面録画し `assets/posting_gpx_demo.mp4`・`assets/posting_geojson_demo.mp4` を追加 → 該当 `.gPane` に `<video class="gVideo" src="../assets/xxx_demo.mp4" autoplay muted loop playsinline ...>` を入れる。`node build/make_dist.mjs` で配布版(`dist/`)にも自動反映(`*_demo.mp4` は絶対URL化される)。
 
 ## ライセンス
 

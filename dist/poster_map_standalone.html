@@ -1105,7 +1105,7 @@ document.getElementById("resetBtn").onclick = () => {
     if (Array.isArray(window.EMBEDDED_BOARDS)) {
       boards = window.EMBEDDED_BOARDS; // 配布用単一ファイル版はデータ同梱
     } else {
-      const res = await fetch("data/boards.sample.json");
+      const res = await fetch("https://yukinobu-nakamura.github.io/senkyo-maps/data/boards.sample.json");
       boards = await res.json();
     }
     const edits = loadLocal(KEY_EDITS, {});
