@@ -80,6 +80,21 @@ header.appbar a:hover{text-decoration:underline;}
 .noticebar .noticeLic{ font-size:11px; color:#374151; }
 .noticebar .noticeLic a{ color:#166534; }
 
+/* ===== デバイス別最適化: 画面幅に応じてヘッダ・ツールバーを段階的にコンパクト化し地図面積を確保 =====
+   〜700px=スマホ / 701〜1024px=タブレット / 1025px〜=PC(既定スタイル) */
+@media (max-width: 1024px){ /* タブレット以下 */
+  header.appbar{ padding:7px 12px; gap:8px; }
+  .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11.5px; padding:5px 9px; }
+  .samplebar{ font-size:11.5px; padding:4px 10px; }
+}
+@media (max-width: 700px){ /* スマホ */
+  header.appbar{ padding:6px 10px; gap:6px; }
+  header.appbar h1{ font-size:14px; min-width:0; }
+  .toolbar{ gap:4px; }
+  .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11px; padding:5px 8px; }
+  .samplebar{ font-size:11px; padding:4px 10px; }
+}
+
 </style>
 </head>
 <body>

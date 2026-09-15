@@ -81,6 +81,21 @@ header.appbar a:hover{text-decoration:underline;}
 .noticebar .noticeLic{ font-size:11px; color:#374151; }
 .noticebar .noticeLic a{ color:#166534; }
 
+/* ===== デバイス別最適化: 画面幅に応じてヘッダ・ツールバーを段階的にコンパクト化し地図面積を確保 =====
+   〜700px=スマホ / 701〜1024px=タブレット / 1025px〜=PC(既定スタイル) */
+@media (max-width: 1024px){ /* タブレット以下 */
+  header.appbar{ padding:7px 12px; gap:8px; }
+  .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11.5px; padding:5px 9px; }
+  .samplebar{ font-size:11.5px; padding:4px 10px; }
+}
+@media (max-width: 700px){ /* スマホ */
+  header.appbar{ padding:6px 10px; gap:6px; }
+  header.appbar h1{ font-size:14px; min-width:0; }
+  .toolbar{ gap:4px; }
+  .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11px; padding:5px 8px; }
+  .samplebar{ font-size:11px; padding:4px 10px; }
+}
+
 </style>
 <style>
   /* 管理表マーカーの実績枚数ラベル */
@@ -127,6 +142,9 @@ header.appbar a:hover{text-decoration:underline;}
     pointer-events:none; text-align:center; line-height:1.25; }
   .setaiLabel .setaiNm{ font-size:calc(var(--setaiFs, 12px) * .8); font-weight:800; color:#1e293b; }
   .setaiLabel .setaiUnit{ font-size:calc(var(--setaiFs, 12px) * .75); font-weight:800; }
+  /* 説明文バー(details化): スマホでは初期折りたたみで地図を広く使う(開閉はJS不要のネイティブ動作) */
+  details.samplebar summary{ cursor:pointer; font-weight:700; }
+  details.samplebar .introBody{ margin-top:3px; }
 </style>
 </head>
 <body>
@@ -145,7 +163,7 @@ header.appbar a:hover{text-decoration:underline;}
   </div>
 </header>
 <div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。原本・最新版: <a href="https://yukinobu-nakamura.github.io/senkyo-maps/">https://yukinobu-nakamura.github.io/senkyo-maps/</a></div>
-<div class="samplebar">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div>
+<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -530,6 +548,11 @@ function addPlaceSearchControl(map) {
 </script>
 <script>
 "use strict";
+/* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
+   (タップで開閉可能。PCでは開いたまま) */
+if (window.matchMedia("(max-width: 1024px)").matches) {
+  document.getElementById("introBar").removeAttribute("open");
+}
 const SHAPE_STATUSES = [
   { id: "plan",  label: "予定",   color: "#1e88e5" },
   { id: "doing", label: "配布中", color: "#eab308" }, /* 黄色系(メンバー要望。白地図でも見える濃さ) */
@@ -558,7 +581,8 @@ function stampFeature(props) {
   props.mtime = Date.now();
 }
 
-const map = L.map("map").setView([35.7295, 139.7109], 14);
+/* renderer padding=1: 画面外1画面分まで先行描画し、ピンチ/パン時に図形が画面端で切れて見える(クリップ)のを防ぐ */
+const map = L.map("map", { renderer: L.svg({ padding: 1 }) }).setView([35.7295, 139.7109], 14);
 const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 const layersCtl = L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
@@ -1181,6 +1205,7 @@ onFileSelected(document.getElementById("mgIn"), (text) => {
    手描き図形より下のペインに描くため、描画・クリック操作の邪魔をしない。 */
 map.createPane("setaiPane");
 map.getPane("setaiPane").style.zIndex = 350; /* overlayPane(400)より下 */
+const setaiRenderer = L.svg({ pane: "setaiPane", padding: 1 }); /* クリップ防止(map本体と同じ理由) */
 const SETAI_BINS = [
   { min: 5000, color: "#08519c", label: "5,000世帯〜" },
   { min: 4000, color: "#3182bd", label: "4,000〜" },
@@ -1206,9 +1231,8 @@ SETAI_SOURCES.forEach(s => {
 function setaiFill(ent, gj){
   L.geoJSON(gj, {
     pane: "setaiPane",
-    style: f => {
-      return { pane: "setaiPane", color: "#64748b", weight: 1, opacity: 0.55, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45 };
-    },
+    renderer: setaiRenderer,
+    style: f => ({ color: "#64748b", weight: 1, opacity: 0.55, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45 }),
     onEachFeature: (f, ly) => {
       const p = f.properties;
       ly.bindTooltip(`<span class="setaiNm">${p.name}</span><br>${p.setai.toLocaleString()}<span class="setaiUnit">世帯</span>`, { permanent: true, direction: "center", className: "setaiLabel" });
@@ -1239,10 +1263,10 @@ function setaiLegendRefresh(){
 }
 /* ズームに連動してラベル文字サイズを増減。
    引くほど小さく=ラベルが各町丁目の区画内に収まるように、寄るほど大きく読みやすく */
+const SETAI_FONT_BY_ZOOM = { 13: 7, 14: 9, 15: 11.5, 16: 14, 17: 17, 18: 20 }; /* z12以下=5.5 / z18以上=20 */
 function setaiFontRefresh(){
-  const z = map.getZoom();
-  const fs = z >= 18 ? 20 : z === 17 ? 17 : z === 16 ? 14 : z === 15 ? 11.5 : z === 14 ? 9 : z === 13 ? 7 : 5.5;
-  map.getContainer().style.setProperty("--setaiFs", fs + "px");
+  const z = Math.min(map.getZoom(), 18);
+  map.getContainer().style.setProperty("--setaiFs", (SETAI_FONT_BY_ZOOM[z] || 5.5) + "px");
 }
 map.on("zoomend", setaiFontRefresh);
 setaiFontRefresh();
