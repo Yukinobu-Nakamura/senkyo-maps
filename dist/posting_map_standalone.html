@@ -120,8 +120,10 @@ header.appbar a:hover{text-decoration:underline;}
   .reqBtns{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
   .reqBtn{ display:block; text-align:center; padding:9px 12px; border-radius:9px; border:1.5px solid #d1d5db; background:#f9fafb; color:#111; text-decoration:none; cursor:pointer; font-size:13.5px; }
   .reqBtn.main{ background:#8b5cf6; border-color:#8b5cf6; color:#fff; font-weight:700; }
-  /* 世帯数レイヤの町丁目ラベル */
-  .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; }
+  /* 世帯数レイヤの町丁目ラベル(地域名で改行して世帯数) */
+  .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; text-align:center; line-height:1.25; }
+  .setaiLabel .setaiNm{ font-size:8.5px; font-weight:600; }
+  .setaiLabel .setaiUnit{ font-size:8px; font-weight:600; }
 </style>
 </head>
 <body>
@@ -590,7 +592,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
       <li>まず上部の<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
       <li>各メンバーが<b>「💾GeoJSON書出」</b>→ファイルを取りまとめ役に送る</li>
       <li>取りまとめ役が<b>「📂読込」</b>で順に読み込む → <b>賢く統合</b>されます(同じ図形は更新が新しい方を採用・重複は増えない)。統合結果を書出して全員に配り直せば完了</li>
-      <li>(任意)ファイルの受け渡しなしでその場で共有したいチームは<b>「☁️ 同期」</b>も使えます。チーム自身のGoogleアカウントに同期先を設置する方式です(設置手順: GitHubの templates/team-sync)</li>
+      <li>(任意)ファイルの受け渡しなしで共有したいチームは<b>「☁️ 同期」</b>も使えます。<b>仕組み</b>=チームの“共有倉庫”(チームのGoogleスプレッドシート)と送受信して全員のマップを同じ状態にします。<b>メンバーのやること</b>=①代表者から<b>URLと合言葉(トークン)</b>を受け取る→②「☁️ 同期」を押して貼り付ける→③以後は作業の前後に「☁️ 同期」を押すだけ。<b>何度押しても図形は増えません</b>(同じ図形は自動で1つに整理)。<b>代表者のやること</b>=“倉庫”の設置(約10分・無料。手順: <a href="https://github.com/Yukinobu-Nakamura/senkyo-maps/blob/main/templates/team-sync/README.md" target="_blank" rel="noopener noreferrer">templates/team-sync の設置手順</a>)→URLと合言葉をメンバーに配布。入力し直したいときは「☁️ 同期」を<b>Shift+クリック(PC)または長押し(スマホ)</b></li>
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
@@ -773,12 +775,15 @@ function attachShape(layer) {
 }
 
 function addFeatureLayer(f) {
+  let addedLayer = null;
   L.geoJSON(f, {
     onEachFeature: (feature, layer) => {
       layer.feature = feature;
       attachShape(layer);
+      addedLayer = layer;
     },
   });
+  return addedLayer;
 }
 
 function loadGeoJson(gj, fit) {
@@ -789,31 +794,59 @@ function loadGeoJson(gj, fit) {
 
 /* ===== 賢い統合(マージ) =====
    ・fidが同じ図形 → 更新時刻(mtime)の新しい方を採用
-   ・fidが無い図形(旧版ファイル) → 形が完全一致するものはスキップ(同じファイルの再読込で増殖しない)
+   ・形が完全一致する図形 → 同じ図形とみなし新しい方を採用(fidが違っても増やさない。
+     各端末が同じ図形に別々のfidを付けてから同期すると多重に増殖する事故の根治)
+   ・統合前に手元の完全重複も自動整理(過去に増殖した分の掃除)。
+     整理・置換で消したfidは削除記録(トゥームストーン)に載せ、同期先・他端末からも消えるようにする
    ・それ以外 → 追加 */
 function geomKey(g) { return g ? g.type + ":" + JSON.stringify(g.coordinates) : ""; }
 function mergeGeoJson(gj) {
   const byFid = {};
-  const geoKeys = new Set();
+  const byGeom = {};
+  const r = { added: 0, updated: 0, skipped: 0, cleaned: 0 };
+  /* 1) 手元の完全重複(形が同一)を整理: 更新が新しい1つを残す */
+  const dupLocal = [];
+  shapesLayer.eachLayer(l => {
+    if (!l.feature) return;
+    const k = geomKey(l.feature.geometry);
+    const cur = byGeom[k];
+    if (!cur) { byGeom[k] = l; return; }
+    const curT = (cur.feature.properties || {}).mtime || 0;
+    const newT = (l.feature.properties || {}).mtime || 0;
+    if (newT > curT) { dupLocal.push(cur); byGeom[k] = l; } else dupLocal.push(l);
+  });
+  dupLocal.forEach(l => { recordTombstone(l); shapesLayer.removeLayer(l); r.cleaned++; });
   shapesLayer.eachLayer(l => {
     const p = l.feature && l.feature.properties;
     if (p && p.fid) byFid[p.fid] = l;
-    if (l.feature) geoKeys.add(geomKey(l.feature.geometry));
   });
-  const r = { added: 0, updated: 0, skipped: 0 };
+  /* 2) 取り込み: fid一致 or 形状完全一致は「同じ図形」として新しい方を採用 */
   (gj.features || []).forEach(f => {
     const p = f.properties = f.properties || {};
-    if (p.fid && byFid[p.fid]) {
-      const cur = byFid[p.fid].feature.properties;
-      if ((p.mtime || 0) > (cur.mtime || 0)) {
-        shapesLayer.removeLayer(byFid[p.fid]);
-        addFeatureLayer(f);
+    const k = geomKey(f.geometry);
+    const cur = (p.fid && byFid[p.fid]) || byGeom[k] || null;
+    if (cur) {
+      const cp = cur.feature.properties || {};
+      if (!p.fid) {
+        /* fidなし(旧版ファイル・GPXの再読込): 形一致は従来どおり常にスキップ(手元の編集を守る) */
+        r.skipped++;
+      } else if ((p.mtime || 0) > (cp.mtime || 0)) {
+        if (p.fid && cp.fid && p.fid !== cp.fid) recordTombstoneFid(cp.fid);
+        shapesLayer.removeLayer(cur);
+        if (cp.fid) delete byFid[cp.fid];
+        const nl = addFeatureLayer(f);
+        if (p.fid && nl) byFid[p.fid] = nl;
+        if (nl) byGeom[k] = nl;
         r.updated++;
-      } else r.skipped++;
-    } else if (!p.fid && geoKeys.has(geomKey(f.geometry))) {
-      r.skipped++;
+      } else {
+        /* 手元の方が新しい(または同じ) → 取り込まない。fid違いの同形図形は相手のfidを削除記録して増殖を止める */
+        if (p.fid && cp.fid && p.fid !== cp.fid) recordTombstoneFid(p.fid);
+        r.skipped++;
+      }
     } else {
-      addFeatureLayer(f);
+      const nl = addFeatureLayer(f);
+      if (p.fid && nl) byFid[p.fid] = nl;
+      if (nl) byGeom[k] = nl;
       r.added++;
     }
   });
@@ -866,7 +899,7 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
   const r = mergeGeoJson(gj);
   if (shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
   persist();
-  alert(`統合しました: 追加 ${r.added} 件 ・ 更新 ${r.updated} 件 ・ 重複スキップ ${r.skipped} 件`);
+  alert(`統合しました: 追加 ${r.added} 件 ・ 更新 ${r.updated} 件 ・ 重複スキップ ${r.skipped} 件` + (r.cleaned ? ` ・ 手元の重複を自動整理 ${r.cleaned} 件` : ""));
 });
 
 document.getElementById("gjOut").onclick = () => {
@@ -892,21 +925,38 @@ const KEY_TOMB = "postingMap.tombstones";
 function recordTombstone(layer) {
   const p = layer.feature && layer.feature.properties;
   if (!p || !p.fid) return;
+  recordTombstoneFid(p.fid);
+}
+function recordTombstoneFid(fid) {
+  if (!fid) return;
   const t = loadLocal(KEY_TOMB, []) || [];
-  t.push({ fid: p.fid, mtime: Date.now() });
-  saveLocal(KEY_TOMB, t.slice(-500));
+  t.push({ fid: fid, mtime: Date.now() });
+  saveLocal(KEY_TOMB, t.slice(-4000)); /* 大量の重複整理でも削除の伝播が欠けないよう多めに保持 */
 }
 
 function syncSetup() {
   const cur = loadLocal(KEY_SYNC, null) || { url: "", token: "" };
-  const url = prompt("チーム同期のウェブアプリURL(空欄で解除)\n※設置手順: GitHubリポジトリの templates/team-sync/README.md", cur.url || "");
+  if (!cur.url) {
+    /* 初めての人向け: 何をする機能か・何を入力するのかを先に説明 */
+    const go = confirm(
+      "☁️ 同期とは?\n" +
+      "チームの“共有倉庫”(チームのGoogleスプレッドシート)とデータを送受信して、メンバー全員のマップを同じ状態にする機能です。\n\n" +
+      "● チームの代表者が1回だけ“倉庫”を設置し、【URL】と【合言葉(トークン)】をメンバーに配ります\n" +
+      "● メンバーは、配られたURLと合言葉を次の画面に貼り付けるだけです\n" +
+      "● 何度押しても大丈夫(同じ図形は増えません)\n\n" +
+      "URLと合言葉を受け取っている → [OK]\n" +
+      "まだ持っていない → [キャンセル](ファイルの書出→読込でも共有できます。設置手順はガイド❓「チームで共有」)"
+    );
+    if (!go) return null;
+  }
+  const url = prompt("① チーム同期のURL(代表者から配られた https://script.google.com/… を貼り付け。空欄で解除)", cur.url || "");
   if (url === null) return null;
   if (!url.trim()) {
     localStorage.removeItem(KEY_SYNC);
     alert("チーム同期を解除しました。");
     return null;
   }
-  const token = prompt("同期トークン(設置時に決めた文字列)", cur.token || "");
+  const token = prompt("② 合言葉(トークン。代表者から配られた文字列を貼り付け)", cur.token || "");
   if (token === null) return null;
   const cfg = { url: url.trim(), token: (token || "").trim() };
   saveLocal(KEY_SYNC, cfg);
@@ -962,7 +1012,7 @@ async function teamSync() {
       removed = toRemove.length;
     }
     persist();
-    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件`);
+    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件` + (r.cleaned ? `\n🧹 重複していた図形 ${r.cleaned} 件を自動整理しました(何度同期しても増えません)` : ""));
   } catch (err) {
     alert("同期に失敗しました: " + err.message + "\n(URL・トークン・インターネット接続を確認してください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
   } finally {
@@ -1158,7 +1208,7 @@ function setaiFill(ent, gj){
     },
     onEachFeature: (f, ly) => {
       const p = f.properties;
-      ly.bindTooltip(`${p.setai.toLocaleString()}`, { permanent: true, direction: "center", className: "setaiLabel" });
+      ly.bindTooltip(`<span class="setaiNm">${p.name}</span><br>${p.setai.toLocaleString()}<span class="setaiUnit">世帯</span>`, { permanent: true, direction: "center", className: "setaiLabel" });
       ly.bindPopup(`<b>${p.name}</b><br>世帯数: <b>${p.setai.toLocaleString()}世帯</b><br>人口: ${p.jinko.toLocaleString()}人<br><span style="font-size:10.5px;color:#888">${SETAI_CREDIT}</span>`);
     },
   }).eachLayer(l => ent.grp.addLayer(l));
