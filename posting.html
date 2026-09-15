@@ -49,7 +49,7 @@
   /* 世帯数レイヤの町丁目ラベル(地域名で改行して世帯数)。
      枠なし透過のまま、濃紺の太字+強い白フチでベース地図から浮き立たせる */
   .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#08306b; font-weight:900; font-size:var(--setaiFs, 12px);
-    text-shadow:-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff, 0 0 4px #fff, 0 0 7px #fff;
+    text-shadow:-.08em -.08em 0 #fff, .08em -.08em 0 #fff, -.08em .08em 0 #fff, .08em .08em 0 #fff, -.12em 0 0 #fff, .12em 0 0 #fff, 0 -.12em 0 #fff, 0 .12em 0 #fff, 0 0 .33em #fff, 0 0 .58em #fff;
     pointer-events:none; text-align:center; line-height:1.25; }
   .setaiLabel .setaiNm{ font-size:calc(var(--setaiFs, 12px) * .8); font-weight:800; color:#1e293b; }
   .setaiLabel .setaiUnit{ font-size:calc(var(--setaiFs, 12px) * .75); font-weight:800; }
@@ -785,10 +785,11 @@ function setaiLegendRefresh(){
     setaiLegendCtl = null;
   }
 }
-/* 地図を拡大しても文字が相対的に小さく見えないよう、ズームに連動してラベル文字サイズを拡大 */
+/* ズームに連動してラベル文字サイズを増減。
+   引くほど小さく=ラベルが各町丁目の区画内に収まるように、寄るほど大きく読みやすく */
 function setaiFontRefresh(){
   const z = map.getZoom();
-  const fs = z >= 18 ? 22 : z === 17 ? 19 : z === 16 ? 16 : z === 15 ? 13 : z === 14 ? 11.5 : 10.5;
+  const fs = z >= 18 ? 20 : z === 17 ? 17 : z === 16 ? 14 : z === 15 ? 11.5 : z === 14 ? 9 : z === 13 ? 7 : 5.5;
   map.getContainer().style.setProperty("--setaiFs", fs + "px");
 }
 map.on("zoomend", setaiFontRefresh);
