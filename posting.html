@@ -46,10 +46,13 @@
   .reqBtns{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
   .reqBtn{ display:block; text-align:center; padding:9px 12px; border-radius:9px; border:1.5px solid #d1d5db; background:#f9fafb; color:#111; text-decoration:none; cursor:pointer; font-size:13.5px; }
   .reqBtn.main{ background:#8b5cf6; border-color:#8b5cf6; color:#fff; font-weight:700; }
-  /* 世帯数レイヤの町丁目ラベル(地域名で改行して世帯数) */
-  .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; text-align:center; line-height:1.25; }
-  .setaiLabel .setaiNm{ font-size:8.5px; font-weight:600; }
-  .setaiLabel .setaiUnit{ font-size:8px; font-weight:600; }
+  /* 世帯数レイヤの町丁目ラベル(地域名で改行して世帯数)。
+     枠なし透過のまま、濃紺の太字+強い白フチでベース地図から浮き立たせる */
+  .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#08306b; font-weight:900; font-size:12px;
+    text-shadow:-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, -1.5px 0 0 #fff, 1.5px 0 0 #fff, 0 -1.5px 0 #fff, 0 1.5px 0 #fff, 0 0 4px #fff, 0 0 7px #fff;
+    pointer-events:none; text-align:center; line-height:1.25; }
+  .setaiLabel .setaiNm{ font-size:9.5px; font-weight:800; color:#1e293b; }
+  .setaiLabel .setaiUnit{ font-size:9px; font-weight:800; }
 </style>
 </head>
 <body>
