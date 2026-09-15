@@ -120,10 +120,14 @@ header.appbar a:hover{text-decoration:underline;}
   .reqBtns{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
   .reqBtn{ display:block; text-align:center; padding:9px 12px; border-radius:9px; border:1.5px solid #d1d5db; background:#f9fafb; color:#111; text-decoration:none; cursor:pointer; font-size:13.5px; }
   .reqBtn.main{ background:#8b5cf6; border-color:#8b5cf6; color:#fff; font-weight:700; }
-  /* 世帯数レイヤの町丁目ラベル(地域名で改行して世帯数) */
-  .setaiLabel{ background:transparent; border:none; box-shadow:none; color:#1e3a5f; font-weight:700; font-size:10px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; pointer-events:none; text-align:center; line-height:1.25; }
-  .setaiLabel .setaiNm{ font-size:8.5px; font-weight:600; }
-  .setaiLabel .setaiUnit{ font-size:8px; font-weight:600; }
+  /* 世帯数レイヤの町丁目ラベル(地域名で改行して世帯数)。
+     ベース地図の地名文字と同化しないよう白地チップで目立たせる */
+  .setaiLabel{ background:rgba(255,255,255,.93); border:1.5px solid #2563eb; border-radius:7px; box-shadow:0 1px 4px rgba(15,40,80,.35); color:#0b3a75; font-weight:800; font-size:11.5px; padding:2px 6px; pointer-events:none; text-align:center; line-height:1.3; }
+  .setaiLabel .setaiNm{ font-size:9px; font-weight:700; color:#334155; }
+  .setaiLabel .setaiUnit{ font-size:8.5px; font-weight:700; }
+  /* 引きのズームでは地域名を省き小さな世帯数チップに(チップ同士の重なり防止)。寄ると地域名+世帯数のフル表示 */
+  .setaiZoomFar .setaiLabel{ font-size:10px; padding:1px 4px; border-width:1px; border-radius:5px; }
+  .setaiZoomFar .setaiLabel .setaiNm{ display:none; }
 </style>
 </head>
 <body>
@@ -1204,7 +1208,7 @@ function setaiFill(ent, gj){
   L.geoJSON(gj, {
     pane: "setaiPane",
     style: f => {
-      return { pane: "setaiPane", color: "#64748b", weight: 1, opacity: 0.55, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45 };
+      return { pane: "setaiPane", color: "#475569", weight: 1.5, opacity: 0.75, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.55 };
     },
     onEachFeature: (f, ly) => {
       const p = f.properties;
@@ -1234,6 +1238,11 @@ function setaiLegendRefresh(){
     setaiLegendCtl = null;
   }
 }
+/* ズームに応じてラベルの詳しさを切替(15以上=地域名+世帯数 / 14以下=世帯数のみ) */
+function setaiZoomClass(){ map.getContainer().classList.toggle("setaiZoomFar", map.getZoom() < 15); }
+map.on("zoomend", setaiZoomClass);
+setaiZoomClass();
+
 map.on("overlayadd", (e) => {
   if (e.layer === usLayer) { setaiLegendRefresh(); return; }
   const ent = setaiLayers[e.name];
