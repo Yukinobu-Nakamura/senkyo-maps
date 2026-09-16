@@ -45,8 +45,16 @@
   この分割は住居表示に対応せず、現地に境界の手がかりが無い(住所はどちらも
   「岡津町○○番地」)。ポスティング・ポスター配置の用途では**町名単位**が
   実務の単位なので、同一市区町村内で**同じ S_NAME を1フィーチャへ統合**する。
+  - 世帯数・人口は合算(岡津町なら 3,965+461=4,426世帯)
+  - ラベルは**最も世帯数の多い区分の本体ポリゴン**に載せる
+  - properties.units に合算した集計単位数が入る(1なら未統合)
+  丁目は名称が異なるため統合されない(下和泉一丁目と二丁目は別のまま)。
 
-■ 統合キーの決め方(2段構え)
+■ 統合キーの決め方(3段構え)
+  第0段: **市区町村コード(PREF+CITY)で仕切る**。統合は必ずこの中だけで行う。
+         都道府県一括の境界データ(code=2桁)は複数市区町村が1ファイルに入るため、
+         これをやらないと「新宿一丁目」(新宿区)と「新宿一丁目」(葛飾区)のような
+         別の市区町村の同名町丁目が1つに融合する(東京都だけで204件該当)。
   第1段: **S_AREA(町丁・字等番号 = KIHON1+KIHON2)を主キー**にして束ねる。
          S_AREA は集計単位そのものの公式IDで必ず入っているため、これを土台にする。
          ここで KIGO_E の複数境界(E1,E2…)が1単位にまとまる。
@@ -59,14 +67,12 @@
   追加したときに全町丁目が1フィーチャへ融合する事故が起きうる。
   S_AREA を土台に置けばその形の壊れ方はしない。
 
-  同名なのに KIHON1(町字コード)が違う単位を束ねたときは警告を出す
-  (現状の該当は大田区 令和島の0811/0812のみ。地理的に一続きで両方0世帯、
-   統合して差し支えないことを確認済み)。別の町が同名で並んでいる自治体が
-  来たらここで気づけるようにしてある。
-  - 世帯数・人口は合算(岡津町なら 3,965+461=4,426世帯)
-  - ラベルは**最も世帯数の多い区分の本体ポリゴン**に載せる
-  - properties.units に合算した集計単位数が入る(1なら未統合)
-  丁目は名称が異なるため統合されない(下和泉一丁目と二丁目は別のまま)。
+  なお第2段の条件に KIHON1(町字コード)の一致を足す案もあるが、採らない。
+  KIHON1 は市区町村内でしか一意でないので市区町村またぎの誤統合は防げず
+  (それは第0段の仕事)、逆に**同一町名で KIHON1 が違う正当な統合を壊す**
+  (大田区 令和島=0811/0812。地理的に一続きで両方0世帯、統合が妥当)。
+  そこで KIHON1 は条件には使わず、**違っていたら警告を出す**に留める。
+  別の町が同名で並んでいる自治体が来たらここで気づける。
 
   ■ これは「飛び地」ではない(用語の注意)
   e-Stat には飛び地・抜け地の専用フラグ KIGO_D('D'=抜け地 / 'D1'=抜け地(飛び地))が
@@ -79,31 +85,49 @@
   横浜市18区の29ケースの内訳は、同名の別番号とかみ合って分割=17件、
   1つの番号の territory 自体が離れている=12件(上永谷町・寺家町など)。
 
-使い方: python3 build/make_setai_geojson.py <r2kaXXXXX.shpのパス> <出力geojsonパス>
+使い方:
+  1市区町村: python3 build/make_setai_geojson.py <r2kaXXXXX.shp> <出力geojson>
+  都道府県一括: python3 build/make_setai_geojson.py <r2kaXX.shp> --split <出力ディレクトリ>
+               (市区町村コードごとに setai_<code>.geojson を書き出す)
 依存: pyshp (pip install pyshp)
 """
 import json
 import sys
+from pathlib import Path
 from collections import Counter, OrderedDict
 
 import shapefile
 
 
-def convert(src: str, dst: str) -> None:
+def read_municipalities(src: str):
+    """shapefile を読み、市区町村コード単位に仕分けして返す。
+
+    都道府県一括の境界データ(code=2桁でDLしたもの)は複数市区町村が1ファイルに
+    入っているため、**必ず市区町村で仕切ってから**町名の統合をする。
+    これをやらないと「新宿一丁目」(新宿区)と「新宿一丁目」(葛飾区)のように
+    別の市区町村の同名町丁目が1つに統合されてしまう(東京都だけで204件該当)。
+    戻り値: OrderedDict {市区町村コード5桁: {"pref","city","units"}}
+    """
     sf = shapefile.Reader(src, encoding="cp932")
     fields = [f[0] for f in sf.fields[1:]]
-
-    # --- 第1段: S_AREA(町丁・字等番号)を主キーにする ---------------------
-    # S_AREA は集計単位そのものの公式ID。まずこれで束ね、KIGO_E の複数境界を吸収する。
-    # (町名を主キーにすると、将来 S_NAME が空の自治体が来たとき全部1つに融合してしまう)
-    units = OrderedDict()  # S_AREA -> unit
+    munis = OrderedDict()
     for sr in sf.shapeRecords():
         rec = dict(zip(fields, list(sr.record)))
         if rec.get("HCODE") != 8101:  # 町丁目のみ(水面調査区などを除外)
             continue
-        area_id = rec.get("S_AREA") or rec.get("KEY_CODE") or ""
-        u = units.setdefault(area_id, {
-            "key": rec.get("KEY_CODE") or "",
+        key_code = rec.get("KEY_CODE") or ""
+        code = (rec.get("PREF") or "") + (rec.get("CITY") or "") or key_code[:5]
+        m = munis.setdefault(code, {
+            "pref": rec.get("PREF_NAME") or "",
+            "city": rec.get("CITY_NAME") or "",
+            "units": OrderedDict(),
+        })
+        # --- 第1段: S_AREA(町丁・字等番号)を主キーにする -------------------
+        # S_AREA は集計単位そのものの公式ID。まずこれで束ね、KIGO_E の複数境界を吸収する。
+        # (町名を主キーにすると、将来 S_NAME が空の自治体が来たとき全部1つに融合してしまう)
+        area_id = rec.get("S_AREA") or key_code or ""
+        u = m["units"].setdefault(area_id, {
+            "key": key_code,
             "name": rec.get("S_NAME") or "",
             "parts": [],
         })
@@ -113,7 +137,11 @@ def convert(src: str, dst: str) -> None:
             "area": float(rec.get("AREA") or 0),
             "geom": round_geom(sr.shape.__geo_interface__, 5),
         })
+    return munis
 
+
+def build_features(units):
+    """1市区町村分の units から GeoJSON の features を作る。"""
     n_multi_boundary = 0
     for u in units.values():
         if len(u["parts"]) > 1:
@@ -155,16 +183,51 @@ def convert(src: str, dst: str) -> None:
             "geometry": merge_geoms([p["geom"] for u in us for p in u["parts"]]),
         })
 
-    gj = {"type": "FeatureCollection", "features": feats}
+    return feats, {
+        "units": len(units), "multi_boundary": n_multi_boundary,
+        "merged": merged_names, "warns": warns,
+    }
+
+
+def write_geojson(feats, dst):
     with open(dst, "w", encoding="utf-8") as f:
-        json.dump(gj, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"{dst}: {len(feats)} features / S_AREA単位 {len(units)} "
-          f"(うち複数境界(KIGO_E)を束ねた単位 {n_multi_boundary}) "
-          f"/ 同名で統合した町名 {len(merged_names)}")
-    for nm, cnt, s in merged_names:
-        print(f"    統合: {nm} = {cnt}区分 → {s:,}世帯")
-    for w in warns:
+        json.dump({"type": "FeatureCollection", "features": feats}, f,
+                  ensure_ascii=False, separators=(",", ":"))
+
+
+def report(label, feats, st, verbose=True):
+    print(f"{label}: {len(feats)} features / S_AREA単位 {st['units']} "
+          f"(うち複数境界(KIGO_E)を束ねた単位 {st['multi_boundary']}) "
+          f"/ 同名で統合した町名 {len(st['merged'])}")
+    if verbose:
+        for nm, cnt, s in st["merged"]:
+            print(f"    統合: {nm} = {cnt}区分 → {s:,}世帯")
+    for w in st["warns"]:
         print(f"    ⚠️ {w}")
+
+
+def convert(src: str, dst: str) -> None:
+    """1市区町村のshpを1つのgeojsonへ(従来の使い方)。"""
+    munis = read_municipalities(src)
+    if len(munis) != 1:
+        sys.exit(f"エラー: {src} に {len(munis)} 市区町村が入っています。"
+                 f"都道府県一括データは --split を使ってください。")
+    code, m = next(iter(munis.items()))
+    feats, st = build_features(m["units"])
+    write_geojson(feats, dst)
+    report(dst, feats, st)
+
+
+def convert_split(src: str, outdir: str) -> None:
+    """都道府県一括などの複数市区町村shpを、市区町村ごとの geojson に分けて出す。"""
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+    munis = read_municipalities(src)
+    for code, m in munis.items():
+        feats, st = build_features(m["units"])
+        write_geojson(feats, outdir / f"setai_{code}.geojson")
+        report(f"{code} {m['pref']}{m['city']}", feats, st, verbose=False)
+    print(f"--- {src}: {len(munis)} 市区町村を書き出し ---")
 
 
 def merge_geoms(geoms):
@@ -191,6 +254,9 @@ def round_geom(geom, nd):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) == 3:
+        convert(sys.argv[1], sys.argv[2])
+    elif len(sys.argv) == 4 and sys.argv[2] == "--split":
+        convert_split(sys.argv[1], sys.argv[3])
+    else:
         sys.exit(__doc__)
-    convert(sys.argv[1], sys.argv[2])

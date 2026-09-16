@@ -308,7 +308,13 @@ function loadLocal(key, fallback) {
   }
 }
 function saveLocal(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  /* 配布版HTMLを file:// で開いた場合など、保存が拒否される環境がある。
+     ここで落とすとアプリ全体が止まるので、保存できなくても動作は続ける */
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn("この環境ではブラウザに保存できませんでした:", key, e);
+  }
 }
 
 /* ---- ファイル入出力 ---- */
@@ -579,8 +585,7 @@ function rememberMapSession(map, key, cfg) {
 /* ===== 🏠 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
    ポスターマップ・ポスティングマップ共通。右上のレイヤボタンからON/OFFし、
    データは data/setai_<市区町村コード>.geojson を初回ONのときだけ取得する。
-   収録自治体を増やすときは SETAI_SOURCES に1行足し、対応する geojson を
-   build/make_setai_geojson.py で作って data/ に置く(コード・名称はe-Statの境界データが正)。 */
+   収録自治体は data/setai_index.json から読み込む(下の fetchSetaiIndex)。 */
 const SETAI_BINS = [
   { min: 5000, color: "#08519c", label: "5,000世帯〜" },
   { min: 4000, color: "#3182bd", label: "4,000〜" },
@@ -591,27 +596,19 @@ const SETAI_BINS = [
 ];
 function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
 const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データを加工して作成";
-/* 自治体(市区町村) > 区 の2階層。政令市は wards に行政区を並べる。
-   自治体のチェックで配下の区が全部ON/OFF、区は下層で個別に選べる。
-   収録を増やすときはここに1行(または1ブロック)足し、対応する geojson を
-   build/make_setai_geojson.py で作って data/ に置く(コード・名称はe-Statの境界データが正)。 */
-const SETAI_SOURCES = [
-  { pref: "東京都",   city: "豊島区", wards: [{ code: "13116", name: "豊島区" }] },
-  { pref: "東京都",   city: "杉並区", wards: [{ code: "13115", name: "杉並区" }] },
-  { pref: "東京都",   city: "大田区", wards: [{ code: "13111", name: "大田区" }] },
-  { pref: "大阪府",   city: "大阪市", wards: [{ code: "27126", name: "平野区" }] },
-  { pref: "神奈川県", city: "横浜市", wards: [
-    { code: "14101", name: "鶴見区" },   { code: "14102", name: "神奈川区" },
-    { code: "14103", name: "西区" },     { code: "14104", name: "中区" },
-    { code: "14105", name: "南区" },     { code: "14106", name: "保土ケ谷区" },
-    { code: "14107", name: "磯子区" },   { code: "14108", name: "金沢区" },
-    { code: "14109", name: "港北区" },   { code: "14110", name: "戸塚区" },
-    { code: "14111", name: "港南区" },   { code: "14112", name: "旭区" },
-    { code: "14113", name: "緑区" },     { code: "14114", name: "瀬谷区" },
-    { code: "14115", name: "栄区" },     { code: "14116", name: "泉区" },
-    { code: "14117", name: "青葉区" },   { code: "14118", name: "都筑区" },
-  ] },
-];
+/* 収録自治体の一覧は data/setai_index.json から取得する(コードに埋め込まない)。
+   配布版(dist)のHTMLも公開URLの同じJSONを見に行くため、あとから自治体を足しても
+   **既に配ったHTMLがそのまま新しい一覧を拾える**(配り直し不要)。
+   形式: {version, updated, cities:[{pref, city, wards:[{code, name}]}]}
+   作り方は build/make_setai_index.py を参照(名称はe-Statの境界データが正)。 */
+function fetchSetaiIndex() {
+  return fetch("https://yukinobu-nakamura.github.io/senkyo-maps/data/setai_index.json")
+    .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(j => Array.isArray(j.cities) ? j.cities : []);
+}
+/* 区が1つでも、市名と区名が違う(政令市の一部だけ収録)なら下層レイヤとして見せる。
+   例: 大阪市 > 平野区。市名=区名の特別区や一般市(豊島区・金沢市)は1行のまま */
+function setaiHasSub(c) { return c.wards.length > 1 || c.wards[0].name !== c.city; }
 /* ズームに連動してラベル文字サイズを増減。
    引くほど小さく=ラベルが各町丁目の区画内に収まるように、寄るほど大きく読みやすく */
 const SETAI_FONT_BY_ZOOM = { 13: 7, 14: 9, 15: 11.5, 16: 14, 17: 17, 18: 20 }; /* z12以下=5.5 / z18以上=20 */
@@ -634,10 +631,9 @@ function addSetaiLayers(map, opts) {
   map.getPane("setaiPane").style.zIndex = 350; /* overlayPane(400)より下 */
   const renderer = L.svg({ pane: "setaiPane", padding: 1 }); /* クリップ防止(map本体と同じ理由) */
 
-  const wards = {};   /* 市区町村コード -> {grp, loaded, cityIdx, name} */
-  SETAI_SOURCES.forEach((c, ci) => c.wards.forEach(w => {
-    wards[w.code] = { grp: L.layerGroup(), loaded: false, cityIdx: ci, name: w.name };
-  }));
+  let cities = [];    /* data/setai_index.json の cities。取得できるまで空 */
+  let indexState = "loading";  /* loading | ready | error */
+  const wards = {};   /* 市区町村コード -> {grp, loaded, cityIdx, city, name} */
   /* desired = ONにしたい区コードの集合。チェックボックスはこれを映し、
      地図への追加は読込完了後に追いつく(読込中もチェックは入ったまま) */
   const desired = new Set();
@@ -703,44 +699,44 @@ function addSetaiLayers(map, opts) {
   let panelBody = null, panelWrap = null;
 
   function cityState(ci) {
-    const ws = SETAI_SOURCES[ci].wards;
+    const ws = cities[ci].wards;
     const on = ws.filter(w => desired.has(w.code)).length;
     return on === 0 ? "off" : (on === ws.length ? "on" : "part");
   }
 
   function renderPanel() {
     if (!panelBody) return;
-    const rows = SETAI_SOURCES.map((c, ci) => {
+    const rows = cities.map((c, ci) => {
       const st = cityState(ci);
-      const multi = c.wards.length > 1;
+      /* 区が1つでも市名と区名が違えば(政令市の一部だけ収録)下層レイヤにする。
+         大阪市>平野区 が該当。市名=区名の特別区・一般市は1行のまま */
+      const sub2 = setaiHasSub(c);
       const open = expanded.has(ci);
-      const sub = !multi || !open ? "" :
+      const sub = !sub2 || !open ? "" :
         `<div class="stWards">
            <div class="stWardBtns">
              <button type="button" data-all="${ci}">全選択</button>
              <button type="button" data-none="${ci}">全クリア</button>
            </div>
-           ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
+           ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
          </div>`;
-      /* 1区だけ収録している政令市(例: 大阪市=平野区のみ)は、市全体が入っていると
-         誤解されないよう区名まで出す。区名と市名が同じ自治体(豊島区など)はそのまま */
-      const title = !multi && c.wards[0].name !== c.city ? `${c.city}${c.wards[0].name}` : c.city;
       return `<div class="stCity">
         <div class="stCityRow">
-          <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${title}</b><span class="stPref">${c.pref}</span></label>
-          ${multi ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length}区</span></button>` : ""}
+          <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b><span class="stPref">${c.pref}</span></label>
+          ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length}区</span></button>` : ""}
         </div>${sub}</div>`;
     }).join("");
     const extra = opts.extra
       ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${opts.extra.label}</label></div>`
       : "";
-    panelBody.innerHTML =
-      `<div class="stNote">選択内容は<b>再読み込みでは残り</b>、タブを閉じると消えます</div>` +
-      rows + extra +
+    const head = indexState === "loading" ? `<div class="stLoadBar">収録自治体の一覧を読み込み中…</div>`
+      : indexState === "error" ? `<div class="stLoadBar">一覧を読み込めませんでした。インターネット接続を確認して開き直してください。</div>`
+      : `<div class="stNote">選択内容は<b>再読み込みでは残り</b>、タブを閉じると消えます</div>`;
+    panelBody.innerHTML = head + rows + extra +
       (pending ? `<div class="stLoadBar">世帯数データを読み込み中… 残り${pending}件</div>` : "") +
       `<div class="stReq"><a href="#" data-req="1">➕ 自治体の追加をリクエスト</a></div>`;
     /* 一部だけONの自治体は中間状態(■)にする */
-    SETAI_SOURCES.forEach((c, ci) => {
+    cities.forEach((c, ci) => {
       const el = panelBody.querySelector(`input[data-city="${ci}"]`);
       if (el) el.indeterminate = cityState(ci) === "part";
     });
@@ -773,7 +769,7 @@ function addSetaiLayers(map, opts) {
     panelBody.addEventListener("change", (ev) => {
       const t = ev.target;
       if (t.dataset.city != null) {
-        const ws = SETAI_SOURCES[+t.dataset.city].wards;
+        const ws = cities[+t.dataset.city].wards;
         ws.forEach(w => t.checked ? desired.add(w.code) : desired.delete(w.code));
         if (t.checked && ws.length > 1) expanded.add(+t.dataset.city);
       } else if (t.dataset.ward) {
@@ -791,10 +787,10 @@ function addSetaiLayers(map, opts) {
         expanded.has(ci) ? expanded.delete(ci) : expanded.add(ci);
         renderPanel();
       } else if (t.dataset.all != null) {
-        SETAI_SOURCES[+t.dataset.all].wards.forEach(w => desired.add(w.code));
+        cities[+t.dataset.all].wards.forEach(w => desired.add(w.code));
         apply(); renderPanel();
       } else if (t.dataset.none != null) {
-        SETAI_SOURCES[+t.dataset.none].wards.forEach(w => desired.delete(w.code));
+        cities[+t.dataset.none].wards.forEach(w => desired.delete(w.code));
         apply(); renderPanel();
       } else if (t.dataset.req) {
         ev.preventDefault(); openReqModal();
@@ -853,13 +849,26 @@ function addSetaiLayers(map, opts) {
     ev.returnValue = "";
   });
 
-  restore();
-  if (desired.size) {
-    /* 復元した自治体は区の一覧を開いておく(どれが入っているか見えるように) */
-    desired.forEach(c => { if (SETAI_SOURCES[wards[c].cityIdx].wards.length > 1) expanded.add(wards[c].cityIdx); });
-    apply();
-  }
-  renderPanel();
+  /* 収録一覧を取ってからレイヤを組み立てる。
+     ここで一覧を外部JSONにしているので、自治体を追加しても配布済みHTMLが追従できる。
+     一覧に無くなったコードがセッションに残っていても、wards に無ければ黙って捨てる
+     (収録の入れ替えがあっても復元でエラーにならない) */
+  fetchSetaiIndex()
+    .then(list => {
+      cities = list;
+      indexState = "ready";
+      cities.forEach((c, ci) => c.wards.forEach(w => {
+        wards[w.code] = { grp: L.layerGroup(), loaded: false, cityIdx: ci, city: c.city, name: w.name };
+      }));
+      restore();
+      if (desired.size) {
+        /* 復元した自治体は区の一覧を開いておく(どれが入っているか見えるように) */
+        desired.forEach(c => { if (setaiHasSub(cities[wards[c].cityIdx])) expanded.add(wards[c].cityIdx); });
+        apply();
+      }
+    })
+    .catch(() => { indexState = "error"; })
+    .then(() => renderPanel());
 
   return { refreshLegend, layers: wards, desired };
 }
@@ -1389,7 +1398,7 @@ addLocateControl(map);
 addPlaceSearchControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 /* 🏠 世帯数レイヤ(国勢調査2020・町丁目)。実装と収録自治体は assets/common.js の
-   addSetaiLayers() / SETAI_SOURCES にあり、ポスティングマップと共通。
+   addSetaiLayers() と data/setai_index.json にあり、ポスティングマップと共通。
    右上の🏠ボタンから自治体>区の2階層で選ぶ。
    掲示場ピンより下のペインに描くので、ピンのタップ操作の邪魔はしない。 */
 addSetaiLayers(map, { sessionKey: "posterMap" });

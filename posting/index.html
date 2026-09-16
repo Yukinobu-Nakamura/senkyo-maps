@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=17">
+<link rel="stylesheet" href="../assets/common.css?v=18">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -63,7 +63,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=17"></script>
+<script src="../assets/common.js?v=18"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -729,7 +729,7 @@ let usRows = loadLocal(KEY_USETAI, []) || [];
 
 /* ===== 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
    実装はポスターマップと共通のため assets/common.js の addSetaiLayers() にある。
-   収録自治体を増やすときは common.js の SETAI_SOURCES に足す(このファイルは触らない)。
+   収録自治体の一覧は data/setai_index.json から読み込む(このファイルは触らない)。
    右上の🏠ボタンから「自治体 > 区」の2階層で選ぶ。選択はタブを開いている間だけ残る。 */
 const setaiCtl = addSetaiLayers(map, {
   sessionKey: "postingMap",
@@ -853,7 +853,7 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
        キーは市区町村コード、値に区名と自治体の並び順が入っている */
     const onWards = Object.keys(setaiCtl.layers)
       .filter(code => map.hasLayer(setaiCtl.layers[code].grp))
-      .map(code => SETAI_SOURCES[setaiCtl.layers[code].cityIdx].city + setaiCtl.layers[code].name);
+      .map(code => setaiCtl.layers[code].city + setaiCtl.layers[code].name);
     if (onWards.length) layerInfo.push(`🏠 世帯数 ${onWards.length}件(${onWards.slice(0, 3).join("・")}${onWards.length > 3 ? "ほか" : ""})`);
     if (map.hasLayer(usLayer)) layerInfo.push("🏠 世帯数(取込CSV) 表示中");
     rows.push(`<div class="lpSection">レイヤー: ${layerInfo.join(" / ")}</div>`);

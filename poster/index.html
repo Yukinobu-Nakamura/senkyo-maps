@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポスターマップ — 掲示板の貼付け管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=17">
+<link rel="stylesheet" href="../assets/common.css?v=18">
 </head>
 <body>
 <header class="appbar">
@@ -23,7 +23,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=17"></script>
+<script src="../assets/common.js?v=18"></script>
 <script>
 "use strict";
 /* ステータス定義(ここを書き換えれば増減可能) */
@@ -47,7 +47,7 @@ addLocateControl(map);
 addPlaceSearchControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 /* 🏠 世帯数レイヤ(国勢調査2020・町丁目)。実装と収録自治体は assets/common.js の
-   addSetaiLayers() / SETAI_SOURCES にあり、ポスティングマップと共通。
+   addSetaiLayers() と data/setai_index.json にあり、ポスティングマップと共通。
    右上の🏠ボタンから自治体>区の2階層で選ぶ。
    掲示場ピンより下のペインに描くので、ピンのタップ操作の邪魔はしない。 */
 addSetaiLayers(map, { sessionKey: "posterMap" });
