@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=15">
+<link rel="stylesheet" href="../assets/common.css?v=16">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -58,12 +58,12 @@
     <a href="../" style="align-self:center;">← トップ</a>
   </div>
 </header>
-<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上のレイヤボタンから<b>🏠 世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
+<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択は<b>再読み込みでは残り、タブを閉じると消えます</b>)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=15"></script>
+<script src="../assets/common.js?v=16"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -717,23 +717,28 @@ onFileSelected(document.getElementById("mgIn"), (text) => {
   alert(loaded.length + " 件(丁目)の管理表データを地図に表示しました。");
 });
 
-/* ===== 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
-   実装はポスターマップと共通のため assets/common.js の addSetaiLayers() にある。
-   収録自治体を増やすときは common.js の SETAI_SOURCES に1行足す(このファイルは触らない)。
-   取込CSVレイヤ(usLayer)がONのときも凡例を出したいので isExtraActive を渡す。
-   ※isExtraActive は overlayadd 発火時にしか呼ばれない=直後で定義する usLayer より必ず後に走るため
-     ここで先に呼んで問題ない。逆順にするとTDZで落ちるので、この並びは変えないこと。 */
-const setaiCtl = addSetaiLayers(map, layersCtl, { isExtraActive: () => map.hasLayer(usLayer) });
-const setaiLegendRefresh = setaiCtl.refreshLegend;
-
 /* ===== 🏠 ユーザ任意の世帯数CSV取込 =====
    自分の選挙区の世帯数一覧(スプレッドシート→CSV)を読み込んで点表示する。
    列: 名称(町丁目等)・世帯数[必須]・人口[任意]・緯度/経度[任意]。
-   緯度経度が無い行は国土地理院の住所検索APIで自動的に位置を推定する。 */
+   緯度経度が無い行は国土地理院の住所検索APIで自動的に位置を推定する。
+   ※このレイヤは世帯数パネル(下の addSetaiLayers)の最下段に並べるので、
+     パネルより先に定義しておく必要がある。 */
 const KEY_USETAI = "postingMap.userSetai";
 const usLayer = L.layerGroup();
-layersCtl.addOverlay(usLayer, "🏠 世帯数: 取込CSV");
 let usRows = loadLocal(KEY_USETAI, []) || [];
+
+/* ===== 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
+   実装はポスターマップと共通のため assets/common.js の addSetaiLayers() にある。
+   収録自治体を増やすときは common.js の SETAI_SOURCES に足す(このファイルは触らない)。
+   右上の🏠ボタンから「自治体 > 区」の2階層で選ぶ。選択はタブを開いている間だけ残る。 */
+const setaiCtl = addSetaiLayers(map, {
+  sessionKey: "postingMap",
+  extra: { layer: usLayer, label: "取込CSV(自分で読み込んだ世帯数)" },
+});
+const setaiLegendRefresh = setaiCtl.refreshLegend;
+/* ベースマップと地図の位置を、タブを開いている間だけ覚える
+   (再読み込みで消えない／閉じると消える。手描き図形は従来どおり端末に保存) */
+rememberMapSession(map, "postingMap", { baseLayers, overlays: {} });
 
 const US_COL = {
   name:  ["名称","町丁目","町名","地区","地区名","エリア名","エリア","地域","区域"],
@@ -805,7 +810,7 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
   map.fitBounds(L.latLngBounds(usRows.map(r => [r.lat, r.long])), { padding: [30, 30] });
   alert(`${withXY.length} 件を地図に表示しました。` +
     (failed.length ? `\n位置を特定できなかった行(${failed.length}件): ${failed.slice(0, 10).join("、")}${failed.length > 10 ? " 他" : ""}\n※名称を選管資料どおりの表記にすると当たりやすくなります` : "") +
-    `\n※自動推定の位置は目安です(丁目の代表点)。レイヤボタンの「🏠 世帯数: 取込CSV」でON/OFFできます。`);
+    `\n※自動推定の位置は目安です(丁目の代表点)。右上の🏠ボタンのパネル最下段「取込CSV」でON/OFFできます。`);
 });
 
 /* ===== 📃 オブジェクト一覧パネル =====
@@ -844,8 +849,13 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
     const layerInfo = [];
     layerInfo.push(`手描き図形 ${layers.length} 件`);
     if (manageRows.length) layerInfo.push(`📋 管理表 ${manageRows.length} 丁目`);
-    /* 世帯数レイヤの実体は addSetaiLayers() の戻り値(setaiCtl.layers)側にある */
-    Object.keys(setaiCtl.layers).forEach(label => { if (map.hasLayer(setaiCtl.layers[label].grp)) layerInfo.push(label + " 表示中"); });
+    /* 世帯数レイヤの実体は addSetaiLayers() の戻り値(setaiCtl.layers)側にある。
+       キーは市区町村コード、値に区名と自治体の並び順が入っている */
+    const onWards = Object.keys(setaiCtl.layers)
+      .filter(code => map.hasLayer(setaiCtl.layers[code].grp))
+      .map(code => SETAI_SOURCES[setaiCtl.layers[code].cityIdx].city + setaiCtl.layers[code].name);
+    if (onWards.length) layerInfo.push(`🏠 世帯数 ${onWards.length}件(${onWards.slice(0, 3).join("・")}${onWards.length > 3 ? "ほか" : ""})`);
+    if (map.hasLayer(usLayer)) layerInfo.push("🏠 世帯数(取込CSV) 表示中");
     rows.push(`<div class="lpSection">レイヤー: ${layerInfo.join(" / ")}</div>`);
     panel.innerHTML = rows.join("");
     panel.querySelector(".lpClose").onclick = () => setListOpen(false);

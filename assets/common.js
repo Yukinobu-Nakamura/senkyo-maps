@@ -372,6 +372,48 @@ function addPlaceSearchControl(map) {
   };
   ctl.addTo(map);
 }
+/* ===== 表示状態を「そのタブが開いている間だけ」覚える =====
+   ベースマップの選択・オーバーレイのON/OFF・地図の表示位置を sessionStorage に保存する。
+   localStorage と違い **再読み込みでは残り、タブ/ブラウザを閉じると消える**ので、
+   うっかりリロードして設定が全部外れる事故を防ぎつつ、端末には残さない。
+   引数の baseLayers / overlays は {表示名: レイヤ} の辞書。 */
+function rememberMapSession(map, key, cfg) {
+  cfg = cfg || {};
+  const SKEY = key + ".view";
+  const bases = cfg.baseLayers || {}, overs = cfg.overlays || {};
+
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SKEY) || "null");
+    if (s) {
+      if (s.base && bases[s.base]) {
+        Object.values(bases).forEach(l => { if (map.hasLayer(l)) map.removeLayer(l); });
+        map.addLayer(bases[s.base]);
+      }
+      if (Array.isArray(s.on)) {
+        Object.keys(overs).forEach(n => {
+          const want = s.on.indexOf(n) >= 0;
+          if (want && !map.hasLayer(overs[n])) map.addLayer(overs[n]);
+          if (!want && map.hasLayer(overs[n])) map.removeLayer(overs[n]);
+        });
+      }
+      if (s.view && isFinite(s.view.lat) && isFinite(s.view.lng)) map.setView([s.view.lat, s.view.lng], s.view.z);
+    }
+  } catch (e) { /* 壊れていたら既定の表示のまま続行 */ }
+
+  function save() {
+    try {
+      const c = map.getCenter();
+      sessionStorage.setItem(SKEY, JSON.stringify({
+        base: Object.keys(bases).find(n => map.hasLayer(bases[n])) || null,
+        on: Object.keys(overs).filter(n => map.hasLayer(overs[n])),
+        view: { lat: +c.lat.toFixed(6), lng: +c.lng.toFixed(6), z: map.getZoom() },
+      }));
+    } catch (e) { /* 保存不可でも動作は継続 */ }
+  }
+  map.on("baselayerchange overlayadd overlayremove moveend zoomend", save);
+  save();
+}
+
 /* ===== 🏠 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
    ポスターマップ・ポスティングマップ共通。右上のレイヤボタンからON/OFFし、
    データは data/setai_<市区町村コード>.geojson を初回ONのときだけ取得する。
@@ -387,56 +429,65 @@ const SETAI_BINS = [
 ];
 function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
 const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データを加工して作成";
+/* 自治体(市区町村) > 区 の2階層。政令市は wards に行政区を並べる。
+   自治体のチェックで配下の区が全部ON/OFF、区は下層で個別に選べる。
+   収録を増やすときはここに1行(または1ブロック)足し、対応する geojson を
+   build/make_setai_geojson.py で作って data/ に置く(コード・名称はe-Statの境界データが正)。 */
 const SETAI_SOURCES = [
-  { code: "13116", label: "🏠 世帯数: 豊島区" },
-  { code: "13115", label: "🏠 世帯数: 杉並区" },
-  { code: "13111", label: "🏠 世帯数: 大田区" },
-  { code: "27126", label: "🏠 世帯数: 大阪市平野区" },
-  /* 横浜市(18区) */
-  { code: "14101", label: "🏠 世帯数: 横浜市鶴見区" },
-  { code: "14102", label: "🏠 世帯数: 横浜市神奈川区" },
-  { code: "14103", label: "🏠 世帯数: 横浜市西区" },
-  { code: "14104", label: "🏠 世帯数: 横浜市中区" },
-  { code: "14105", label: "🏠 世帯数: 横浜市南区" },
-  { code: "14106", label: "🏠 世帯数: 横浜市保土ケ谷区" },
-  { code: "14107", label: "🏠 世帯数: 横浜市磯子区" },
-  { code: "14108", label: "🏠 世帯数: 横浜市金沢区" },
-  { code: "14109", label: "🏠 世帯数: 横浜市港北区" },
-  { code: "14110", label: "🏠 世帯数: 横浜市戸塚区" },
-  { code: "14111", label: "🏠 世帯数: 横浜市港南区" },
-  { code: "14112", label: "🏠 世帯数: 横浜市旭区" },
-  { code: "14113", label: "🏠 世帯数: 横浜市緑区" },
-  { code: "14114", label: "🏠 世帯数: 横浜市瀬谷区" },
-  { code: "14115", label: "🏠 世帯数: 横浜市栄区" },
-  { code: "14116", label: "🏠 世帯数: 横浜市泉区" },
-  { code: "14117", label: "🏠 世帯数: 横浜市青葉区" },
-  { code: "14118", label: "🏠 世帯数: 横浜市都筑区" },
+  { pref: "東京都",   city: "豊島区", wards: [{ code: "13116", name: "豊島区" }] },
+  { pref: "東京都",   city: "杉並区", wards: [{ code: "13115", name: "杉並区" }] },
+  { pref: "東京都",   city: "大田区", wards: [{ code: "13111", name: "大田区" }] },
+  { pref: "大阪府",   city: "大阪市", wards: [{ code: "27126", name: "平野区" }] },
+  { pref: "神奈川県", city: "横浜市", wards: [
+    { code: "14101", name: "鶴見区" },   { code: "14102", name: "神奈川区" },
+    { code: "14103", name: "西区" },     { code: "14104", name: "中区" },
+    { code: "14105", name: "南区" },     { code: "14106", name: "保土ケ谷区" },
+    { code: "14107", name: "磯子区" },   { code: "14108", name: "金沢区" },
+    { code: "14109", name: "港北区" },   { code: "14110", name: "戸塚区" },
+    { code: "14111", name: "港南区" },   { code: "14112", name: "旭区" },
+    { code: "14113", name: "緑区" },     { code: "14114", name: "瀬谷区" },
+    { code: "14115", name: "栄区" },     { code: "14116", name: "泉区" },
+    { code: "14117", name: "青葉区" },   { code: "14118", name: "都筑区" },
+  ] },
 ];
 /* ズームに連動してラベル文字サイズを増減。
    引くほど小さく=ラベルが各町丁目の区画内に収まるように、寄るほど大きく読みやすく */
 const SETAI_FONT_BY_ZOOM = { 13: 7, 14: 9, 15: 11.5, 16: 14, 17: 17, 18: 20 }; /* z12以下=5.5 / z18以上=20 */
 
-/* map に世帯数レイヤ一式を追加する。
-   opts.isExtraActive: 凡例を出すべき追加レイヤ(取込CSV等)がONかを返す関数(任意)
+/* 区画の枠線の太さ(ズーム別)。引くと細く、寄ると太く。
+   同じ色の区画が隣り合っても境目が分かるよう、塗りより濃い線をはっきり出す。
+   個々の図形に setStyle すると数千件で重いので、ペインへのCSS変数で一括指定する。 */
+const SETAI_STROKE_BY_ZOOM = { 13: 1.1, 14: 1.4, 15: 1.8, 16: 2.2, 17: 2.6, 18: 3 }; /* z12以下=0.9 / z18以上=3 */
+
+/* map に世帯数レイヤ一式と、その選択パネル(自治体 > 区の2階層)を追加する。
+   opts.extra: {layer, label} 取込CSV等、パネル最下段に並べる追加レイヤ(任意)
+   opts.sessionKey: 選択状態を sessionStorage に覚えるときのキー接頭辞
    戻り値.refreshLegend: 追加レイヤ側から凡例を出し直したいときに呼ぶ */
-function addSetaiLayers(map, layersCtl, opts) {
+function addSetaiLayers(map, opts) {
   opts = opts || {};
+  const SKEY = (opts.sessionKey || "senkyoMaps") + ".setaiOn";
+
   /* 手描き図形より下のペインに描くため、描画・クリック操作の邪魔をしない */
   map.createPane("setaiPane");
   map.getPane("setaiPane").style.zIndex = 350; /* overlayPane(400)より下 */
-  const setaiRenderer = L.svg({ pane: "setaiPane", padding: 1 }); /* クリップ防止(map本体と同じ理由) */
-  const setaiLayers = {};
-  SETAI_SOURCES.forEach(s => {
-    const grp = L.layerGroup();
-    setaiLayers[s.label] = { grp, code: s.code, loaded: false };
-    layersCtl.addOverlay(grp, s.label);
-  });
+  const renderer = L.svg({ pane: "setaiPane", padding: 1 }); /* クリップ防止(map本体と同じ理由) */
 
-  function setaiFill(ent, gj){
+  const wards = {};   /* 市区町村コード -> {grp, loaded, cityIdx, name} */
+  SETAI_SOURCES.forEach((c, ci) => c.wards.forEach(w => {
+    wards[w.code] = { grp: L.layerGroup(), loaded: false, cityIdx: ci, name: w.name };
+  }));
+  /* desired = ONにしたい区コードの集合。チェックボックスはこれを映し、
+     地図への追加は読込完了後に追いつく(読込中もチェックは入ったまま) */
+  const desired = new Set();
+
+  function fill(ent, gj) {
     L.geoJSON(gj, {
       pane: "setaiPane",
-      renderer: setaiRenderer,
-      style: f => ({ color: "#64748b", weight: 1, opacity: 0.55, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45 }),
+      renderer,
+      style: f => ({
+        color: "#0f172a", weight: 2, opacity: 0.85,          /* 区画の境界をはっきり見せる */
+        fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45,
+      }),
       onEachFeature: (f, ly) => {
         const p = f.properties;
         ly.bindTooltip(`<span class="setaiNm">${p.name}</span><br>${p.setai.toLocaleString()}<span class="setaiUnit">世帯</span>`, { permanent: true, direction: "center", className: "setaiLabel" });
@@ -449,13 +500,143 @@ function addSetaiLayers(map, layersCtl, opts) {
     }).eachLayer(l => ent.grp.addLayer(l));
   }
 
-  let setaiLegendCtl = null;
-  function refreshLegend(){
-    const active = Object.values(setaiLayers).some(ent => map.hasLayer(ent.grp)) ||
-      !!(opts.isExtraActive && opts.isExtraActive());
-    if (active && !setaiLegendCtl){
-      setaiLegendCtl = L.control({ position: "bottomright" });
-      setaiLegendCtl.onAdd = () => {
+  /* desired の中身を地図に反映する。未読込のものは取得してから載せる */
+  let pending = 0;
+  function apply() {
+    Object.keys(wards).forEach(code => {
+      const ent = wards[code];
+      if (desired.has(code)) {
+        if (ent.loaded) { if (!map.hasLayer(ent.grp)) map.addLayer(ent.grp); return; }
+        if (ent.fetching) return;
+        ent.fetching = true;
+        pending++; renderPanel();
+        fetch("../data/setai_" + code + ".geojson")
+          .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(gj => { fill(ent, gj); ent.loaded = true; if (desired.has(code)) map.addLayer(ent.grp); })
+          .catch(err => {
+            desired.delete(code);   /* 取れなかった区はチェックを戻す */
+            alert(`世帯数データを読み込めませんでした(${ent.name})。インターネット接続を確認してください: ${err.message}`);
+          })
+          .then(() => { ent.fetching = false; pending--; save(); renderPanel(); refreshLegend(); });
+      } else if (map.hasLayer(ent.grp)) {
+        map.removeLayer(ent.grp);
+      }
+    });
+    save(); refreshLegend();
+  }
+
+  /* 選択状態は sessionStorage = 再読み込みでは残り、タブ/ブラウザを閉じると消える */
+  function save() {
+    try { sessionStorage.setItem(SKEY, JSON.stringify([...desired])); } catch (e) { /* 保存不可でも動作は継続 */ }
+  }
+  function restore() {
+    try {
+      const v = JSON.parse(sessionStorage.getItem(SKEY) || "[]");
+      if (Array.isArray(v)) v.forEach(c => { if (wards[c]) desired.add(c); });
+    } catch (e) { /* 壊れていたら無視 */ }
+  }
+
+  /* ===== 選択パネル(自治体 > 区) ===== */
+  const expanded = new Set();
+  let panelBody = null, panelWrap = null;
+
+  function cityState(ci) {
+    const ws = SETAI_SOURCES[ci].wards;
+    const on = ws.filter(w => desired.has(w.code)).length;
+    return on === 0 ? "off" : (on === ws.length ? "on" : "part");
+  }
+
+  function renderPanel() {
+    if (!panelBody) return;
+    const rows = SETAI_SOURCES.map((c, ci) => {
+      const st = cityState(ci);
+      const multi = c.wards.length > 1;
+      const open = expanded.has(ci);
+      const sub = !multi || !open ? "" :
+        `<div class="stWards">
+           <div class="stWardBtns">
+             <button type="button" data-all="${ci}">全選択</button>
+             <button type="button" data-none="${ci}">全クリア</button>
+           </div>
+           ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
+         </div>`;
+      return `<div class="stCity">
+        <div class="stCityRow">
+          <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b><span class="stPref">${c.pref}</span></label>
+          ${multi ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length}区</span></button>` : ""}
+        </div>${sub}</div>`;
+    }).join("");
+    const extra = opts.extra
+      ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${opts.extra.label}</label></div>`
+      : "";
+    panelBody.innerHTML =
+      `<div class="stNote">選択内容は<b>再読み込みでは残り</b>、タブを閉じると消えます</div>` +
+      rows + extra +
+      (pending ? `<div class="stLoadBar">世帯数データを読み込み中… 残り${pending}件</div>` : "") +
+      `<div class="stReq"><a href="#" data-req="1">➕ 自治体の追加をリクエスト</a></div>`;
+    /* 一部だけONの自治体は中間状態(■)にする */
+    SETAI_SOURCES.forEach((c, ci) => {
+      const el = panelBody.querySelector(`input[data-city="${ci}"]`);
+      if (el) el.indeterminate = cityState(ci) === "part";
+    });
+  }
+
+  const ctl = L.control({ position: "topright" });
+  ctl.onAdd = () => {
+    panelWrap = L.DomUtil.create("div", "setaiCtl leaflet-bar");
+    panelWrap.innerHTML =
+      `<button type="button" class="stToggle" title="世帯数レイヤを選ぶ">🏠</button>
+       <div class="stPanel" hidden><div class="stHead">🏠 世帯数(2020国勢調査)<button type="button" class="stClose" aria-label="閉じる">✕</button></div><div class="stBody"></div></div>`;
+    L.DomEvent.disableClickPropagation(panelWrap);
+    L.DomEvent.disableScrollPropagation(panelWrap);
+    panelBody = panelWrap.querySelector(".stBody");
+    const panel = panelWrap.querySelector(".stPanel");
+    const toggle = panelWrap.querySelector(".stToggle");
+    toggle.onclick = () => { panel.hidden = !panel.hidden; toggle.classList.toggle("on", !panel.hidden); };
+    panelWrap.querySelector(".stClose").onclick = () => { panel.hidden = true; toggle.classList.remove("on"); };
+
+    panelBody.addEventListener("change", (ev) => {
+      const t = ev.target;
+      if (t.dataset.city != null) {
+        const ws = SETAI_SOURCES[+t.dataset.city].wards;
+        ws.forEach(w => t.checked ? desired.add(w.code) : desired.delete(w.code));
+        if (t.checked && ws.length > 1) expanded.add(+t.dataset.city);
+      } else if (t.dataset.ward) {
+        t.checked ? desired.add(t.dataset.ward) : desired.delete(t.dataset.ward);
+      } else if (t.dataset.extra && opts.extra) {
+        t.checked ? map.addLayer(opts.extra.layer) : map.removeLayer(opts.extra.layer);
+      }
+      apply(); renderPanel();
+    });
+    panelBody.addEventListener("click", (ev) => {
+      const t = ev.target.closest("button, a");
+      if (!t) return;
+      if (t.dataset.exp != null) {
+        const ci = +t.dataset.exp;
+        expanded.has(ci) ? expanded.delete(ci) : expanded.add(ci);
+        renderPanel();
+      } else if (t.dataset.all != null) {
+        SETAI_SOURCES[+t.dataset.all].wards.forEach(w => desired.add(w.code));
+        apply(); renderPanel();
+      } else if (t.dataset.none != null) {
+        SETAI_SOURCES[+t.dataset.none].wards.forEach(w => desired.delete(w.code));
+        apply(); renderPanel();
+      } else if (t.dataset.req) {
+        ev.preventDefault(); openReqModal();
+      }
+    });
+    renderPanel();
+    return panelWrap;
+  };
+  ctl.addTo(map);
+
+  /* ===== 凡例 ===== */
+  let legendCtl = null;
+  function refreshLegend() {
+    const active = desired.size > 0 || (opts.extra && map.hasLayer(opts.extra.layer));
+    if (active && !legendCtl) {
+      legendCtl = L.control({ position: "bottomright" });
+      legendCtl.onAdd = () => {
         const div = L.DomUtil.create("div", "legend");
         div.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
           SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
@@ -463,38 +644,49 @@ function addSetaiLayers(map, layersCtl, opts) {
           `<div style="margin-top:3px"><a href="#" id="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
         return div;
       };
-      setaiLegendCtl.addTo(map);
+      legendCtl.addTo(map);
       const rl = document.getElementById("setaiReqLink");
       if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
-    } else if (!active && setaiLegendCtl){
-      map.removeControl(setaiLegendCtl);
-      setaiLegendCtl = null;
+    } else if (!active && legendCtl) {
+      map.removeControl(legendCtl);
+      legendCtl = null;
     }
   }
 
-  function setaiFontRefresh(){
+  /* ラベル文字サイズと枠線の太さをズームに連動させる */
+  function zoomRefresh() {
     const z = Math.min(map.getZoom(), 18);
-    map.getContainer().style.setProperty("--setaiFs", (SETAI_FONT_BY_ZOOM[z] || 5.5) + "px");
+    const cs = map.getContainer().style;
+    cs.setProperty("--setaiFs", (SETAI_FONT_BY_ZOOM[z] || 5.5) + "px");
+    cs.setProperty("--setaiSw", (SETAI_STROKE_BY_ZOOM[z] || 0.9) + "px");
   }
-  map.on("zoomend", setaiFontRefresh);
-  setaiFontRefresh();
+  map.on("zoomend", zoomRefresh);
+  zoomRefresh();
 
-  map.on("overlayadd", (e) => {
-    const ent = setaiLayers[e.name];
-    refreshLegend();
-    if (!ent || ent.loaded) return;
-    ent.loaded = true;
-    fetch("../data/setai_" + ent.code + ".geojson")
-      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(gj => setaiFill(ent, gj))
-      .catch(err => {
-        ent.loaded = false;
-        alert("世帯数データを読み込めませんでした(インターネット接続を確認してください): " + err.message);
-      });
+  /* 取込CSV等の追加レイヤが外から付け外しされてもパネルと凡例を合わせる */
+  if (opts.extra) {
+    map.on("layeradd layerremove", (e) => {
+      if (e.layer === opts.extra.layer) { renderPanel(); refreshLegend(); }
+    });
+  }
+
+  /* 閉じる前の忠告。選択が何も無いときは邪魔しない。
+     ブラウザ仕様により文言は指定できず、再読み込みでも同じ確認が出る */
+  window.addEventListener("beforeunload", (ev) => {
+    if (!desired.size && !(opts.extra && map.hasLayer(opts.extra.layer))) return;
+    ev.preventDefault();
+    ev.returnValue = "";
   });
-  map.on("overlayremove", () => refreshLegend());
 
-  return { refreshLegend, layers: setaiLayers };
+  restore();
+  if (desired.size) {
+    /* 復元した自治体は区の一覧を開いておく(どれが入っているか見えるように) */
+    desired.forEach(c => { if (SETAI_SOURCES[wards[c].cityIdx].wards.length > 1) expanded.add(wards[c].cityIdx); });
+    apply();
+  }
+  renderPanel();
+
+  return { refreshLegend, layers: wards, desired };
 }
 
 /* ===== 🏠 自治体追加リクエスト(世帯数レイヤ) =====
