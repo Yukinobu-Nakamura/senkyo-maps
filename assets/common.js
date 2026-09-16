@@ -560,9 +560,12 @@ function addSetaiLayers(map, opts) {
            </div>
            ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
          </div>`;
+      /* 1区だけ収録している政令市(例: 大阪市=平野区のみ)は、市全体が入っていると
+         誤解されないよう区名まで出す。区名と市名が同じ自治体(豊島区など)はそのまま */
+      const title = !multi && c.wards[0].name !== c.city ? `${c.city}${c.wards[0].name}` : c.city;
       return `<div class="stCity">
         <div class="stCityRow">
-          <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b><span class="stPref">${c.pref}</span></label>
+          <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${title}</b><span class="stPref">${c.pref}</span></label>
           ${multi ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length}区</span></button>` : ""}
         </div>${sub}</div>`;
     }).join("");
@@ -592,8 +595,18 @@ function addSetaiLayers(map, opts) {
     panelBody = panelWrap.querySelector(".stBody");
     const panel = panelWrap.querySelector(".stPanel");
     const toggle = panelWrap.querySelector(".stToggle");
-    toggle.onclick = () => { panel.hidden = !panel.hidden; toggle.classList.toggle("on", !panel.hidden); };
-    panelWrap.querySelector(".stClose").onclick = () => { panel.hidden = true; toggle.classList.remove("on"); };
+    /* パネルを開いている間だけ右上のコントロール帯を前面に出す。
+       Leaflet の右上(topright)と右下(bottomright)は同じ z-index の兄弟で、
+       重なるとDOM順で後ろの右下(凡例)が上に乗り、パネルのボタンが押せなくなるため。
+       子要素の z-index では親の重なり順を超えられないので、親側を持ち上げる。 */
+    function setOpen(open) {
+      panel.hidden = !open;
+      toggle.classList.toggle("on", open);
+      const bar = panelWrap.parentElement;
+      if (bar) bar.style.zIndex = open ? "1200" : "";
+    }
+    toggle.onclick = () => setOpen(panel.hidden);
+    panelWrap.querySelector(".stClose").onclick = () => setOpen(false);
 
     panelBody.addEventListener("change", (ev) => {
       const t = ev.target;

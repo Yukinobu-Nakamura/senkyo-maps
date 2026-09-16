@@ -34,8 +34,10 @@ header.appbar a:hover{text-decoration:underline;}
 .setaiLabel .setaiNm{ font-size:calc(var(--setaiFs, 12px) * .8); font-weight:800; color:#1e293b; }
 .setaiLabel .setaiUnit{ font-size:calc(var(--setaiFs, 12px) * .75); font-weight:800; }
 /* 区画の枠線。塗りが同じ濃さでも境目が分かるよう、ズームに応じて太さを変える
-   (図形ごとの setStyle は数千件で重いのでCSS変数で一括指定) */
-.leaflet-setaiPane-pane path{ stroke-width:var(--setaiSw, 1.6px); stroke-linejoin:round; }
+   (図形ごとの setStyle は数千件で重いのでCSS変数で一括指定)
+   ※クラス名は leaflet-setai-pane。Leaflet の createPane は名前から "Pane" を
+     取り除いて 'leaflet-'+name+'-pane' を作るため、setaiPane → setai になる */
+.leaflet-setai-pane path{ stroke-width:var(--setaiSw, 1.6px); stroke-linejoin:round; }
 /* 世帯数レイヤの選択パネル(自治体 > 区の2階層) */
 .setaiCtl{ background:none; border:none; box-shadow:none; }
 .setaiCtl .stToggle{ width:34px; height:34px; border:2px solid rgba(0,0,0,.25); background:#fff; border-radius:6px; cursor:pointer; font-size:17px; display:block; }
