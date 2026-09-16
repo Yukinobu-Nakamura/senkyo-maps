@@ -613,7 +613,11 @@ function addSetaiLayers(map, layersCtl, opts) {
       onEachFeature: (f, ly) => {
         const p = f.properties;
         ly.bindTooltip(`<span class="setaiNm">${p.name}</span><br>${p.setai.toLocaleString()}<span class="setaiUnit">世帯</span>`, { permanent: true, direction: "center", className: "setaiLabel" });
-        ly.bindPopup(`<b>${p.name}</b><br>世帯数: <b>${p.setai.toLocaleString()}世帯</b><br>人口: ${p.jinko.toLocaleString()}人<br><span style="font-size:10.5px;color:#888">${SETAI_CREDIT}</span>`);
+        /* units>1 = 同じ町名が国勢調査の集計単位で分かれていたものを合算した町丁目
+           (丁目に当たらない区分で、住所には現れない。例: 泉区 岡津町=2区分) */
+        const note = p.units > 1
+          ? `<br><span style="font-size:10.5px;color:#888">※国勢調査の集計単位${p.units}区分を合算(同一町名)</span>` : "";
+        ly.bindPopup(`<b>${p.name}</b><br>世帯数: <b>${p.setai.toLocaleString()}世帯</b><br>人口: ${p.jinko.toLocaleString()}人${note}<br><span style="font-size:10.5px;color:#888">${SETAI_CREDIT}</span>`);
       },
     }).eachLayer(l => ent.grp.addLayer(l));
   }
