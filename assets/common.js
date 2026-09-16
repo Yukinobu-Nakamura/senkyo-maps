@@ -372,4 +372,172 @@ function addPlaceSearchControl(map) {
   };
   ctl.addTo(map);
 }
+/* ===== 🏠 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
+   ポスターマップ・ポスティングマップ共通。右上のレイヤボタンからON/OFFし、
+   データは data/setai_<市区町村コード>.geojson を初回ONのときだけ取得する。
+   収録自治体を増やすときは SETAI_SOURCES に1行足し、対応する geojson を
+   build/make_setai_geojson.py で作って data/ に置く(コード・名称はe-Statの境界データが正)。 */
+const SETAI_BINS = [
+  { min: 5000, color: "#08519c", label: "5,000世帯〜" },
+  { min: 4000, color: "#3182bd", label: "4,000〜" },
+  { min: 3000, color: "#6baed6", label: "3,000〜" },
+  { min: 2000, color: "#9ecae1", label: "2,000〜" },
+  { min: 1000, color: "#c6dbef", label: "1,000〜" },
+  { min: 0,    color: "#eff3ff", label: "〜999世帯" },
+];
+function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
+const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データを加工して作成";
+const SETAI_SOURCES = [
+  { code: "13116", label: "🏠 世帯数: 豊島区" },
+  { code: "13115", label: "🏠 世帯数: 杉並区" },
+  { code: "13111", label: "🏠 世帯数: 大田区" },
+  { code: "27126", label: "🏠 世帯数: 大阪市平野区" },
+  /* 横浜市(18区) */
+  { code: "14101", label: "🏠 世帯数: 横浜市鶴見区" },
+  { code: "14102", label: "🏠 世帯数: 横浜市神奈川区" },
+  { code: "14103", label: "🏠 世帯数: 横浜市西区" },
+  { code: "14104", label: "🏠 世帯数: 横浜市中区" },
+  { code: "14105", label: "🏠 世帯数: 横浜市南区" },
+  { code: "14106", label: "🏠 世帯数: 横浜市保土ケ谷区" },
+  { code: "14107", label: "🏠 世帯数: 横浜市磯子区" },
+  { code: "14108", label: "🏠 世帯数: 横浜市金沢区" },
+  { code: "14109", label: "🏠 世帯数: 横浜市港北区" },
+  { code: "14110", label: "🏠 世帯数: 横浜市戸塚区" },
+  { code: "14111", label: "🏠 世帯数: 横浜市港南区" },
+  { code: "14112", label: "🏠 世帯数: 横浜市旭区" },
+  { code: "14113", label: "🏠 世帯数: 横浜市緑区" },
+  { code: "14114", label: "🏠 世帯数: 横浜市瀬谷区" },
+  { code: "14115", label: "🏠 世帯数: 横浜市栄区" },
+  { code: "14116", label: "🏠 世帯数: 横浜市泉区" },
+  { code: "14117", label: "🏠 世帯数: 横浜市青葉区" },
+  { code: "14118", label: "🏠 世帯数: 横浜市都筑区" },
+];
+/* ズームに連動してラベル文字サイズを増減。
+   引くほど小さく=ラベルが各町丁目の区画内に収まるように、寄るほど大きく読みやすく */
+const SETAI_FONT_BY_ZOOM = { 13: 7, 14: 9, 15: 11.5, 16: 14, 17: 17, 18: 20 }; /* z12以下=5.5 / z18以上=20 */
+
+/* map に世帯数レイヤ一式を追加する。
+   opts.isExtraActive: 凡例を出すべき追加レイヤ(取込CSV等)がONかを返す関数(任意)
+   戻り値.refreshLegend: 追加レイヤ側から凡例を出し直したいときに呼ぶ */
+function addSetaiLayers(map, layersCtl, opts) {
+  opts = opts || {};
+  /* 手描き図形より下のペインに描くため、描画・クリック操作の邪魔をしない */
+  map.createPane("setaiPane");
+  map.getPane("setaiPane").style.zIndex = 350; /* overlayPane(400)より下 */
+  const setaiRenderer = L.svg({ pane: "setaiPane", padding: 1 }); /* クリップ防止(map本体と同じ理由) */
+  const setaiLayers = {};
+  SETAI_SOURCES.forEach(s => {
+    const grp = L.layerGroup();
+    setaiLayers[s.label] = { grp, code: s.code, loaded: false };
+    layersCtl.addOverlay(grp, s.label);
+  });
+
+  function setaiFill(ent, gj){
+    L.geoJSON(gj, {
+      pane: "setaiPane",
+      renderer: setaiRenderer,
+      style: f => ({ color: "#64748b", weight: 1, opacity: 0.55, fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45 }),
+      onEachFeature: (f, ly) => {
+        const p = f.properties;
+        ly.bindTooltip(`<span class="setaiNm">${p.name}</span><br>${p.setai.toLocaleString()}<span class="setaiUnit">世帯</span>`, { permanent: true, direction: "center", className: "setaiLabel" });
+        ly.bindPopup(`<b>${p.name}</b><br>世帯数: <b>${p.setai.toLocaleString()}世帯</b><br>人口: ${p.jinko.toLocaleString()}人<br><span style="font-size:10.5px;color:#888">${SETAI_CREDIT}</span>`);
+      },
+    }).eachLayer(l => ent.grp.addLayer(l));
+  }
+
+  let setaiLegendCtl = null;
+  function refreshLegend(){
+    const active = Object.values(setaiLayers).some(ent => map.hasLayer(ent.grp)) ||
+      !!(opts.isExtraActive && opts.isExtraActive());
+    if (active && !setaiLegendCtl){
+      setaiLegendCtl = L.control({ position: "bottomright" });
+      setaiLegendCtl.onAdd = () => {
+        const div = L.DomUtil.create("div", "legend");
+        div.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
+          SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
+          `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
+          `<div style="margin-top:3px"><a href="#" id="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
+        return div;
+      };
+      setaiLegendCtl.addTo(map);
+      const rl = document.getElementById("setaiReqLink");
+      if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
+    } else if (!active && setaiLegendCtl){
+      map.removeControl(setaiLegendCtl);
+      setaiLegendCtl = null;
+    }
+  }
+
+  function setaiFontRefresh(){
+    const z = Math.min(map.getZoom(), 18);
+    map.getContainer().style.setProperty("--setaiFs", (SETAI_FONT_BY_ZOOM[z] || 5.5) + "px");
+  }
+  map.on("zoomend", setaiFontRefresh);
+  setaiFontRefresh();
+
+  map.on("overlayadd", (e) => {
+    const ent = setaiLayers[e.name];
+    refreshLegend();
+    if (!ent || ent.loaded) return;
+    ent.loaded = true;
+    fetch("../data/setai_" + ent.code + ".geojson")
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(gj => setaiFill(ent, gj))
+      .catch(err => {
+        ent.loaded = false;
+        alert("世帯数データを読み込めませんでした(インターネット接続を確認してください): " + err.message);
+      });
+  });
+  map.on("overlayremove", () => refreshLegend());
+
+  return { refreshLegend, layers: setaiLayers };
+}
+
+/* ===== 🏠 自治体追加リクエスト(世帯数レイヤ) =====
+   受け口はGitHub Issue(定型文プリセット)。アカウントの無い人向けにテンプレコピーも用意。
+   将来フォームに切り替える場合は REQ_FORM_URL にURLを入れるだけ(空なら非表示)。 */
+const REQ_FORM_URL = ""; /* 例: Googleフォーム URL。設定すると「フォームで送る」ボタンが出る */
+const REQ_TEMPLATE = [
+  "【世帯数レイヤ 自治体追加リクエスト】",
+  "・都道府県: ",
+  "・対象自治体(市区町村名。政令市は「〇〇市△△区」まで): ",
+  "・選挙区が区割になっている場合の区割(対象の市区町村をすべて): ",
+  "・用途/急ぎ度(任意): ",
+].join("\n");
+function openReqModal() {
+  let m = document.getElementById("reqModal");
+  if (!m) {
+    m = document.createElement("div");
+    m.id = "reqModal";
+    m.className = "reqOverlay";
+    const ghUrl = "https://github.com/Yukinobu-Nakamura/senkyo-maps/issues/new?title=" +
+      encodeURIComponent("【世帯数レイヤ】自治体追加リクエスト") + "&body=" + encodeURIComponent(REQ_TEMPLATE);
+    m.innerHTML = `<div class="reqBox">
+      <button class="reqClose" aria-label="閉じる">✕</button>
+      <h3>🏠 世帯数レイヤ 自治体追加リクエスト</h3>
+      <p>次の2点を<b>正確に</b>ご記載ください。</p>
+      <ol>
+        <li><b>都道府県</b></li>
+        <li><b>対象自治体</b>(市区町村名。政令市は「〇〇市△△区」まで)<br>
+        <span class="reqCaution">⚠️ 選挙区が<b>区割</b>になっている場合(衆議院小選挙区・都道府県議会の選挙区など)は、<b>選挙管理委員会の公表資料や選挙ドットコム等のサイトで区割を確認し、対象の市区町村をすべて正確に</b>書いてください。記載が不正確だと反映できない場合があります。</span></li>
+      </ol>
+      <p class="reqCaution">※反映は手作業のため、<b>タイムリーな反映や必ず反映することはお約束できません</b>。あらかじめご了承ください。</p>
+      <div class="reqBtns">
+        ${REQ_FORM_URL ? `<a class="reqBtn main" href="${REQ_FORM_URL}" target="_blank" rel="noopener noreferrer">📝 フォームで送る</a>` : ""}
+        <a class="reqBtn ${REQ_FORM_URL ? "" : "main"}" href="${ghUrl}" target="_blank" rel="noopener noreferrer">🐙 GitHubで送る(無料アカウントが必要)</a>
+        <button class="reqBtn" id="reqCopy">📋 記載テンプレートをコピー</button>
+      </div>
+      <p style="font-size:11px;color:#6b7280;margin-top:6px">GitHubアカウントが無い場合は、テンプレートをコピーして、本ツールを紹介してくれた方経由でお送りください。</p>
+    </div>`;
+    document.body.appendChild(m);
+    m.onclick = (ev) => { if (ev.target === m) m.style.display = "none"; };
+    m.querySelector(".reqClose").onclick = () => { m.style.display = "none"; };
+    m.querySelector("#reqCopy").onclick = () => {
+      navigator.clipboard.writeText(REQ_TEMPLATE).then(
+        () => alert("テンプレートをコピーしました。"),
+        () => prompt("以下をコピーしてください", REQ_TEMPLATE));
+    };
+  }
+  m.style.display = "flex";
+}
 /* origin-id: SENKYO-MAPS-ORIGIN-2609-XK47 */
