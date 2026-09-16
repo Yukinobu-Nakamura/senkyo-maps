@@ -45,6 +45,24 @@
   この分割は住居表示に対応せず、現地に境界の手がかりが無い(住所はどちらも
   「岡津町○○番地」)。ポスティング・ポスター配置の用途では**町名単位**が
   実務の単位なので、同一市区町村内で**同じ S_NAME を1フィーチャへ統合**する。
+
+■ 統合キーの決め方(2段構え)
+  第1段: **S_AREA(町丁・字等番号 = KIHON1+KIHON2)を主キー**にして束ねる。
+         S_AREA は集計単位そのものの公式IDで必ず入っているため、これを土台にする。
+         ここで KIGO_E の複数境界(E1,E2…)が1単位にまとまる。
+  第2段: **S_NAME が一致する単位が2つ以上あるときだけ、町名を統合キーに切り替える**。
+         同名が1つしかない単位は S_AREA のままなので、丁目(名称が違う)は束ならない。
+         名称が空の単位は統合しない(空文字どうしが全部1つに融合する事故を防ぐ)。
+
+  町名を主キーにする実装でも現在の22自治体では同じ結果になるが(全件で
+  S_NAME は非空・S_AREA と S_NAME は1対1)、将来 S_NAME が空の自治体を
+  追加したときに全町丁目が1フィーチャへ融合する事故が起きうる。
+  S_AREA を土台に置けばその形の壊れ方はしない。
+
+  同名なのに KIHON1(町字コード)が違う単位を束ねたときは警告を出す
+  (現状の該当は大田区 令和島の0811/0812のみ。地理的に一続きで両方0世帯、
+   統合して差し支えないことを確認済み)。別の町が同名で並んでいる自治体が
+  来たらここで気づけるようにしてある。
   - 世帯数・人口は合算(岡津町なら 3,965+461=4,426世帯)
   - ラベルは**最も世帯数の多い区分の本体ポリゴン**に載せる
   - properties.units に合算した集計単位数が入る(1なら未統合)
@@ -66,7 +84,7 @@
 """
 import json
 import sys
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 
 import shapefile
 
@@ -75,64 +93,78 @@ def convert(src: str, dst: str) -> None:
     sf = shapefile.Reader(src, encoding="cp932")
     fields = [f[0] for f in sf.fields[1:]]
 
-    # 町丁目名でまとめる。同じ名前の中は町丁・字等番号(KEY_CODE)ごとに小分けして持つ
-    groups = OrderedDict()  # S_NAME -> {KEY_CODE: [parts]}
+    # --- 第1段: S_AREA(町丁・字等番号)を主キーにする ---------------------
+    # S_AREA は集計単位そのものの公式ID。まずこれで束ね、KIGO_E の複数境界を吸収する。
+    # (町名を主キーにすると、将来 S_NAME が空の自治体が来たとき全部1つに融合してしまう)
+    units = OrderedDict()  # S_AREA -> unit
     for sr in sf.shapeRecords():
         rec = dict(zip(fields, list(sr.record)))
         if rec.get("HCODE") != 8101:  # 町丁目のみ(水面調査区などを除外)
             continue
-        name = rec.get("S_NAME") or ""
-        key = rec.get("KEY_CODE") or ""
-        groups.setdefault(name, OrderedDict()).setdefault(key, []).append({
+        area_id = rec.get("S_AREA") or rec.get("KEY_CODE") or ""
+        u = units.setdefault(area_id, {
+            "key": rec.get("KEY_CODE") or "",
+            "name": rec.get("S_NAME") or "",
+            "parts": [],
+        })
+        u["parts"].append({
             "setai": int(rec.get("SETAI") or 0),
             "jinko": int(rec.get("JINKO") or 0),
             "area": float(rec.get("AREA") or 0),
             "geom": round_geom(sr.shape.__geo_interface__, 5),
         })
 
-    feats, n_multi_boundary, merged_names = [], 0, []
-    for name, units in groups.items():
-        # 単位(KEY_CODE)ごとに世帯数を確定。KIGO_E の E2 以降は 0 なので合計=E1 の値
-        summary = []
-        for key, parts in units.items():
-            if len(parts) > 1:
-                n_multi_boundary += 1
-            summary.append({
-                "key": key,
-                "setai": sum(p["setai"] for p in parts),
-                "jinko": sum(p["jinko"] for p in parts),
-                "parts": parts,
-            })
-        # 世帯数の多い単位を先に。ラベルがその単位の一番大きいポリゴンに載る
-        summary.sort(key=lambda u: (u["setai"], u["jinko"], max(p["area"] for p in u["parts"])), reverse=True)
-        ordered_geoms = []
-        for u in summary:
-            u["parts"].sort(key=lambda p: (p["setai"] > 0 or p["jinko"] > 0, p["area"]), reverse=True)
-            ordered_geoms.extend(p["geom"] for p in u["parts"])
+    n_multi_boundary = 0
+    for u in units.values():
+        if len(u["parts"]) > 1:
+            n_multi_boundary += 1
+        # 値を持つ境界(KIGO_E=E1)を先頭へ。同点なら面積が大きい方
+        u["parts"].sort(key=lambda p: (p["setai"] > 0 or p["jinko"] > 0, p["area"]), reverse=True)
+        u["setai"] = sum(p["setai"] for p in u["parts"])  # E1以外は0なのでE1の値になる
+        u["jinko"] = sum(p["jinko"] for p in u["parts"])
 
-        if len(summary) > 1:
-            k1s = {u["key"][5:9] for u in summary}
-            merged_names.append((name, len(summary), sum(u["setai"] for u in summary), len(k1s)))
+    # --- 第2段: S_NAME が一致する単位だけを、町名をキーに束ね直す -----------
+    # 丁目は名称が違うので束ならない。名称が空の単位は安全のため束ねない。
+    name_count = Counter((u["name"] or "").strip() for u in units.values())
+    groups, warns = OrderedDict(), []
+    for area_id, u in units.items():
+        nm = (u["name"] or "").strip()
+        # 同名が2つ以上あるときだけ町名キーへ切り替える。それ以外は S_AREA のまま
+        gkey = ("name", nm) if nm and name_count[nm] > 1 else ("area", area_id)
+        groups.setdefault(gkey, []).append(u)
+
+    feats, merged_names = [], []
+    for gkey, us in groups.items():
+        # 世帯数の多い単位を先に = ラベルがその単位の本体ポリゴンに載る
+        us.sort(key=lambda u: (u["setai"], u["jinko"], max(p["area"] for p in u["parts"])), reverse=True)
+        if len(us) > 1:
+            merged_names.append((us[0]["name"], len(us), sum(u["setai"] for u in us)))
+            k1s = {u["key"][5:9] for u in us}
+            if len(k1s) > 1:
+                warns.append(f"{us[0]['name']}: 町字コードが複数 {sorted(k1s)} — "
+                             f"同名でも別の町の可能性があるので地図で位置を確認すること")
         feats.append({
             "type": "Feature",
             "properties": {
-                "name": name,
-                "setai": sum(u["setai"] for u in summary),
-                "jinko": sum(u["jinko"] for u in summary),
-                "key": summary[0]["key"],
-                "units": len(summary),
+                "name": us[0]["name"],
+                "setai": sum(u["setai"] for u in us),
+                "jinko": sum(u["jinko"] for u in us),
+                "key": us[0]["key"],
+                "units": len(us),
             },
-            "geometry": merge_geoms(ordered_geoms),
+            "geometry": merge_geoms([p["geom"] for u in us for p in u["parts"]]),
         })
 
     gj = {"type": "FeatureCollection", "features": feats}
     with open(dst, "w", encoding="utf-8") as f:
         json.dump(gj, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"{dst}: {len(feats)} features / 複数境界(KIGO_E)を束ねた単位 {n_multi_boundary} "
-          f"/ 同名の集計単位を統合した町名 {len(merged_names)}")
-    for nm, cnt, s, k1cnt in merged_names:
-        warn = "  ※町字コードが複数（別の町の可能性・要確認）" if k1cnt > 1 else ""
-        print(f"    統合: {nm} = {cnt}区分 → {s:,}世帯{warn}")
+    print(f"{dst}: {len(feats)} features / S_AREA単位 {len(units)} "
+          f"(うち複数境界(KIGO_E)を束ねた単位 {n_multi_boundary}) "
+          f"/ 同名で統合した町名 {len(merged_names)}")
+    for nm, cnt, s in merged_names:
+        print(f"    統合: {nm} = {cnt}区分 → {s:,}世帯")
+    for w in warns:
+        print(f"    ⚠️ {w}")
 
 
 def merge_geoms(geoms):
