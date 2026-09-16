@@ -1496,7 +1496,8 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
     const layerInfo = [];
     layerInfo.push(`手描き図形 ${layers.length} 件`);
     if (manageRows.length) layerInfo.push(`📋 管理表 ${manageRows.length} 丁目`);
-    Object.keys(setaiLayers).forEach(label => { if (map.hasLayer(setaiLayers[label].grp)) layerInfo.push(label + " 表示中"); });
+    /* 世帯数レイヤの実体は addSetaiLayers() の戻り値(setaiCtl.layers)側にある */
+    Object.keys(setaiCtl.layers).forEach(label => { if (map.hasLayer(setaiCtl.layers[label].grp)) layerInfo.push(label + " 表示中"); });
     rows.push(`<div class="lpSection">レイヤー: ${layerInfo.join(" / ")}</div>`);
     panel.innerHTML = rows.join("");
     panel.querySelector(".lpClose").onclick = () => setListOpen(false);
