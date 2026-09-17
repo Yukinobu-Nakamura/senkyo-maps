@@ -624,7 +624,11 @@ function addSetaiLayers(map, opts) {
 
   const ctl = L.control({ position: "topright" });
   ctl.onAdd = () => {
-    panelWrap = L.DomUtil.create("div", "setaiCtl leaflet-bar");
+    /* leaflet-bar は付けない。付けると Leaflet 既定の
+       `.leaflet-bar a { width:26px; height:26px; display:block }` がパネル内のリンク
+       (自治体の追加リクエスト)にも効いて、文字が26px幅に縦折り返しされてしまう。
+       見た目は .setaiCtl / .stToggle 側で作っているので不要。 */
+    panelWrap = L.DomUtil.create("div", "setaiCtl");
     panelWrap.innerHTML =
       `<button type="button" class="stToggle" title="世帯数レイヤを選ぶ">🏠</button>
        <div class="stPanel" hidden>
