@@ -532,38 +532,80 @@ function addSetaiLayers(map, opts) {
     } catch (e) { /* 壊れていたら無視 */ }
   }
 
-  /* ===== 選択パネル(自治体 > 区) ===== */
-  const expanded = new Set();
-  let panelBody = null, panelWrap = null;
+  /* ===== 選択パネル(都道府県 > 自治体 > 区の3階層 + 絞り込み) =====
+     全国の市区を収録すると自治体が800件を超えるので、都道府県でたたんで出す。
+     都道府県そのものにはチェックを付けない(一県まるごとONは数十MBの読込になり
+     事故のもとなので、意図して自治体を選ばせる)。 */
+  const expanded = new Set();      /* 区の一覧を開いている自治体の添字 */
+  const openPrefs = new Set();     /* 開いている都道府県名 */
+  let query = "";                  /* 絞り込み文字列 */
+  let panelBody = null, panelWrap = null, prefOrder = [], byPref = {};
+
+  function indexCities() {
+    prefOrder = []; byPref = {};
+    cities.forEach((c, ci) => {
+      if (!byPref[c.pref]) { byPref[c.pref] = []; prefOrder.push(c.pref); }
+      byPref[c.pref].push(ci);
+    });
+  }
 
   function cityState(ci) {
     const ws = cities[ci].wards;
     const on = ws.filter(w => desired.has(w.code)).length;
     return on === 0 ? "off" : (on === ws.length ? "on" : "part");
   }
+  function cityHasSelection(ci) { return cityState(ci) !== "off"; }
+
+  function cityRow(ci) {
+    const c = cities[ci];
+    const st = cityState(ci);
+    /* 区が1つでも市名と区名が違えば(政令市の一部だけ収録)下層レイヤにする。
+       大阪市>平野区 が該当。市名=区名の特別区・一般市は1行のまま */
+    const sub2 = setaiHasSub(c);
+    const open = expanded.has(ci);
+    const sub = !sub2 || !open ? "" :
+      `<div class="stWards">
+         <div class="stWardBtns">
+           <button type="button" data-all="${ci}">全選択</button>
+           <button type="button" data-none="${ci}">全クリア</button>
+         </div>
+         ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
+       </div>`;
+    return `<div class="stCity">
+      <div class="stCityRow">
+        <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b>${query ? `<span class="stPref">${c.pref}</span>` : ""}</label>
+        ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length > 1 ? c.wards.length + "区" : c.wards[0].name}</span></button>` : ""}
+      </div>${sub}</div>`;
+  }
 
   function renderPanel() {
     if (!panelBody) return;
-    const rows = cities.map((c, ci) => {
-      const st = cityState(ci);
-      /* 区が1つでも市名と区名が違えば(政令市の一部だけ収録)下層レイヤにする。
-         大阪市>平野区 が該当。市名=区名の特別区・一般市は1行のまま */
-      const sub2 = setaiHasSub(c);
-      const open = expanded.has(ci);
-      const sub = !sub2 || !open ? "" :
-        `<div class="stWards">
-           <div class="stWardBtns">
-             <button type="button" data-all="${ci}">全選択</button>
-             <button type="button" data-none="${ci}">全クリア</button>
-           </div>
-           ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
-         </div>`;
-      return `<div class="stCity">
-        <div class="stCityRow">
-          <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b><span class="stPref">${c.pref}</span></label>
-          ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length}区</span></button>` : ""}
-        </div>${sub}</div>`;
-    }).join("");
+    let rows;
+    if (query) {
+      /* 絞り込み中は都道府県のたたみを無視して該当自治体だけ並べる
+         (都道府県名・自治体名・区名のどれに当たっても拾う) */
+      const hit = cities.map((c, ci) => ci).filter(ci => {
+        const c = cities[ci];
+        return (c.city + c.pref + c.wards.map(w => w.name).join("")).indexOf(query) >= 0;
+      });
+      rows = hit.length
+        ? `<div class="stNote">「${query}」に一致: ${hit.length}件</div>` + hit.map(cityRow).join("")
+        : `<div class="stNote">「${query}」に一致する自治体はありません。未収録なら下のリンクからリクエストできます</div>`;
+    } else {
+      rows = prefOrder.map(pf => {
+        const cis = byPref[pf];
+        const open = openPrefs.has(pf);
+        const nSel = cis.filter(cityHasSelection).length;
+        return `<div class="stPrefBlock">
+          <button type="button" class="stPrefRow" data-pref="${pf}">
+            <span class="stPrefArrow">${open ? "▾" : "▸"}</span><b>${pf}</b>
+            <span class="stCnt">${cis.length}</span>
+            ${nSel ? `<span class="stSel">${nSel}件選択中</span>` : ""}
+          </button>
+          ${open ? `<div class="stPrefCities">${cis.map(cityRow).join("")}</div>` : ""}
+        </div>`;
+      }).join("");
+    }
     const extra = opts.extra
       ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${opts.extra.label}</label></div>`
       : "";
@@ -585,7 +627,11 @@ function addSetaiLayers(map, opts) {
     panelWrap = L.DomUtil.create("div", "setaiCtl leaflet-bar");
     panelWrap.innerHTML =
       `<button type="button" class="stToggle" title="世帯数レイヤを選ぶ">🏠</button>
-       <div class="stPanel" hidden><div class="stHead">🏠 世帯数(2020国勢調査)<button type="button" class="stClose" aria-label="閉じる">✕</button></div><div class="stBody"></div></div>`;
+       <div class="stPanel" hidden>
+         <div class="stHead">🏠 世帯数(2020国勢調査)<button type="button" class="stClose" aria-label="閉じる">✕</button></div>
+         <div class="stSearch"><input type="search" class="stQ" placeholder="🔍 自治体名で絞り込み(例: 横浜)" autocomplete="off"></div>
+         <div class="stBody"></div>
+       </div>`;
     L.DomEvent.disableClickPropagation(panelWrap);
     L.DomEvent.disableScrollPropagation(panelWrap);
     panelBody = panelWrap.querySelector(".stBody");
@@ -604,6 +650,11 @@ function addSetaiLayers(map, opts) {
     toggle.onclick = () => setOpen(panel.hidden);
     panelWrap.querySelector(".stClose").onclick = () => setOpen(false);
 
+    /* 絞り込み欄は stBody の外に置く。stBody は innerHTML で作り直すため、
+       中に入れると入力のたびにフォーカスとカーソル位置が飛ぶ */
+    const q = panelWrap.querySelector(".stQ");
+    q.addEventListener("input", () => { query = q.value.trim(); renderPanel(); });
+
     panelBody.addEventListener("change", (ev) => {
       const t = ev.target;
       if (t.dataset.city != null) {
@@ -620,7 +671,11 @@ function addSetaiLayers(map, opts) {
     panelBody.addEventListener("click", (ev) => {
       const t = ev.target.closest("button, a");
       if (!t) return;
-      if (t.dataset.exp != null) {
+      if (t.dataset.pref != null) {
+        const pf = t.dataset.pref;
+        openPrefs.has(pf) ? openPrefs.delete(pf) : openPrefs.add(pf);
+        renderPanel();
+      } else if (t.dataset.exp != null) {
         const ci = +t.dataset.exp;
         expanded.has(ci) ? expanded.delete(ci) : expanded.add(ci);
         renderPanel();
@@ -698,10 +753,15 @@ function addSetaiLayers(map, opts) {
       cities.forEach((c, ci) => c.wards.forEach(w => {
         wards[w.code] = { grp: L.layerGroup(), loaded: false, cityIdx: ci, city: c.city, name: w.name };
       }));
+      indexCities();
       restore();
       if (desired.size) {
-        /* 復元した自治体は区の一覧を開いておく(どれが入っているか見えるように) */
-        desired.forEach(c => { if (setaiHasSub(cities[wards[c].cityIdx])) expanded.add(wards[c].cityIdx); });
+        /* 復元した選択は、その都道府県と自治体を開いた状態にする(どれが入っているか見えるように) */
+        desired.forEach(code => {
+          const ci = wards[code].cityIdx;
+          openPrefs.add(cities[ci].pref);
+          if (setaiHasSub(cities[ci])) expanded.add(ci);
+        });
         apply();
       }
     })

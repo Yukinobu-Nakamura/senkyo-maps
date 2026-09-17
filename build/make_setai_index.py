@@ -48,25 +48,27 @@ def split_city_ward(city_name: str):
 
 
 def build(shpdir: str, out: str, updated: str = "") -> None:
-    shpdir = Path(shpdir)
+    """shpdir 以下の *.shp を再帰的に走査して一覧を作る。
+
+    ファイル名ではなくレコードの PREF/CITY から市区町村コードを取るので、
+    1市区町村ずつの r2kaXXXXX.shp でも、都道府県一括の r2kaXX.shp でも同じに扱える。
+    """
     datadir = Path(out).parent
-    cities, skipped = {}, []
-    for shp in sorted(shpdir.glob("r2ka*.shp")):
-        code = shp.stem.replace("r2ka", "")
-        if len(code) != 5:
-            continue  # 都道府県一括(2桁)のファイルは対象外
-        if not (datadir / f"setai_{code}.geojson").exists():
-            skipped.append(code)
-            continue
+    cities, names, skipped = {}, {}, []
+    for shp in sorted(Path(shpdir).rglob("*.shp")):
         sf = shapefile.Reader(str(shp), encoding="cp932")
         fields = [f[0] for f in sf.fields[1:]]
-        pref = city_name = ""
-        for r in sf.records():  # 先頭の町丁目レコードから名称を取る
+        for r in sf.records():
             d = dict(zip(fields, list(r)))
-            if d.get("HCODE") == 8101:
-                pref, city_name = d.get("PREF_NAME") or "", d.get("CITY_NAME") or ""
-                break
-        if not city_name:
+            if d.get("HCODE") != 8101:
+                continue
+            code = (d.get("PREF") or "") + (d.get("CITY") or "")
+            if code and code not in names:
+                names[code] = (d.get("PREF_NAME") or "", d.get("CITY_NAME") or "")
+
+    for code, (pref, city_name) in sorted(names.items()):
+        # data/ に geojson が無いコードは載せない(選んでも404になるため)
+        if not city_name or not (datadir / f"setai_{code}.geojson").exists():
             skipped.append(code)
             continue
         city, ward = split_city_ward(city_name)
