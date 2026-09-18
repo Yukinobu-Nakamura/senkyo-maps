@@ -39,6 +39,65 @@ function addLocateControl(map) {
 }
 
 /* ---- 使い方ガイド(毎回初期表示、❓ボタンで開閉) ---- */
+/* ===== ❓ よくある質問(3マップ共通) =====
+   ガイド(❓ボタン)の中に自動で差し込む。文面はここ1か所を直せば全マップに反映される。
+   ・タブ構造のガイド(ポスティング)  → 最後のタブとして追加
+   ・タブの無いガイド(ポスター・街宣) → 末尾に開閉式で追加
+   「⬇️ アプリを保存」が無いページでは、その項目(.faqDl)を自動で取り除く。 */
+const FAQ_HTML = `
+<p class="faqLead">このアプリは<b>データを預かる場所を持たない地図</b>です。描いた内容は<b>あなたの端末の中だけ</b>に保存され、インターネット上には送られません。だから<b>他の人にも作成者にも見えません</b>。人に渡したいときだけ「💾 書出」でファイルにして渡します。</p>
+
+<div class="faqQ">ダウンロードせず、URLのまま使って大丈夫?</div>
+<div class="faqA"><b>大丈夫です。むしろそれが基本の使い方です。</b>URLを開くと、そのつど<b>まっさらなアプリ</b>が読み込まれ、あなたが描いた内容はその端末の中から復元されます。スマホなら共有ボタン →「ホーム画面に追加」で、アプリのように1タップで開けます。</div>
+
+<div class="faqQ">描いた区域やルートは、他の人に見えますか?</div>
+<div class="faqA">見えません。同じURLを他の人が開いても、その人の画面は<b>白紙</b>です。<br>
+<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから「全消去(状態リセット)」しておくと安心です。</span></div>
+
+<div class="faqQ">データはどこに保存されていますか?</div>
+<div class="faqA">端末の<b>ブラウザの中</b>です。写真のように「ファイル」として残るわけではありません。取り出したいときは「💾 書出」を押すとファイルになります。</div>
+
+<div class="faqQ faqDl">「⬇️ アプリを保存」は何をするボタン?</div>
+<div class="faqA faqDl"><b>アプリ本体を1つのHTMLファイルにコピーする</b>ボタンです。押すたびに<b>まっさらな状態</b>のコピーが落ちてきます(描いたデータは入りません)。<b>URLを知らせずに人へ渡したいとき</b>のための機能です。<br>
+<span class="faqNote">※チームで使うだけなら、全員が同じURLを開けば十分で、このボタンは使わなくて構いません。</span></div>
+
+<div class="faqQ faqDl">保存したファイルをiPhone・iPadで開くと地図が真っ白です</div>
+<div class="faqA faqDl">iPhone・iPadの仕様です。ダウンロードしたHTMLは「表示するだけ」の扱いになり、地図を描くプログラムが動きません(PC・Androidなら開けます)。<b>iPhone・iPadでは、このページのURLをそのままお使いください。</b>共有ボタン →「ホーム画面に追加」をしておくと、アプリのように1タップで開けます。</div>
+
+<div class="faqQ">電波のないところでも使えますか?</div>
+<div class="faqA">使えません。地図そのものを毎回インターネットから取り寄せているため、保存したファイル版でも通信が必要です。</div>
+
+<div class="faqQ">GPX(歩いた記録)を取り込むと、どこに入りますか?</div>
+<div class="faqA">その端末の中に入ります(ネットには送られません)。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。</div>
+
+<div class="faqQ">保存したデータが消えることはありますか?</div>
+<div class="faqA">あります。次の4つに注意してください。
+<ol class="faqList">
+<li>ブラウザの<b>履歴・Webサイトデータを削除</b>したとき</li>
+<li><b>プライベートブラウズ</b>で使ったとき(閉じると消えます)</li>
+<li><b>iPhone・iPadで7日間このサイトを開かなかったとき</b>(iOSが自動で消します。「ホーム画面に追加」から開けば対象外)</li>
+<li>保存容量(目安5MB＝長いGPXルートで80本ほど)を超えたとき</li>
+</ol>
+<b>週に1回くらい「💾 書出」で書き出して保管</b>しておけば、どれが起きても元に戻せます。</div>
+
+<div class="faqQ">パソコンとスマホで同じデータを見たい</div>
+<div class="faqA">自動では揃いません。片方で「💾 書出」→ そのファイルをメールやクラウド経由でもう片方へ送り →「📂 読込」で取り込むと、同じ状態になります。</div>
+
+<div class="faqQ">チームで共有するには?</div>
+<div class="faqA">全員が<b>同じURL</b>を開いて使い、担当者が「💾 書出」したファイルを配って、各自「📂 読込」で取り込みます。取り込みは<b>統合</b>なので、同じ図形が二重に増えることはありません。<br>
+<span class="faqNote">※やり取りなしで自動的に揃えたいチームは「☁️ 同期」も使えます(チーム自身がGoogleスプレッドシートを用意する方式。ポスティングマップのみ)。</span></div>
+
+<div class="faqQ">「保存できませんでした」と出ました</div>
+<div class="faqA">端末の保存容量がいっぱいです。まず「💾 書出」で書き出してから、不要な図形(とくに長いGPXルート)を削除してください。</div>
+
+<div class="faqQ">同じ地図を2つのタブで開いてもいい?</div>
+<div class="faqA"><b>1つにしてください。</b>両方で編集すると、あとから保存した側で上書きされ、片方の変更が消えます(検知すると画面の上に警告が出ます)。</div>
+
+<div class="faqQ">自分のデータが作成者や他のチームに送られることはありますか?</div>
+<div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
+<span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div>
+`;
+
 function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   const container = map.getContainer();
 
@@ -114,6 +173,20 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   };
   ctl.addTo(map);
 
+  /* ❓よくある質問を差し込む(タブ構造ならタブとして、無ければ末尾に開閉式で) */
+  if (!panel.querySelector(".faqBody")) {
+    const tabsBar = panel.querySelector(".gTabs");
+    if (tabsBar) {
+      tabsBar.insertAdjacentHTML("beforeend", `<button class="gTab" data-pane="gFaq" type="button">❓ よくある質問</button>`);
+      panel.insertAdjacentHTML("beforeend", `<div class="gPane faqBody" id="gFaq">${FAQ_HTML}</div>`);
+    } else {
+      panel.insertAdjacentHTML("beforeend",
+        `<details class="faqDetails"><summary>❓ よくある質問(保存・共有・iPhoneのこと)</summary><div class="faqBody">${FAQ_HTML}</div></details>`);
+    }
+    /* 「⬇️ アプリを保存」が無いページでは、その項目を消す */
+    if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
+  }
+
   /* ガイド内のタブ切替(.gTab で .gPane を切り替え。動画は表示中のペインだけ再生) */
   const gTabs = panel.querySelectorAll(".gTab");
   const gPanes = panel.querySelectorAll(".gPane");
@@ -147,23 +220,111 @@ function loadLocal(key, fallback) {
 }
 function saveLocal(key, value) {
   /* 配布版HTMLを file:// で開いた場合など、保存が拒否される環境がある。
-     ここで落とすとアプリ全体が止まるので、保存できなくても動作は続ける */
+     ここで落とすとアプリ全体が止まるので、保存できなくても動作は続ける。
+     ただし黙って握りつぶすと「保存されたつもりで消える」ので、画面に警告を出す
+     (実測: 3000点のGPXルート83本=約5MBで QuotaExceededError。以降の変更は保存されない) */
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch (e) {
     console.warn("この環境ではブラウザに保存できませんでした:", key, e);
+    const quota = /quota|exceed/i.test(e.name || "") || e.code === 22 || e.code === 1014;
+    showAppNotice(quota
+      ? "⚠️ <b>この端末に保存できませんでした(保存容量がいっぱいです)。</b>いまの変更は、次にひらいたときには消えています。「💾 GeoJSON書出」でファイルに書き出して保管し、不要な図形(とくに長いGPXルート)を削除してください。"
+      : "⚠️ <b>この端末に保存できませんでした。</b>プライベートブラウズ等では保存できないことがあります。「💾 GeoJSON書出」でファイルに書き出して保管してください。",
+      "err");
+    return false;
   }
 }
 
 /* ---- ファイル入出力 ---- */
+/* iOS Safari 対策で2点:
+   (1) アンカーを DOM に入れてから click する
+   (2) Blob URL の破棄(revokeObjectURL)を遅らせる
+   click 直後に同期で破棄すると、ダウンロード開始が非同期なブラウザ(iOS Safari 等)では
+   書き出しがキャンセルされ「保存したのにファイルが無い」状態になる。 */
 function downloadFile(filename, text, mime) {
   const blob = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 60000);
 }
+
+/* ---- 画面上の通知バー(保存失敗・別タブ警告など) ----
+   alert と違い操作を止めないが、見落とさないよう画面最上部に固定で出す。 */
+function showAppNotice(html, level, actions) {
+  let bar = document.getElementById("appNotice");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "appNotice";
+    document.body.appendChild(bar);
+  }
+  if (bar.dataset.msg === html && bar.style.display === "flex") return bar; /* 同じ内容を重ねない */
+  bar.dataset.msg = html;
+  bar.className = "appNotice" + (level === "warn" ? " warn" : "");
+  bar.innerHTML = `<span class="anTxt">${html}</span>`;
+  (actions || []).forEach((a) => {
+    const b = document.createElement("button");
+    b.className = "anBtn";
+    b.type = "button";
+    b.textContent = a.label;
+    b.onclick = a.onClick;
+    bar.appendChild(b);
+  });
+  const close = document.createElement("button");
+  close.className = "anClose";
+  close.type = "button";
+  close.setAttribute("aria-label", "閉じる");
+  close.textContent = "✕";
+  close.onclick = () => { bar.style.display = "none"; bar.dataset.msg = ""; };
+  bar.appendChild(close);
+  bar.style.display = "flex";
+  return bar;
+}
+
+/* ---- 同じマップを別タブで開いたときの上書き事故を防ぐ ----
+   保存は「そのタブが持っている全データで丸ごと上書き」なので、2つのタブで編集すると
+   あとから保存した側で上書きされ、先に保存した側の変更が消える(実測で再現)。
+   storage イベントは「他のタブが書き換えたとき」だけ飛ぶので、それを検知して警告する。 */
+function watchOtherTabs(keys) {
+  const watch = [].concat(keys || []);
+  window.addEventListener("storage", (ev) => {
+    if (!ev.key || watch.indexOf(ev.key) < 0) return;
+    showAppNotice(
+      "⚠️ <b>このマップを別のタブ(または別ウィンドウ)でも開いています。</b>両方で編集すると、あとから保存した側で上書きされ、片方の変更が消えます。<b>タブは1つにしてください。</b>",
+      "warn",
+      [{ label: "🔄 最新の内容に更新", onClick: () => location.reload() }]);
+  });
+}
+
+/* ---- iPhone/iPad で「⬇️ アプリを保存」を押したときの案内 ----
+   iOS は保存したHTMLを開いてもファイル内のプログラム(JavaScript)を動かさないため、
+   地図が表示されない。落としてから気づくと原因が分からないので、押した時点で説明する。 */
+function isIOS() {
+  const ua = navigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+function guardStandaloneDownload() {
+  document.querySelectorAll("a.dlbtn").forEach((a) => {
+    a.addEventListener("click", (ev) => {
+      if (!isIOS()) return;
+      const ok = confirm(
+        "iPhone・iPadでは、保存したファイルを開いても地図が表示されません。\n" +
+        "(iOSの仕様で、ファイル内のプログラムが動かないためです)\n\n" +
+        "このページのURLをそのままお使いください。\n共有ボタン →「ホーム画面に追加」でアプリのように開けます。\n\n" +
+        "※PC・Androidでは保存したファイルを開けます。人に渡す目的ならこのまま保存できます。\n\n" +
+        "それでも保存しますか?");
+      if (!ok) ev.preventDefault();
+    });
+  });
+}
+document.addEventListener("DOMContentLoaded", guardStandaloneDownload);
 function onFileSelected(inputEl, handler) {
   inputEl.addEventListener("change", () => {
     const f = inputEl.files[0];

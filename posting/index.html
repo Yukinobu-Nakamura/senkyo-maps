@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=20">
+<link rel="stylesheet" href="../assets/common.css?v=21">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -63,7 +63,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=20"></script>
+<script src="../assets/common.js?v=21"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -739,6 +739,11 @@ const setaiLegendRefresh = setaiCtl.refreshLegend;
 /* ベースマップと地図の位置を、タブを開いている間だけ覚える
    (再読み込みで消えない／閉じると消える。手描き図形は従来どおり端末に保存) */
 rememberMapSession(map, "postingMap", { baseLayers, overlays: {} });
+
+/* 同じマップを別タブ・別ウィンドウでも開いているときに警告する。
+   保存は「そのタブの全データで丸ごと上書き」なので、両方で編集するとあとから
+   保存した側で上書きされ、片方の変更が消える(storageイベントは他タブの保存時だけ飛ぶ) */
+watchOtherTabs([KEY_SHAPES, KEY_MANAGE, KEY_USETAI]);
 
 const US_COL = {
   name:  ["名称","町丁目","町名","地区","地区名","エリア名","エリア","地域","区域"],
