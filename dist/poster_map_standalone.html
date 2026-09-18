@@ -61,6 +61,13 @@ header.appbar a:hover{text-decoration:underline;}
 .leaflet-container.uiHidden .leaflet-control-attribution{ display:block !important; }
 .leaflet-container.uiHidden .guidePanel,
 .leaflet-container.uiHidden .listPanel{ display:none !important; }
+/* 地図の外にある上部のボタン帯・説明バー・免責バーも一緒に隠して、地図を画面いっぱいに使う。
+   免責バー(.noticebar)は「消える」のではなく**隠れるだけ**で、ツールを戻すと必ず一緒に戻る
+   (バー自身の✕は従来どおりそのページ表示のあいだ閉じたまま。こちらは可逆なので、
+    ✕で閉じられる既存の挙動より強く表示を残す側になる)。 */
+body.uiHidden header.appbar,
+body.uiHidden .samplebar,
+body.uiHidden .noticebar{ display:none !important; }
 .uiHideBtn{ background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:15px; cursor:pointer; color:#374151; font-family:inherit; }
 .uiShowChip{ position:absolute; left:50%; bottom:24px; transform:translateX(-50%); z-index:1500; font-family:inherit;
   font-size:12.5px; font-weight:700; color:#fff; background:rgba(31,41,55,.88); border:none; border-radius:999px;
@@ -331,8 +338,9 @@ const FAQ_HTML = `
 <div class="faqQ">地図が見づらい。凡例やボタンを消せますか?</div>
 <div class="faqA"><b>消せます。</b>やり方は3つあります。
 <ol class="faqList">
-<li><b>地図の何もない所をタップ</b> — ボタン・凡例・パネルがまとめて消えて地図だけになります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
+<li><b>地図の何もない所をタップ</b> — <b>上のボタン帯も含めて</b>まとめて消え、<b>地図が画面いっぱい</b>になります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
 <li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
+<li><span class="faqNote">※上の紫のボタン帯・説明・注意書きも一緒に隠れます。戻すと元どおり出てきます。</span></li>
 <li><b>凡例の「»」</b> — その凡例だけを<b>画面の右端へ畳みます</b>(細いタブだけが残ります。タブを押すと戻ります)</li>
 </ol>
 <span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div>
@@ -622,6 +630,12 @@ function addUiHideControl(map, opts) {
     if (hidden === v) return;
     hidden = v;
     container.classList.toggle("uiHidden", v);
+    /* 地図の外にある上部のボタン帯・説明バーも一緒に隠す(中村さん指示 2026-09-18)。
+       ここを隠すと地図の高さが変わるので invalidateSize で作り直す。
+       免責バー(.noticebar)は法務レビュー済みの表示のため、ここでは隠さない
+       (元から✕で閉じられる)。 */
+    document.body.classList.toggle("uiHidden", v);
+    map.invalidateSize({ animate: false });
     chip.style.display = v ? "block" : "none";
     if (v && !hintShown) {
       hintShown = true;
@@ -1876,7 +1890,7 @@ addGuideControl(map, "🗺️ ポスターマップの使い方",
   </ol>
   <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/poster_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ピンをタップしてステータスとメモを保存すると色と完了率が更新される"></video>
   <div class="gVideoCap">▲ 操作デモ(ズーム→ピンをタップ→ステータス・メモを保存)</div>
-  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、ボタン・凡例・パネルがまとめて消えて地図だけになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。ピンや世帯数レイヤが重なってタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。</div>`,
+  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。ピンや世帯数レイヤが重なってタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。</div>`,
   "posterMap");
 
 /* 進捗ボックス */

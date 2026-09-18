@@ -52,6 +52,13 @@ header.appbar a:hover{text-decoration:underline;}
 .leaflet-container.uiHidden .leaflet-control-attribution{ display:block !important; }
 .leaflet-container.uiHidden .guidePanel,
 .leaflet-container.uiHidden .listPanel{ display:none !important; }
+/* 地図の外にある上部のボタン帯・説明バー・免責バーも一緒に隠して、地図を画面いっぱいに使う。
+   免責バー(.noticebar)は「消える」のではなく**隠れるだけ**で、ツールを戻すと必ず一緒に戻る
+   (バー自身の✕は従来どおりそのページ表示のあいだ閉じたまま。こちらは可逆なので、
+    ✕で閉じられる既存の挙動より強く表示を残す側になる)。 */
+body.uiHidden header.appbar,
+body.uiHidden .samplebar,
+body.uiHidden .noticebar{ display:none !important; }
 .uiHideBtn{ background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:15px; cursor:pointer; color:#374151; font-family:inherit; }
 .uiShowChip{ position:absolute; left:50%; bottom:24px; transform:translateX(-50%); z-index:1500; font-family:inherit;
   font-size:12.5px; font-weight:700; color:#fff; background:rgba(31,41,55,.88); border:none; border-radius:999px;

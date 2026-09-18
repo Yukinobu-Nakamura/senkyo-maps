@@ -96,8 +96,9 @@ const FAQ_HTML = `
 <div class="faqQ">地図が見づらい。凡例やボタンを消せますか?</div>
 <div class="faqA"><b>消せます。</b>やり方は3つあります。
 <ol class="faqList">
-<li><b>地図の何もない所をタップ</b> — ボタン・凡例・パネルがまとめて消えて地図だけになります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
+<li><b>地図の何もない所をタップ</b> — <b>上のボタン帯も含めて</b>まとめて消え、<b>地図が画面いっぱい</b>になります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
 <li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
+<li><span class="faqNote">※上の紫のボタン帯・説明・注意書きも一緒に隠れます。戻すと元どおり出てきます。</span></li>
 <li><b>凡例の「»」</b> — その凡例だけを<b>画面の右端へ畳みます</b>(細いタブだけが残ります。タブを押すと戻ります)</li>
 </ol>
 <span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div>
@@ -387,6 +388,12 @@ function addUiHideControl(map, opts) {
     if (hidden === v) return;
     hidden = v;
     container.classList.toggle("uiHidden", v);
+    /* 地図の外にある上部のボタン帯・説明バーも一緒に隠す(中村さん指示 2026-09-18)。
+       ここを隠すと地図の高さが変わるので invalidateSize で作り直す。
+       免責バー(.noticebar)は法務レビュー済みの表示のため、ここでは隠さない
+       (元から✕で閉じられる)。 */
+    document.body.classList.toggle("uiHidden", v);
+    map.invalidateSize({ animate: false });
     chip.style.display = v ? "block" : "none";
     if (v && !hintShown) {
       hintShown = true;

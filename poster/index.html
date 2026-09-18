@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポスターマップ — 掲示板の貼付け管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=23">
+<link rel="stylesheet" href="../assets/common.css?v=24">
 </head>
 <body>
 <header class="appbar">
@@ -23,7 +23,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=23"></script>
+<script src="../assets/common.js?v=24"></script>
 <script>
 "use strict";
 /* ステータス定義(ここを書き換えれば増減可能) */
@@ -64,7 +64,7 @@ addGuideControl(map, "🗺️ ポスターマップの使い方",
   </ol>
   <video class="gVideo" src="../assets/poster_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ピンをタップしてステータスとメモを保存すると色と完了率が更新される"></video>
   <div class="gVideoCap">▲ 操作デモ(ズーム→ピンをタップ→ステータス・メモを保存)</div>
-  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、ボタン・凡例・パネルがまとめて消えて地図だけになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。ピンや世帯数レイヤが重なってタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。</div>`,
+  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。ピンや世帯数レイヤが重なってタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。</div>`,
   "posterMap");
 
 /* 進捗ボックス */
