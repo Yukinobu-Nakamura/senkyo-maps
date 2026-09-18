@@ -90,7 +90,7 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 
 ## ライセンス
 
-**PolyForm Noncommercial License 1.0.0**(`LICENSE` 参照 / [全文](https://polyformproject.org/licenses/noncommercial/1.0.0/))。
+**PolyForm Noncommercial License 1.0.0**(`LICENSE` 参照 / [全文](https://polyformproject.org/licenses/noncommercial/1.0.0))。
 
 - **非商用**の目的であれば、候補者ご本人や政治活動のボランティアを含め、**誰でも無償で**複製・改変・再配布して利用できます
 - **営利目的での利用・販売・複製・再配布は許可していません**。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは法的措置を含め厳正に対処します
