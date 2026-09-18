@@ -27,6 +27,38 @@
   header .lead{color:var(--muted); font-size:14px; margin-bottom:14px;}
   .note{background:#fffbeb; border:1.5px solid #f59e0b; border-radius:12px; padding:10px 14px; font-size:12.5px; margin-bottom:22px;}
 
+  /* ===== 同意ゲート(ご利用前の確認) =====
+     ①自己責任 ②非商用 の2つにチェックを入れると本文へ進める。
+     「次回から表示しない」を選んだ端末では次回以降スキップする(localStorage)。
+     文面を変えたら JS の GATE_VER を上げること(全員にもう一度同意を求められる)。 */
+  body.gateOn{overflow:hidden;}
+  body.gateOn .wrap, body.gateOn .draftbar{display:none;}
+  .gate{position:fixed; inset:0; z-index:9999; background:rgba(31,41,55,.78); overflow-y:auto;
+        display:flex; align-items:flex-start; justify-content:center; padding:18px 12px 40px;}
+  .gateBox{background:#fff; border-radius:16px; max-width:760px; width:100%; padding:22px 22px 18px;
+           box-shadow:0 12px 40px rgba(0,0,0,.4); margin:auto;}
+  .gateBox h2{font-size:clamp(17px,3.4vw,21px); margin-bottom:4px;}
+  .gateLead{font-size:13.5px; color:var(--muted); margin-bottom:14px;}
+  .gateItem{display:flex; gap:11px; align-items:flex-start; border:1.5px solid #e5e7eb; border-radius:12px;
+            padding:13px 14px; margin-bottom:11px; cursor:pointer; background:#fcfcfd;}
+  .gateItem:hover{border-color:var(--s4);}
+  .gateItem.on{border-color:var(--s1); background:#f0fdf4;}
+  .gateItem input{flex:none; width:21px; height:21px; margin-top:2px; cursor:pointer; accent-color:var(--s1);}
+  .gateTxt{font-size:12.8px; line-height:1.85;}
+  .gateH{display:block; font-size:14px; margin-bottom:4px; color:var(--ink);}
+  .gateLic{display:block; font-size:11.5px; color:var(--muted); margin-top:4px;}
+  .gateSkip{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);
+            margin:6px 2px 14px; cursor:pointer;}
+  .gateSkip input{width:17px; height:17px; cursor:pointer;}
+  .gateBtns{display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
+  .gateBtn{font-family:inherit; font-size:15px; font-weight:bold; border:none; border-radius:11px;
+           padding:13px 26px; cursor:pointer; background:var(--s1); color:#fff;}
+  .gateBtn:disabled{background:#d1d5db; color:#6b7280; cursor:not-allowed;}
+  .gateBack{font-size:13px; color:var(--muted);}
+  .gateHint{font-size:12px; color:var(--s3); margin-top:9px;}
+  .gateNote{font-size:11.5px; color:var(--muted); margin-top:11px; border-top:1px solid #eef0f4; padding-top:8px;}
+  @media (max-width:600px){ .gateBox{padding:16px 15px 14px;} .gateBtn{width:100%;} .gateBtns{gap:8px;} }
+
   /* ===== 歩き方マップ ===== */
   .mapTitle{font-size:14px; font-weight:bold; color:var(--muted); margin-bottom:10px;}
   .journey{display:flex; gap:0; align-items:stretch; overflow-x:auto; padding:10px 2px 18px; scroll-snap-type:x proximity;}
@@ -256,7 +288,71 @@
   .tlMark small{display:block; font-size:12px; color:var(--muted); font-weight:normal;}
 </style>
 </head>
-<body>
+<body class="gateOn">
+<!-- ===== 同意ゲート(ご利用前の確認) =====
+     ①自己責任 ②非商用 の両方にチェックを入れないと本文へ進めない。
+     文面を変えたら下の GATE_VER を上げること(記憶済みの人にも再同意を求められる)。 -->
+<div id="gate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gateTtl">
+  <div class="gateBox">
+    <h2 id="gateTtl">🗺️ 選挙と政治活動の歩き方 — ご利用の前に</h2>
+    <p class="gateLead">次の2点をお読みいただき、<b>両方にチェック</b>を入れてください。チェックすると下のボタンが押せるようになります。</p>
+
+    <label class="gateItem" id="gateItem1">
+      <input type="checkbox" id="gateChk1">
+      <span class="gateTxt"><b class="gateH">① 自己責任でのご利用に同意します</b>本サイトおよび各マップツールは有志が無償で提供するもので、内容は<b>一般的な情報のご案内</b>です(法的助言ではありません)。掲載内容は作成時点の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、<b>正確性・完全性・最新性を保証するものではありません</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用は<b>ご自身の責任</b>でお願いします。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。</span>
+    </label>
+
+    <label class="gateItem" id="gateItem2">
+      <input type="checkbox" id="gateChk2">
+      <span class="gateTxt"><b class="gateH">② 非商用でのご利用に同意します</b>本サイトおよび各マップツールは、<b>非商用</b>の目的であれば誰でも無償で複製・利用できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。<span class="gateLic">ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0/" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura</span></span>
+    </label>
+
+    <label class="gateSkip"><input type="checkbox" id="gateSkip">次回からこの確認を表示しない(お使いの端末のブラウザに記憶します)</label>
+
+    <div class="gateBtns">
+      <button type="button" id="gateOk" class="gateBtn" disabled>同意して歩き方を開く</button>
+      <a class="gateBack" href="../">同意しない(トップページへ戻る)</a>
+    </div>
+    <p class="gateHint" id="gateHint">※ ①と②の両方にチェックを入れると押せます。</p>
+    <p class="gateNote">同じ内容は、ページを開いたあとも上部の「ご利用にあたって」に常時掲載しています。</p>
+  </div>
+</div>
+<script>
+(function () {
+  "use strict";
+  /* 同意の記憶。文面を変えたら GATE_VER を上げる = 全員にもう一度同意を求める */
+  var GATE_KEY = "senkyoMaps.arukikata.agreed";
+  var GATE_VER = "2026-09-18";
+  var gate = document.getElementById("gate");
+  function enter() {
+    document.body.classList.remove("gateOn");
+    if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+  }
+  try {
+    if (localStorage.getItem(GATE_KEY) === GATE_VER) { enter(); return; }
+  } catch (e) { /* 記憶できない環境(プライベートブラウズ等)では毎回表示する */ }
+  var c1 = document.getElementById("gateChk1"), c2 = document.getElementById("gateChk2");
+  var ok = document.getElementById("gateOk"), hint = document.getElementById("gateHint");
+  function sync() {
+    document.getElementById("gateItem1").classList.toggle("on", c1.checked);
+    document.getElementById("gateItem2").classList.toggle("on", c2.checked);
+    var both = c1.checked && c2.checked;
+    ok.disabled = !both;
+    hint.style.visibility = both ? "hidden" : "visible";
+  }
+  c1.addEventListener("change", sync);
+  c2.addEventListener("change", sync);
+  ok.addEventListener("click", function () {
+    if (!(c1.checked && c2.checked)) return;
+    if (document.getElementById("gateSkip").checked) {
+      try { localStorage.setItem(GATE_KEY, GATE_VER); } catch (e) { /* 記憶できなくても入れる */ }
+    }
+    enter();
+    window.scrollTo(0, 0);
+  });
+  sync();
+})();
+</script>
 <noscript>
   <div style="background:#fef2f2; border:2px solid #dc2626; color:#7f1d1d; border-radius:10px; padding:14px 16px; margin:12px auto; max-width:1000px; font-size:14px; line-height:1.7;">
     ⚠️ <b>このページは JavaScript で動きます。</b>上部のアイコンで表示を切り替えるには、<b>ファイルを保存してから Chrome / Edge / Safari などのブラウザで開いて</b>ください。<br>
@@ -268,7 +364,7 @@
     <h1>🗺️ 選挙と政治活動の歩き方</h1>
     <p class="lead">これから政治活動を始める人・候補者を支える人・関心のある有権者のための、スタートからゴールまでの道案内。</p>
     <div class="note">本ページは一般的な情報提供であり、特定候補への投票を勧めるものではありません。ルールの詳細・最新情報は必ず<b>選挙管理委員会・総務省</b>でご確認ください。記載の条文・数値は目安です。</div>
-    <div class="note">⚠️ <b>ご利用にあたって:</b>本サイトおよび各マップツールは有志が無償で提供するもので、内容は一般的な情報のご案内です(法的助言ではありません)。掲載内容は作成時点の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、正確性・完全性・最新性を保証するものではありません。個別の判断は、各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用はご自身の責任でお願いします。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。<br>🟢 本サイトおよび各マップツールは、<b>非商用</b>の目的であれば誰でも無償で複製・利用できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>(ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0/" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura)。提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。</div>
+    <div class="note">⚠️ <b>ご利用にあたって</b><br><b>① 自己責任でのご利用について:</b>本サイトおよび各マップツールは有志が無償で提供するもので、内容は<b>一般的な情報のご案内</b>です(法的助言ではありません)。掲載内容は作成時点の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、<b>正確性・完全性・最新性を保証するものではありません</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用は<b>ご自身の責任</b>でお願いします。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。<br><b>🟢 ② 非商用でのご利用について:</b>本サイトおよび各マップツールは、<b>非商用</b>の目的であれば誰でも無償で複製・利用できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。<span class="gateLic">ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0/" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura</span></div>
   </header>
 
   <div class="mapTitle">🚶 道のり(タップ/クリックで詳細へ)</div>
