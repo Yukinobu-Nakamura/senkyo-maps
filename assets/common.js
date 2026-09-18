@@ -98,8 +98,9 @@ const FAQ_HTML = `
 <ol class="faqList">
 <li><b>地図の何もない所をタップ</b> — ボタン・凡例・パネルがまとめて消えて地図だけになります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
 <li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
-<li><b>凡例の「✕」</b> — その凡例だけを見出しだけの小さな表示にします。見出しを押すと元に戻ります</li>
-</ol></div>
+<li><b>凡例の「»」</b> — その凡例だけを<b>画面の右端へ畳みます</b>(細いタブだけが残ります。タブを押すと戻ります)</li>
+</ol>
+<span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div>
 
 <div class="faqQ">自分のデータが作成者や他のチームに送られることはありますか?</div>
 <div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
@@ -296,23 +297,35 @@ function showAppNotice(html, level, actions) {
   return bar;
 }
 
-/* ---- 地図に重ねた箱(凡例など)を折りたためるようにする ----
-   ✕で「小さな見出しボタン」だけに縮み、押すと元に戻る。
-   凡例は行数が多く、スマホでは地図のかなりの面積を覆ってしまうため
-   (メンバー要望 2026-09-18「世帯数のウィンドウが大きめなので閉じたい」)。
+/* ---- 地図に重ねた箱(凡例など)を画面の端へ畳めるようにする ----
+   「»」を押すと画面の右端(左側の箱なら左端)へスライドして外へ逃げ、
+   縦書きの細いタブだけが残る。タブを押すと戻る。
+   YouTubeのミニプレーヤーを画面の枠外へどかす操作のイメージ
+   (メンバー要望 2026-09-18「世帯数のウィンドウが大きめ」「右端に折りたためるように」)。
    開閉はタブを開いている間だけ覚える(sessionStorage)。
      div    : L.DomUtil.create("div","legend") 等で作った箱
-     mini   : たたんだときに出す短いラベル(例 "🏠 世帯数")
-     key    : 開閉状態を覚えるキー(省略可)
+     mini   : 畳んだときにタブへ縦書きで出す短いラベル(例 "🏠 世帯数")
+     key    : 開閉状態を覚えるキー(null なら覚えない=毎回開いた状態から)
      render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
 function addBoxCollapse(div, mini, key, render) {
   const SKEY = key ? "senkyoMaps." + key + ".open" : null;
   let open = true;
   try { if (SKEY && sessionStorage.getItem(SKEY) === "0") open = false; } catch (e) { /* 読めなければ既定=開く */ }
+  /* どちらの端へ逃がすかは、Leaflet のどの隅に置かれたかで決める。
+     onAdd の時点ではまだ隅に入っていない(parentElement が null)ので、
+     入った直後にもう一度見て左右を確定する。 */
+  let side = "right";
+  function applySide() {
+    const par = div.parentElement;
+    if (par) side = /leaflet-left/.test(par.className) ? "left" : "right";
+    div.classList.toggle("boxLeft", side === "left");
+  }
   function draw() {
     div.classList.toggle("boxMini", !open);
     if (open) {
-      div.innerHTML = '<button type="button" class="boxToggle" title="閉じる" aria-label="閉じる">✕</button><div class="boxBody"></div>';
+      const arrow = side === "left" ? "«" : "»";
+      const where = side === "left" ? "左端" : "右端";
+      div.innerHTML = `<button type="button" class="boxToggle" title="${where}に畳む" aria-label="${where}に畳む">${arrow}</button><div class="boxBody"></div>`;
       render(div.querySelector(".boxBody"));
     } else {
       div.innerHTML = '<button type="button" class="boxToggle boxOpenBtn" title="開く"></button>';
@@ -325,17 +338,24 @@ function addBoxCollapse(div, mini, key, render) {
          結果、凡例を畳んだだけで地図タップ扱いになり道具が全部隠れてしまうので、
          自分で伝播を止める(実測で再現・2026-09-18) */
       ev.stopPropagation();
-      open = !open;
-      try { if (SKEY) sessionStorage.setItem(SKEY, open ? "1" : "0"); } catch (e) { /* 保存不可でも動作は継続 */ }
-      draw();
+      setOpen(!open);
     };
+  }
+  function setOpen(v) {
+    if (open === v) return;
+    open = v;
+    try { if (SKEY) sessionStorage.setItem(SKEY, open ? "1" : "0"); } catch (e) { /* 保存不可でも動作は継続 */ }
+    applySide();
+    draw();
   }
   /* 箱の上のクリック・ドラッグを地図に伝えない(地図タップでの一括非表示や
      地図の移動が、凡例を触っただけで起きてしまうのを防ぐ) */
   L.DomEvent.disableClickPropagation(div);
   L.DomEvent.disableScrollPropagation(div);
   draw();
-  return { redraw: draw, isOpen: () => open };
+  /* 隅に入った直後に左右を確定して描き直す(初回だけ) */
+  setTimeout(() => { applySide(); draw(); }, 0);
+  return { redraw: draw, isOpen: () => open, setOpen };
 }
 
 /* ---- 地図の何もない所をタップして、重ねている道具を一括で隠す/戻す ----
@@ -993,16 +1013,20 @@ function addSetaiLayers(map, opts) {
   };
   ctl.addTo(map);
 
-  /* ===== 凡例 ===== */
-  let legendCtl = null;
+  /* ===== 凡例 =====
+     世帯数を表示していないときは凡例そのものを出さない。
+     自治体を選んで世帯数が地図に出た時点で、開いた状態で現れる(色の意味が分かるように)。
+     そのあとは「»」で右端へ畳める。畳んだ状態は覚えない(= キーを渡さない)。
+     世帯数を全部OFFにすると凡例ごと消え、次に選び直したときにまた開いて出る。
+     (メンバー要望 2026-09-18) */
+  let legendCtl = null, legendBox = null;
   function refreshLegend() {
     const active = desired.size > 0 || (opts.extra && map.hasLayer(opts.extra.layer));
     if (active && !legendCtl) {
       legendCtl = L.control({ position: "bottomright" });
       legendCtl.onAdd = () => {
         const div = L.DomUtil.create("div", "legend");
-        /* ✕でたためる(スマホでは凡例が地図をかなり覆うため。メンバー要望 2026-09-18) */
-        addBoxCollapse(div, "🏠 世帯数", "setaiLegend", (body) => {
+        legendBox = addBoxCollapse(div, "🏠 世帯数", null, (body) => {
           body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
             SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
             `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
@@ -1013,9 +1037,11 @@ function addSetaiLayers(map, opts) {
         return div;
       };
       legendCtl.addTo(map);
+      if (legendBox) legendBox.setOpen(true); /* 出るときは必ず開いた状態で */
     } else if (!active && legendCtl) {
       map.removeControl(legendCtl);
       legendCtl = null;
+      legendBox = null;
     }
   }
 

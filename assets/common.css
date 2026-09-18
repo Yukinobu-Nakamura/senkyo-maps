@@ -26,13 +26,25 @@ header.appbar a:hover{text-decoration:underline;}
 .legend{background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.25); padding:8px 12px; font-size:12px; line-height:1.9;}
 .legend i{display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid #333; margin-right:6px; vertical-align:-1px;}
 .legend i.sq{border-radius:3px;}
-/* 凡例などの箱を✕でたたむ(addBoxCollapse)。たたむと見出しだけの小さなボタンになる */
-.legend .boxToggle{ float:right; margin:-2px -5px 0 8px; width:22px; height:22px; line-height:1; font-size:12px; cursor:pointer;
-  border:1px solid #d1d5db; background:#fff; color:#6b7280; border-radius:6px; font-family:inherit; }
+/* 凡例などの箱を画面の端へ畳む(addBoxCollapse)。
+   「»」で右端(左側の箱は「«」で左端)へスライドして外へ逃がし、縦書きの細いタブだけを残す。
+   YouTubeのミニプレーヤーを画面の枠外へどかす操作のイメージ。 */
+.legend .boxToggle{ float:right; margin:-3px -6px 0 8px; width:24px; height:24px; line-height:1; font-size:15px; cursor:pointer;
+  border:1px solid #d1d5db; background:#fff; color:#6b7280; border-radius:6px; font-family:inherit; font-weight:700; }
 .legend .boxToggle:hover{ background:#f3f4f6; color:var(--ink); }
-.legend.boxMini{ padding:0; }
-.legend.boxMini .boxToggle{ float:none; margin:0; width:auto; height:auto; padding:7px 12px; border:none; background:none;
-  color:var(--ink); font-size:12.5px; font-weight:700; white-space:nowrap; }
+/* 畳んだ状態: 端に貼り付く縦書きタブ(タップで戻る) */
+.legend.boxMini{ padding:0; margin-right:0 !important; border-radius:10px 0 0 10px; box-shadow:-1px 1px 7px rgba(0,0,0,.28); }
+.legend.boxMini.boxLeft{ margin-right:10px !important; margin-left:0 !important; border-radius:0 10px 10px 0; box-shadow:1px 1px 7px rgba(0,0,0,.28); }
+.legend.boxMini .boxToggle{ float:none; margin:0; width:27px; height:auto; padding:10px 3px; border:none; background:none;
+  color:var(--ink); font-size:12px; font-weight:700; line-height:1.15; white-space:nowrap;
+  writing-mode:vertical-rl; text-orientation:mixed; }
+.legend.boxMini .boxToggle::after{ content:"‹"; display:block; margin-top:5px; color:var(--accent); font-size:15px; }
+.legend.boxMini.boxLeft .boxToggle::after{ content:"›"; }
+/* 端へ逃がした感じを出す小さな動き(枠外へどかす操作のイメージ) */
+.legend.boxMini{ animation:boxTuckR .18s ease; }
+.legend.boxMini.boxLeft{ animation:boxTuckL .18s ease; }
+@keyframes boxTuckR{ from{ transform:translateX(30px); opacity:.3; } to{ transform:translateX(0); opacity:1; } }
+@keyframes boxTuckL{ from{ transform:translateX(-30px); opacity:.3; } to{ transform:translateX(0); opacity:1; } }
 
 /* ===== ツールの一括表示/非表示(地図の何もない所をタップ、または左上の⛶) =====
    地図に重ねたボタン・凡例・パネルだけを隠す。出典表示(クレジット)は隠さない。 */

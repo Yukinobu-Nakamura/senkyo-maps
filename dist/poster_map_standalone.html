@@ -35,13 +35,25 @@ header.appbar a:hover{text-decoration:underline;}
 .legend{background:rgba(255,255,255,.94); border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.25); padding:8px 12px; font-size:12px; line-height:1.9;}
 .legend i{display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid #333; margin-right:6px; vertical-align:-1px;}
 .legend i.sq{border-radius:3px;}
-/* 凡例などの箱を✕でたたむ(addBoxCollapse)。たたむと見出しだけの小さなボタンになる */
-.legend .boxToggle{ float:right; margin:-2px -5px 0 8px; width:22px; height:22px; line-height:1; font-size:12px; cursor:pointer;
-  border:1px solid #d1d5db; background:#fff; color:#6b7280; border-radius:6px; font-family:inherit; }
+/* 凡例などの箱を画面の端へ畳む(addBoxCollapse)。
+   「»」で右端(左側の箱は「«」で左端)へスライドして外へ逃がし、縦書きの細いタブだけを残す。
+   YouTubeのミニプレーヤーを画面の枠外へどかす操作のイメージ。 */
+.legend .boxToggle{ float:right; margin:-3px -6px 0 8px; width:24px; height:24px; line-height:1; font-size:15px; cursor:pointer;
+  border:1px solid #d1d5db; background:#fff; color:#6b7280; border-radius:6px; font-family:inherit; font-weight:700; }
 .legend .boxToggle:hover{ background:#f3f4f6; color:var(--ink); }
-.legend.boxMini{ padding:0; }
-.legend.boxMini .boxToggle{ float:none; margin:0; width:auto; height:auto; padding:7px 12px; border:none; background:none;
-  color:var(--ink); font-size:12.5px; font-weight:700; white-space:nowrap; }
+/* 畳んだ状態: 端に貼り付く縦書きタブ(タップで戻る) */
+.legend.boxMini{ padding:0; margin-right:0 !important; border-radius:10px 0 0 10px; box-shadow:-1px 1px 7px rgba(0,0,0,.28); }
+.legend.boxMini.boxLeft{ margin-right:10px !important; margin-left:0 !important; border-radius:0 10px 10px 0; box-shadow:1px 1px 7px rgba(0,0,0,.28); }
+.legend.boxMini .boxToggle{ float:none; margin:0; width:27px; height:auto; padding:10px 3px; border:none; background:none;
+  color:var(--ink); font-size:12px; font-weight:700; line-height:1.15; white-space:nowrap;
+  writing-mode:vertical-rl; text-orientation:mixed; }
+.legend.boxMini .boxToggle::after{ content:"‹"; display:block; margin-top:5px; color:var(--accent); font-size:15px; }
+.legend.boxMini.boxLeft .boxToggle::after{ content:"›"; }
+/* 端へ逃がした感じを出す小さな動き(枠外へどかす操作のイメージ) */
+.legend.boxMini{ animation:boxTuckR .18s ease; }
+.legend.boxMini.boxLeft{ animation:boxTuckL .18s ease; }
+@keyframes boxTuckR{ from{ transform:translateX(30px); opacity:.3; } to{ transform:translateX(0); opacity:1; } }
+@keyframes boxTuckL{ from{ transform:translateX(-30px); opacity:.3; } to{ transform:translateX(0); opacity:1; } }
 
 /* ===== ツールの一括表示/非表示(地図の何もない所をタップ、または左上の⛶) =====
    地図に重ねたボタン・凡例・パネルだけを隠す。出典表示(クレジット)は隠さない。 */
@@ -321,8 +333,9 @@ const FAQ_HTML = `
 <ol class="faqList">
 <li><b>地図の何もない所をタップ</b> — ボタン・凡例・パネルがまとめて消えて地図だけになります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
 <li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
-<li><b>凡例の「✕」</b> — その凡例だけを見出しだけの小さな表示にします。見出しを押すと元に戻ります</li>
-</ol></div>
+<li><b>凡例の「»」</b> — その凡例だけを<b>画面の右端へ畳みます</b>(細いタブだけが残ります。タブを押すと戻ります)</li>
+</ol>
+<span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div>
 
 <div class="faqQ">自分のデータが作成者や他のチームに送られることはありますか?</div>
 <div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
@@ -519,23 +532,35 @@ function showAppNotice(html, level, actions) {
   return bar;
 }
 
-/* ---- 地図に重ねた箱(凡例など)を折りたためるようにする ----
-   ✕で「小さな見出しボタン」だけに縮み、押すと元に戻る。
-   凡例は行数が多く、スマホでは地図のかなりの面積を覆ってしまうため
-   (メンバー要望 2026-09-18「世帯数のウィンドウが大きめなので閉じたい」)。
+/* ---- 地図に重ねた箱(凡例など)を画面の端へ畳めるようにする ----
+   「»」を押すと画面の右端(左側の箱なら左端)へスライドして外へ逃げ、
+   縦書きの細いタブだけが残る。タブを押すと戻る。
+   YouTubeのミニプレーヤーを画面の枠外へどかす操作のイメージ
+   (メンバー要望 2026-09-18「世帯数のウィンドウが大きめ」「右端に折りたためるように」)。
    開閉はタブを開いている間だけ覚える(sessionStorage)。
      div    : L.DomUtil.create("div","legend") 等で作った箱
-     mini   : たたんだときに出す短いラベル(例 "🏠 世帯数")
-     key    : 開閉状態を覚えるキー(省略可)
+     mini   : 畳んだときにタブへ縦書きで出す短いラベル(例 "🏠 世帯数")
+     key    : 開閉状態を覚えるキー(null なら覚えない=毎回開いた状態から)
      render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
 function addBoxCollapse(div, mini, key, render) {
   const SKEY = key ? "senkyoMaps." + key + ".open" : null;
   let open = true;
   try { if (SKEY && sessionStorage.getItem(SKEY) === "0") open = false; } catch (e) { /* 読めなければ既定=開く */ }
+  /* どちらの端へ逃がすかは、Leaflet のどの隅に置かれたかで決める。
+     onAdd の時点ではまだ隅に入っていない(parentElement が null)ので、
+     入った直後にもう一度見て左右を確定する。 */
+  let side = "right";
+  function applySide() {
+    const par = div.parentElement;
+    if (par) side = /leaflet-left/.test(par.className) ? "left" : "right";
+    div.classList.toggle("boxLeft", side === "left");
+  }
   function draw() {
     div.classList.toggle("boxMini", !open);
     if (open) {
-      div.innerHTML = '<button type="button" class="boxToggle" title="閉じる" aria-label="閉じる">✕</button><div class="boxBody"></div>';
+      const arrow = side === "left" ? "«" : "»";
+      const where = side === "left" ? "左端" : "右端";
+      div.innerHTML = `<button type="button" class="boxToggle" title="${where}に畳む" aria-label="${where}に畳む">${arrow}</button><div class="boxBody"></div>`;
       render(div.querySelector(".boxBody"));
     } else {
       div.innerHTML = '<button type="button" class="boxToggle boxOpenBtn" title="開く"></button>';
@@ -548,17 +573,24 @@ function addBoxCollapse(div, mini, key, render) {
          結果、凡例を畳んだだけで地図タップ扱いになり道具が全部隠れてしまうので、
          自分で伝播を止める(実測で再現・2026-09-18) */
       ev.stopPropagation();
-      open = !open;
-      try { if (SKEY) sessionStorage.setItem(SKEY, open ? "1" : "0"); } catch (e) { /* 保存不可でも動作は継続 */ }
-      draw();
+      setOpen(!open);
     };
+  }
+  function setOpen(v) {
+    if (open === v) return;
+    open = v;
+    try { if (SKEY) sessionStorage.setItem(SKEY, open ? "1" : "0"); } catch (e) { /* 保存不可でも動作は継続 */ }
+    applySide();
+    draw();
   }
   /* 箱の上のクリック・ドラッグを地図に伝えない(地図タップでの一括非表示や
      地図の移動が、凡例を触っただけで起きてしまうのを防ぐ) */
   L.DomEvent.disableClickPropagation(div);
   L.DomEvent.disableScrollPropagation(div);
   draw();
-  return { redraw: draw, isOpen: () => open };
+  /* 隅に入った直後に左右を確定して描き直す(初回だけ) */
+  setTimeout(() => { applySide(); draw(); }, 0);
+  return { redraw: draw, isOpen: () => open, setOpen };
 }
 
 /* ---- 地図の何もない所をタップして、重ねている道具を一括で隠す/戻す ----
@@ -1216,16 +1248,20 @@ function addSetaiLayers(map, opts) {
   };
   ctl.addTo(map);
 
-  /* ===== 凡例 ===== */
-  let legendCtl = null;
+  /* ===== 凡例 =====
+     世帯数を表示していないときは凡例そのものを出さない。
+     自治体を選んで世帯数が地図に出た時点で、開いた状態で現れる(色の意味が分かるように)。
+     そのあとは「»」で右端へ畳める。畳んだ状態は覚えない(= キーを渡さない)。
+     世帯数を全部OFFにすると凡例ごと消え、次に選び直したときにまた開いて出る。
+     (メンバー要望 2026-09-18) */
+  let legendCtl = null, legendBox = null;
   function refreshLegend() {
     const active = desired.size > 0 || (opts.extra && map.hasLayer(opts.extra.layer));
     if (active && !legendCtl) {
       legendCtl = L.control({ position: "bottomright" });
       legendCtl.onAdd = () => {
         const div = L.DomUtil.create("div", "legend");
-        /* ✕でたためる(スマホでは凡例が地図をかなり覆うため。メンバー要望 2026-09-18) */
-        addBoxCollapse(div, "🏠 世帯数", "setaiLegend", (body) => {
+        legendBox = addBoxCollapse(div, "🏠 世帯数", null, (body) => {
           body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
             SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
             `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
@@ -1236,9 +1272,11 @@ function addSetaiLayers(map, opts) {
         return div;
       };
       legendCtl.addTo(map);
+      if (legendBox) legendBox.setOpen(true); /* 出るときは必ず開いた状態で */
     } else if (!active && legendCtl) {
       map.removeControl(legendCtl);
       legendCtl = null;
+      legendBox = null;
     }
   }
 
@@ -1838,7 +1876,7 @@ addGuideControl(map, "🗺️ ポスターマップの使い方",
   </ol>
   <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/poster_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ピンをタップしてステータスとメモを保存すると色と完了率が更新される"></video>
   <div class="gVideoCap">▲ 操作デモ(ズーム→ピンをタップ→ステータス・メモを保存)</div>
-  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、ボタン・凡例・パネルがまとめて消えて地図だけになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。ピンや世帯数レイヤが重なってタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「✕」</b>で、その凡例だけ見出しに畳めます。</div>`,
+  <div class="gNote">左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、ボタン・凡例・パネルがまとめて消えて地図だけになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。ピンや世帯数レイヤが重なってタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。</div>`,
   "posterMap");
 
 /* 進捗ボックス */
