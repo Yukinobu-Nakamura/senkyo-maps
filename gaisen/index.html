@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=21">
+<link rel="stylesheet" href="../assets/common.css?v=22">
 <style>
   /* 種別ピン(絵文字divIcon) */
   .gm-pin{
@@ -47,7 +47,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=21"></script>
+<script src="../assets/common.js?v=22"></script>
 <script>
 "use strict";
 
@@ -111,23 +111,29 @@ addGuideControl(map, "📢 街宣マップの使い方",
     <li><b>共有・バックアップ</b> — 「💾CSV書出」で保存し、メンバーはそのCSVを「📂読込」すると同じ地点を再現できます。</li>
     <li><b>区の情報から一括で入れる</b> — 施設名・住所・緯度経度・種別の列を持つCSVを「📂読込」で取り込めます。</li>
   </ol>
-  <div class="gNote">🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。左上の<b>🔍で全国の地名検索</b>ができます。データはこの端末(ブラウザ)内にのみ保存されます。</div>`,
+  <div class="gNote">🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。左上の<b>🔍で全国の地名検索</b>ができます。データはこの端末(ブラウザ)内にのみ保存されます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、ボタン・凡例・パネルがまとめて消えて地図だけになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります。「📍地点を追加」モード中は切り替わりません)。凡例は<b>右上の「✕」</b>で見出しだけに畳めます。</div>`,
   "gaisenMap");
 
-/* 凡例 */
+/* 凡例(✕でたためる。項目数が多く地図を覆うため。中身の作り方は共通の addBoxCollapse を参照) */
 const legendCtl = L.control({ position:"bottomright" });
 legendCtl.onAdd = () => {
   const div = L.DomUtil.create("div", "legend");
-  const row = c => `<i class="dot" style="background:${c.color}${c.care?';box-shadow:0 0 0 2px rgba(229,57,53,.35)':''}"></i>${c.emoji} ${c.label}`;
-  div.innerHTML =
-    `<span class="grp">🔇 音声配慮地点</span>` + CARE_GROUP.map(id=>row(catOf(id))).join("<br>") +
-    `<br><span class="care-note">▲ 赤ふち＝静穏に配慮</span>` +
-    `<span class="grp">📢 街宣好適地点</span>` + SPOT_GROUP.map(id=>row(catOf(id))).join("<br>") +
-    `<span class="grp">🗳️ 投票所</span>` + VOTE_GROUP.map(id=>row(catOf(id))).join("<br>") +
-    `<span class="grp">🏢 参考</span>` + REF_GROUP.map(id=>row(catOf(id))).join("<br>");
+  addBoxCollapse(div, "📢 凡例", "gaisenLegend", (body) => {
+    const row = c => `<i class="dot" style="background:${c.color}${c.care?';box-shadow:0 0 0 2px rgba(229,57,53,.35)':''}"></i>${c.emoji} ${c.label}`;
+    body.innerHTML =
+      `<span class="grp">🔇 音声配慮地点</span>` + CARE_GROUP.map(id=>row(catOf(id))).join("<br>") +
+      `<br><span class="care-note">▲ 赤ふち＝静穏に配慮</span>` +
+      `<span class="grp">📢 街宣好適地点</span>` + SPOT_GROUP.map(id=>row(catOf(id))).join("<br>") +
+      `<span class="grp">🗳️ 投票所</span>` + VOTE_GROUP.map(id=>row(catOf(id))).join("<br>") +
+      `<span class="grp">🏢 参考</span>` + REF_GROUP.map(id=>row(catOf(id))).join("<br>");
+  });
   return div;
 };
 legendCtl.addTo(map);
+
+/* 地図の何もない所をタップすると、ボタン・凡例・パネルをまとめて隠す(もう一度タップで戻る)。
+   「📍地点を追加」モード中はタップが地点の追加操作なので切り替えない。 */
+addUiHideControl(map, { busy: () => addMode });
 
 /* 件数ボックス */
 const statCtl = L.control({ position:"topright" });

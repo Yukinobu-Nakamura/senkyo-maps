@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=21">
+<link rel="stylesheet" href="../assets/common.css?v=22">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -63,7 +63,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=21"></script>
+<script src="../assets/common.js?v=22"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -141,7 +141,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、ボタン・凡例・パネルがまとめて消えて地図だけになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「✕」</b>で、その凡例だけ見出しに畳めます。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -160,14 +160,20 @@ let statDiv;
 statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return statDiv; };
 statCtl.addTo(map);
 
-/* 凡例 */
+/* 凡例(✕でたためる。中身の作り方は共通の addBoxCollapse を参照) */
 const legendCtl = L.control({ position: "bottomright" });
 legendCtl.onAdd = () => {
   const div = L.DomUtil.create("div", "legend");
-  div.innerHTML = SHAPE_STATUSES.map(s => `<i class="sq" style="background:${s.color}"></i>${s.label}`).join("<br>");
+  addBoxCollapse(div, "🎨 状態の色", "postingLegend", (body) => {
+    body.innerHTML = SHAPE_STATUSES.map(s => `<i class="sq" style="background:${s.color}"></i>${s.label}`).join("<br>");
+  });
   return div;
 };
 legendCtl.addTo(map);
+
+/* 地図の何もない所をタップすると、ボタン・凡例・パネルをまとめて隠す(もう一度タップで戻る)。
+   左上の⛶ボタンでも隠せる。作図・編集モード中はタップが作図操作なので切り替えない。 */
+addUiHideControl(map);
 
 function statusOf(id) { return SHAPE_STATUSES.find(s => s.id === id) || SHAPE_STATUSES[0]; }
 
@@ -683,9 +689,11 @@ function renderManageLegend(){
   mgLegendCtl = L.control({ position:"bottomleft" });
   mgLegendCtl.onAdd = () => {
     const div = L.DomUtil.create("div", "legend mglegend");
-    div.innerHTML = `<div class="mgttl">📋 管理表ステータス</div>` +
-      statuses.map(s => `<div class="mgrow"><i style="background:${mgColorFor(s)}"></i>${mgEsc(s)}</div>`).join("") +
-      `<div style="font-size:10px;color:#888;margin-top:3px">数字=実績枚数</div>`;
+    addBoxCollapse(div, "📋 管理表", "postingMgLegend", (body) => {
+      body.innerHTML = `<div class="mgttl">📋 管理表ステータス</div>` +
+        statuses.map(s => `<div class="mgrow"><i style="background:${mgColorFor(s)}"></i>${mgEsc(s)}</div>`).join("") +
+        `<div style="font-size:10px;color:#888;margin-top:3px">数字=実績枚数</div>`;
+    });
     return div;
   };
   mgLegendCtl.addTo(map);

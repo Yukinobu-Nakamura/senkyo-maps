@@ -93,6 +93,14 @@ const FAQ_HTML = `
 <div class="faqQ">同じ地図を2つのタブで開いてもいい?</div>
 <div class="faqA"><b>1つにしてください。</b>両方で編集すると、あとから保存した側で上書きされ、片方の変更が消えます(検知すると画面の上に警告が出ます)。</div>
 
+<div class="faqQ">地図が見づらい。凡例やボタンを消せますか?</div>
+<div class="faqA"><b>消せます。</b>やり方は3つあります。
+<ol class="faqList">
+<li><b>地図の何もない所をタップ</b> — ボタン・凡例・パネルがまとめて消えて地図だけになります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
+<li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
+<li><b>凡例の「✕」</b> — その凡例だけを見出しだけの小さな表示にします。見出しを押すと元に戻ります</li>
+</ol></div>
+
 <div class="faqQ">自分のデータが作成者や他のチームに送られることはありますか?</div>
 <div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
 <span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div>
@@ -286,6 +294,132 @@ function showAppNotice(html, level, actions) {
   bar.appendChild(close);
   bar.style.display = "flex";
   return bar;
+}
+
+/* ---- 地図に重ねた箱(凡例など)を折りたためるようにする ----
+   ✕で「小さな見出しボタン」だけに縮み、押すと元に戻る。
+   凡例は行数が多く、スマホでは地図のかなりの面積を覆ってしまうため
+   (メンバー要望 2026-09-18「世帯数のウィンドウが大きめなので閉じたい」)。
+   開閉はタブを開いている間だけ覚える(sessionStorage)。
+     div    : L.DomUtil.create("div","legend") 等で作った箱
+     mini   : たたんだときに出す短いラベル(例 "🏠 世帯数")
+     key    : 開閉状態を覚えるキー(省略可)
+     render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
+function addBoxCollapse(div, mini, key, render) {
+  const SKEY = key ? "senkyoMaps." + key + ".open" : null;
+  let open = true;
+  try { if (SKEY && sessionStorage.getItem(SKEY) === "0") open = false; } catch (e) { /* 読めなければ既定=開く */ }
+  function draw() {
+    div.classList.toggle("boxMini", !open);
+    if (open) {
+      div.innerHTML = '<button type="button" class="boxToggle" title="閉じる" aria-label="閉じる">✕</button><div class="boxBody"></div>';
+      render(div.querySelector(".boxBody"));
+    } else {
+      div.innerHTML = '<button type="button" class="boxToggle boxOpenBtn" title="開く"></button>';
+      div.querySelector(".boxToggle").textContent = mini;
+    }
+    div.querySelector(".boxToggle").onclick = (ev) => {
+      ev.preventDefault();
+      /* ここで innerHTML を作り直すとこのボタンがDOMから外れ、Leaflet の
+         「コントロール上のクリックは地図に伝えない」判定(親を辿る)が効かなくなる。
+         結果、凡例を畳んだだけで地図タップ扱いになり道具が全部隠れてしまうので、
+         自分で伝播を止める(実測で再現・2026-09-18) */
+      ev.stopPropagation();
+      open = !open;
+      try { if (SKEY) sessionStorage.setItem(SKEY, open ? "1" : "0"); } catch (e) { /* 保存不可でも動作は継続 */ }
+      draw();
+    };
+  }
+  /* 箱の上のクリック・ドラッグを地図に伝えない(地図タップでの一括非表示や
+     地図の移動が、凡例を触っただけで起きてしまうのを防ぐ) */
+  L.DomEvent.disableClickPropagation(div);
+  L.DomEvent.disableScrollPropagation(div);
+  draw();
+  return { redraw: draw, isOpen: () => open };
+}
+
+/* ---- 地図の何もない所をタップして、重ねている道具を一括で隠す/戻す ----
+   ボタン・凡例・パネルをまとめて消し、地図だけの表示にする(メンバー要望 2026-09-18)。
+   次のタップは「道具の開け閉め」ではないので対象外にする:
+     ・図形やピンの上のタップ(ポップアップが開く)
+     ・コントロール類の上のタップ
+     ・ポップアップを閉じたタップ(閉じるだけ。続けて道具まで消さない)
+     ・作図/編集中(geoman)や地点追加モード中(タップが作業そのものの操作)
+   地図の出典表示(クレジット)は隠さない(表示義務があるため)。
+     opts.busy: () => true の間はタップでの切替をしない(街宣マップの追加モード等) */
+function addUiHideControl(map, opts) {
+  opts = opts || {};
+  const container = map.getContainer();
+  let hidden = false, lastPopupClose = 0, hintShown = false;
+
+  /* 戻すための小さなボタン(隠している間だけ画面下に出す) */
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "uiShowChip";
+  chip.textContent = "⛶ ツールを表示";
+  chip.title = "隠したボタン・凡例を表示する(地図の何もない所をタップしても戻ります)";
+  chip.style.display = "none";
+  container.appendChild(chip);
+  L.DomEvent.disableClickPropagation(chip);
+  chip.onclick = () => setHidden(false);
+
+  function setHidden(v) {
+    if (hidden === v) return;
+    hidden = v;
+    container.classList.toggle("uiHidden", v);
+    chip.style.display = v ? "block" : "none";
+    if (v && !hintShown) {
+      hintShown = true;
+      showMapToast(container, "ツールを隠しました。地図の何もない所をもう一度タップすると戻ります");
+    }
+  }
+
+  /* 作図・編集・削除モード中か(leaflet-geoman。入っていないページでは常に false) */
+  function busy() {
+    if (opts.busy && opts.busy()) return true;
+    const pm = map.pm;
+    if (!pm) return false;
+    return ["globalDrawModeEnabled", "globalEditModeEnabled", "globalDragModeEnabled",
+      "globalRemovalModeEnabled", "globalCutModeEnabled", "globalRotateModeEnabled"]
+      .some(n => typeof pm[n] === "function" && pm[n]());
+  }
+
+  map.on("popupclose", () => { lastPopupClose = Date.now(); });
+  map.on("click", (ev) => {
+    if (ev.propagatedFrom) return;            /* 図形・ピンの上 */
+    const t = ev.originalEvent && ev.originalEvent.target;
+    /* 押した要素が既にDOMから外れている = パネル側がクリックを受けて中身を作り直した
+       (世帯数パネルの都道府県を開く、凡例を畳む等)。地図のタップではないので対象外 */
+    if (t && t.isConnected === false) return;
+    if (t && t.closest && t.closest(".leaflet-control-container, .guidePanel, .listPanel, .uiShowChip, .mapToast")) return;
+    if (busy()) return;
+    if (Date.now() - lastPopupClose < 400) return; /* 直前のタップでポップアップを閉じた */
+    setHidden(!hidden);
+  });
+
+  /* タップで隠せない場面(世帯数レイヤの上など、どこを押しても図形に当たるとき)の
+     ための明示ボタン。押すと隠れ、戻すのは下の「⛶ ツールを表示」から */
+  const ctl = L.control({ position: "topleft" });
+  ctl.onAdd = () => {
+    const btn = L.DomUtil.create("button", "uiHideBtn");
+    btn.textContent = "⛶";
+    btn.title = "ツール(ボタン・凡例)を隠して地図を広く使う";
+    L.DomEvent.disableClickPropagation(btn);
+    btn.onclick = () => setHidden(true);
+    return btn;
+  };
+  ctl.addTo(map);
+
+  return { setHidden, isHidden: () => hidden };
+}
+
+/* 地図の上に数秒だけ出る小さな案内(操作を止めない) */
+function showMapToast(container, text, ms) {
+  const t = document.createElement("div");
+  t.className = "mapToast";
+  t.textContent = text;
+  container.appendChild(t);
+  setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 400); }, ms || 3000);
 }
 
 /* ---- 同じマップを別タブで開いたときの上書き事故を防ぐ ----
@@ -867,15 +1001,18 @@ function addSetaiLayers(map, opts) {
       legendCtl = L.control({ position: "bottomright" });
       legendCtl.onAdd = () => {
         const div = L.DomUtil.create("div", "legend");
-        div.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
-          SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
-          `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
-          `<div style="margin-top:3px"><a href="#" id="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
+        /* ✕でたためる(スマホでは凡例が地図をかなり覆うため。メンバー要望 2026-09-18) */
+        addBoxCollapse(div, "🏠 世帯数", "setaiLegend", (body) => {
+          body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
+            SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
+            `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
+            `<div style="margin-top:3px"><a href="#" class="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
+          const rl = body.querySelector(".setaiReqLink");
+          if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
+        });
         return div;
       };
       legendCtl.addTo(map);
-      const rl = document.getElementById("setaiReqLink");
-      if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
     } else if (!active && legendCtl) {
       map.removeControl(legendCtl);
       legendCtl = null;
