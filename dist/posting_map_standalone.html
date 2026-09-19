@@ -400,6 +400,15 @@ const FAQ_HTML = `
 
 <details class="faqItem"><summary>同じ地図を2つのタブで開いてもいい?</summary><div class="faqA"><b>1つにしてください。</b>両方で編集すると、あとから保存した側で上書きされ、片方の変更が消えます(検知すると画面の上に警告が出ます)。</div></details>
 
+<details class="faqItem"><summary>地図が見づらい。凡例やボタンを消せますか?</summary><div class="faqA"><b>消せます。</b>やり方は3つあります。
+<ol class="faqList">
+<li><b>地図の何もない所をタップ</b> — <b>上のボタン帯も含めて</b>まとめて消え、<b>地図が画面いっぱい</b>になります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
+<li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
+<li><span class="faqNote">※上の紫のボタン帯・説明・注意書きも一緒に隠れます。戻すと元どおり出てきます。</span></li>
+<li><b>凡例の「»」</b> — その凡例だけを<b>画面の右端へ畳みます</b>(細いタブだけが残ります。タブを押すと戻ります)</li>
+</ol>
+<span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div></details>
+
 <details class="faqItem"><summary>自分のデータが作成者や他のチームに送られることはありますか?</summary><div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
 <span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div></details>
 `;
@@ -479,7 +488,7 @@ function buildGuideMenu(panel) {
     panes.push(d);
   };
   addPane("gTeam", "👥 チームでの回し方", "配る→編集→返す→統合の手順と注意3つ", TEAM_HTML);
-  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(13問)", FAQ_HTML);
+  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(14問)", FAQ_HTML);
 
   /* そのページに無い機能の項目は出さない */
   if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
