@@ -409,6 +409,13 @@ function showAppNotice(html, level, actions) {
      mini   : 畳んだときにタブへ縦書きで出す短いラベル(例 "🏠 世帯数")
      key    : 開閉状態を覚えるキー(null なら覚えない=毎回開いた状態から)
      render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
+/* 凡例の1行を作る。色チップとラベルを flex で横並びに固定し、
+   箱が狭いときに「チップだけ残ってラベルが次の行へ落ちる」折り返しを防ぐ。
+   (インライン要素＋<br> で組むと、行の残り幅が足りない時にチップとラベルの間で改行される) */
+function legendRow(swatchHtml, label) {
+  return `<div class="lgRow">${swatchHtml}<span class="lgLabel">${label}</span></div>`;
+}
+
 function addBoxCollapse(div, mini, key, render) {
   const SKEY = key ? "senkyoMaps." + key + ".open" : null;
   let open = true;
@@ -1136,7 +1143,7 @@ function addSetaiLayers(map, opts) {
         const div = L.DomUtil.create("div", "legend");
         legendBox = addBoxCollapse(div, "🏠 世帯数", null, (body) => {
           body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
-            SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
+            SETAI_BINS.map(b => legendRow(`<i class="sq" style="background:${b.color}"></i>`, b.label)).join("") +
             `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
             `<div style="margin-top:3px"><a href="#" class="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
           const rl = body.querySelector(".setaiReqLink");

@@ -38,13 +38,23 @@ header.appbar a:hover{text-decoration:underline;}
 /* 凡例などの箱を画面の端へ畳む(addBoxCollapse)。
    「»」で右端(左側の箱は「«」で左端)へスライドして外へ逃がし、縦書きの細いタブだけを残す。
    YouTubeのミニプレーヤーを画面の枠外へどかす操作のイメージ。 */
-.legend .boxToggle{ float:right; margin:-3px -6px 0 8px; width:24px; height:24px; line-height:1; font-size:15px; cursor:pointer;
+.legend{ position:relative; }
+/* 畳みボタンは本文の流れから外す(絶対配置)。float のままだと1行目の使える幅を奪い、
+   先頭行だけ「色チップ／ラベル」が分断されて改行されていた(2026-09-19 実測・修正) */
+.legend .boxToggle{ position:absolute; top:5px; right:5px; z-index:1; width:24px; height:24px; line-height:1; font-size:15px; cursor:pointer;
   border:1px solid #d1d5db; background:#fff; color:#6b7280; border-radius:6px; font-family:inherit; font-weight:700; }
+/* ボタンの下に本文が潜り込まないよう、本文側に逃げ幅を確保する */
+.legend .boxBody{ padding-right:22px; }
+/* 凡例の1行: 色チップとラベルは必ず横並び・途中で折り返さない */
+.legend .lgRow{ display:flex; align-items:center; gap:6px; white-space:nowrap; line-height:1.65; }
+.legend .lgRow i{ margin-right:0; flex:none; }
+.legend .lgLabel{ min-width:0; }
 .legend .boxToggle:hover{ background:#f3f4f6; color:var(--ink); }
 /* 畳んだ状態: 端に貼り付く縦書きタブ(タップで戻る) */
+.legend.boxMini .boxBody{ padding-right:0; }
 .legend.boxMini{ padding:0; margin-right:0 !important; border-radius:10px 0 0 10px; box-shadow:-1px 1px 7px rgba(0,0,0,.28); }
 .legend.boxMini.boxLeft{ margin-right:10px !important; margin-left:0 !important; border-radius:0 10px 10px 0; box-shadow:1px 1px 7px rgba(0,0,0,.28); }
-.legend.boxMini .boxToggle{ float:none; margin:0; width:27px; height:auto; padding:10px 3px; border:none; background:none;
+.legend.boxMini .boxToggle{ position:static; float:none; margin:0; width:27px; height:auto; padding:10px 3px; border:none; background:none;
   color:var(--ink); font-size:12px; font-weight:700; line-height:1.15; white-space:nowrap;
   writing-mode:vertical-rl; text-orientation:mixed; }
 .legend.boxMini .boxToggle::after{ content:"‹"; display:block; margin-top:5px; color:var(--accent); font-size:15px; }
@@ -236,6 +246,13 @@ body.uiHidden .noticebar{ display:none !important; }
 .placeSearch .psItem:hover{ background:#eef2ff; }
 .noticebar .noticeLic{ font-size:11px; color:#374151; }
 .noticebar .noticeLic a{ color:#166534; }
+/* 小さい画面で免責バーが画面の半分以上を占め、地図が数十pxしか残らない問題の対策
+   (実測 iPhone SE 320x568: 免責339px / 地図85px=15%、凡例が地図の外にはみ出してタップできない)。
+   文面は一切削らず、バーの中だけでスクロールできるようにして高さの上限を設ける。
+   元に戻すときはこの @media ブロックを消すだけでよい。 */
+@media (max-width:600px){
+  .noticebar{ max-height:30vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+}
 
 /* ===== デバイス別最適化: 画面幅に応じてヘッダ・ツールバーを段階的にコンパクト化し地図面積を確保 =====
    〜700px=スマホ / 701〜1024px=タブレット / 1025px〜=PC(既定スタイル) */
@@ -687,6 +704,13 @@ function showAppNotice(html, level, actions) {
      mini   : 畳んだときにタブへ縦書きで出す短いラベル(例 "🏠 世帯数")
      key    : 開閉状態を覚えるキー(null なら覚えない=毎回開いた状態から)
      render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
+/* 凡例の1行を作る。色チップとラベルを flex で横並びに固定し、
+   箱が狭いときに「チップだけ残ってラベルが次の行へ落ちる」折り返しを防ぐ。
+   (インライン要素＋<br> で組むと、行の残り幅が足りない時にチップとラベルの間で改行される) */
+function legendRow(swatchHtml, label) {
+  return `<div class="lgRow">${swatchHtml}<span class="lgLabel">${label}</span></div>`;
+}
+
 function addBoxCollapse(div, mini, key, render) {
   const SKEY = key ? "senkyoMaps." + key + ".open" : null;
   let open = true;
@@ -1414,7 +1438,7 @@ function addSetaiLayers(map, opts) {
         const div = L.DomUtil.create("div", "legend");
         legendBox = addBoxCollapse(div, "🏠 世帯数", null, (body) => {
           body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
-            SETAI_BINS.map(b => `<i class="sq" style="background:${b.color}"></i>${b.label}`).join("<br>") +
+            SETAI_BINS.map(b => legendRow(`<i class="sq" style="background:${b.color}"></i>`, b.label)).join("") +
             `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
             `<div style="margin-top:3px"><a href="#" class="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
           const rl = body.querySelector(".setaiReqLink");
@@ -2041,7 +2065,7 @@ const legendCtl = L.control({ position: "bottomright" });
 legendCtl.onAdd = () => {
   const div = L.DomUtil.create("div", "legend");
   addBoxCollapse(div, "🎨 ステータス", "posterLegend", (body) => {
-    body.innerHTML = STATUSES.map(s => `<i style="background:${s.color}"></i>${s.label}`).join("<br>");
+    body.innerHTML = STATUSES.map(s => legendRow(`<i style="background:${s.color}"></i>`, s.label)).join("");
   });
   return div;
 };

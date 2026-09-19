@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=26">
+<link rel="stylesheet" href="../assets/common.css?v=28">
 <style>
   /* 種別ピン(絵文字divIcon) */
   .gm-pin{
@@ -22,7 +22,7 @@
   }
   .leaflet-div-icon.gm-wrap{ background:transparent; border:none; }
   .legend .grp{ font-weight:700; margin:6px 0 2px; display:block; }
-  .legend .care-note{ color:#c62828; font-size:11px; }
+  .legend .care-note{ color:#c62828; font-size:11px; margin:1px 0 2px; }
   .legend i.dot{ width:12px; height:12px; border-radius:50%; border:2px solid #333; display:inline-block; margin-right:6px; vertical-align:-1px; }
   .addbar{ display:none; background:#c62828; color:#fff; text-align:center; padding:6px 10px; font-size:13px; font-weight:700; }
   .addbar.on{ display:block; }
@@ -47,7 +47,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=26"></script>
+<script src="../assets/common.js?v=28"></script>
 <script>
 "use strict";
 
@@ -119,13 +119,13 @@ const legendCtl = L.control({ position:"bottomright" });
 legendCtl.onAdd = () => {
   const div = L.DomUtil.create("div", "legend");
   addBoxCollapse(div, "📢 凡例", "gaisenLegend", (body) => {
-    const row = c => `<i class="dot" style="background:${c.color}${c.care?';box-shadow:0 0 0 2px rgba(229,57,53,.35)':''}"></i>${c.emoji} ${c.label}`;
+    const row = c => legendRow(`<i class="dot" style="background:${c.color}${c.care?';box-shadow:0 0 0 2px rgba(229,57,53,.35)':''}"></i>`, `${c.emoji} ${c.label}`);
     body.innerHTML =
-      `<span class="grp">🔇 音声配慮地点</span>` + CARE_GROUP.map(id=>row(catOf(id))).join("<br>") +
-      `<br><span class="care-note">▲ 赤ふち＝静穏に配慮</span>` +
-      `<span class="grp">📢 街宣好適地点</span>` + SPOT_GROUP.map(id=>row(catOf(id))).join("<br>") +
-      `<span class="grp">🗳️ 投票所</span>` + VOTE_GROUP.map(id=>row(catOf(id))).join("<br>") +
-      `<span class="grp">🏢 参考</span>` + REF_GROUP.map(id=>row(catOf(id))).join("<br>");
+      `<span class="grp">🔇 音声配慮地点</span>` + CARE_GROUP.map(id=>row(catOf(id))).join("") +
+      `<div class="care-note">▲ 赤ふち＝静穏に配慮</div>` +
+      `<span class="grp">📢 街宣好適地点</span>` + SPOT_GROUP.map(id=>row(catOf(id))).join("") +
+      `<span class="grp">🗳️ 投票所</span>` + VOTE_GROUP.map(id=>row(catOf(id))).join("") +
+      `<span class="grp">🏢 参考</span>` + REF_GROUP.map(id=>row(catOf(id))).join("");
   });
   return div;
 };
