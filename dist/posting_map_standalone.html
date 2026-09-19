@@ -1224,7 +1224,10 @@ function setaiPct(a, b){ return b > 0 ? Math.round(a / b * 1000) / 10 : null; }
 /* val: properties(+選択中の年齢階級index) -> 数値 or null(データなし) */
 const SETAI_METRICS = [
   { id: "setai", grp: "基本", label: "世帯数", unit: "世帯", val: p => p.setai },
-  { id: "jinko", grp: "基本", label: "人口総数", unit: "人", val: p => p.jinko },
+  /* 人口総数は統計表の総数(tt。秘匿合算の受け皿では境界のjinkoより大きい)を優先し、
+     男女・年齢・外国人の各指標と母数を揃える(C-2: 基準の混在で 8人→65歳以上38人 のような
+     読み違いが起きないように)。ttが無い feature では jinko と同値 */
+  { id: "jinko", grp: "基本", label: "人口総数", unit: "人", val: p => p.hi ? p.jinko : setaiTT(p) },
   { id: "nihon", grp: "基本", label: "日本人人口(概算)", unit: "人", val: p => p.gk == null ? null : setaiTT(p) - p.gk },
   { id: "gk", grp: "基本", label: "外国人人口", unit: "人", val: p => p.gk == null ? null : p.gk },
   { id: "gkr", grp: "基本", label: "外国人比率", unit: "%", val: p => p.gk == null ? null : setaiPct(p.gk, setaiTT(p)) },
@@ -1349,10 +1352,23 @@ function addSetaiLayers(map, opts) {
     const gray = (t) => `<span style="font-size:10.5px;color:#888">${t}</span>`;
     const row = (label, v, unit, extra) =>
       `<tr><td style="color:#555;padding-right:8px">${label}</td><td style="text-align:right"><b>${setaiFmt(v, unit)}</b>${unit === "%" || v == null ? "" : unit}${extra || ""}</td></tr>`;
+    /* 「人口」は統計表の総数(tt)を優先して男女・年齢の内訳と母数を揃える。
+       ttがある(=境界のjinkoと異なる=秘匿合算の受け皿)ときは境界区域の集計も併記(C-2) */
     let html = `<b>${p.name}</b><br><table style="border-collapse:collapse;font-size:12px">` +
-      row("世帯数", p.setai, "世帯") + row("人口", p.jinko, "人");
+      row("世帯数", p.setai, "世帯") + row("人口", p.hi ? p.jinko : tt, "人");
+    if (p.tt != null && !p.hi) {
+      html += `<tr><td></td><td style="text-align:right">${gray(`(境界区域の集計 ${p.jinko.toLocaleString()}人)`)}</td></tr>`;
+    }
     if (p.hi) {
-      html += `</table>` + gray("※男女・外国人・年齢別は非公表(少人口のため国勢調査が別地域へ合算=秘匿処理)") ;
+      /* データなしの理由は生成時に区別している(make_setai_geojson.py の HI_*)。
+         「少人口のため」とは書かない: 補完的秘匿(近隣の小規模地域を守るための秘匿)では
+         人口1万人超の区域も秘匿される(例: 品川区八潮五丁目) */
+      const why = p.hi === 2
+        ? "※同一町名として合算した集計単位の一部が国勢調査で秘匿処理されているため、男女・外国人・年齢別の内訳は表示していません"
+        : p.hi === 3
+        ? "※この区域に対応する統計表の行がありません(男女・外国人・年齢別はデータなし)"
+        : "※この区域の男女・外国人・年齢別の値は、国勢調査の秘匿処理により近隣地域と合算して公表されており、単独の値は公表されていません";
+      html += `</table>` + gray(why);
     } else {
       html += `<tr><td style="color:#555;padding-right:8px">男 / 女</td><td style="text-align:right"><b>${setaiFmt(p.m, "人")}</b> / <b>${setaiFmt(p.f, "人")}</b>${p.m != null ? "人" : ""}</td></tr>` +
         row("外国人", p.gk, "人", p.gk != null ? gray(` (${setaiFmt(setaiPct(p.gk, tt), "%")})`) : "") +
@@ -1370,7 +1386,7 @@ function addSetaiLayers(map, opts) {
       }
       const notes = [];
       if (p.gs) notes.push("※秘匿処理された近隣地域の人数を含む(国勢調査の合算先)");
-      if (p.tt != null && p.tt !== p.jinko) notes.push(`※男女・年齢等の母数は統計表の総数${p.tt.toLocaleString()}人`);
+      if (p.gk != null) notes.push("※日本人=総数−外国人の概算(国籍不詳を含む)");
       if (notes.length) html += `<br>` + gray(notes.join("<br>"));
     }
     if (p.units > 1) html += `<br>` + gray(`※国勢調査の集計単位${p.units}区分を合算(同一町名)`);

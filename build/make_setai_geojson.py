@@ -157,6 +157,11 @@ def load_stats(stats_dir, pref2):
         d = {"tt": _cell(r[11]), "m": _cell(r[12]), "f": _cell(r[13]),
              "gk": _cell(r[14]), "st2": _cell(r[15]),
              "hi": himitsu == "秘匿地域", "gs": himitsu == "合算地域あり"}
+        if d["hi"]:
+            # 秘匿先(受け皿)の町丁字コード。同名統合グループの中で閉じていれば
+            # 既知値の合計がそのまま正値になる(attach_stats の復元判定に使う)
+            hs = (r[5] or "").strip()
+            d["hs"] = city + hs if hs else None
         if level == "1":
             muni[city] = d
             continue
@@ -199,25 +204,46 @@ def _sum_vals(vals):
 
 STAT_KEYS = ("m", "f", "gk", "a0", "a1", "a2", "a75", "nf", "tt")
 
+# hi(データなし)の理由コード。UI(common.js)の説明文と対応する:
+#   1 = この単位自体が秘匿(値は近隣の受け皿へ合算して公表。少人口とは限らない=補完的秘匿がある)
+#   2 = 同一町名で統合した集計単位の一部が秘匿で、受け皿がグループ外にあるため内訳を出せない
+#   3 = 統計表に対応する行が無い(境界データのみの特殊区域)
+HI_SECRET, HI_MERGE, HI_NOROW = 1, 2, 3
+
 
 def attach_stats(us, stats):
-    """統合済みグループ us(units のリスト)の統計値を合算して props 断片を返す。"""
+    """統合済みグループ us(units のリスト)の統計値を合算して props 断片を返す。
+
+    秘匿の復元: 秘匿単位の受け皿(秘匿先情報)が同じ統合グループ内にあるときは、
+    秘匿単位の人数は既知単位の値に含まれているので、既知値の合計がそのまま正値になる
+    (例: 高崎市 倉賀野町=14単位中1単位が秘匿だが受け皿もグループ内 → 合計は市の大字計と一致)。
+    受け皿がグループ外・大字計(lv3)宛のときは過小になるため従来どおり非表示(hi)にする。
+    """
     parts = [stats["units"].get(u["key"]) for u in us]
     found = [p for p in parts if p is not None]
     if not found:
         return None, len(us)            # 全構成単位が統計CSVに無い(未突合)
+    group_keys = {u["key"] for u in us}
+    secret = [d for d in found if d.get("hi")]
+    # 復元可能か: 秘匿単位すべての受け皿がこのグループ内に居るか
+    recover = bool(secret) and all(d.get("hs") in group_keys for d in secret)
+    use = [d for d in found if not d.get("hi")] if recover else found
+    complete = (len(found) == len(parts)) and (recover or not secret)
     p = {}
     for k in STAT_KEYS:
-        p[k] = _sum_vals([d.get(k) for d in found] + ([0] if len(found) == len(parts) else [None]))
-        # ↑構成単位の一部がCSVに無い統合は、値が過小になるため None 扱いにする
-    ags = [d.get("ag") for d in found]
-    if any(a is None for a in ags) or len(found) != len(parts):
+        p[k] = _sum_vals([d.get(k) for d in use] + ([0] if complete else [None]))
+    ags = [d.get("ag") for d in use]
+    if any(a is None for a in ags) or not complete:
         p["ag"] = None
     else:
         cols = [_sum_vals(col) for col in zip(*ags)]
         p["ag"] = None if any(c is None for c in cols) else cols
-    p["hi"] = any(d.get("hi") for d in found)
-    p["gs"] = any(d.get("gs") for d in found)
+    if p.get("m") is None:
+        # 値を出せない理由を区別する(C-1: 「少人口のため」と一括表示しない)
+        p["hi"] = HI_MERGE if (secret and len(us) > 1) else HI_SECRET
+    else:
+        p["hi"] = 0
+    p["gs"] = any(d.get("gs") for d in found) or recover
     return p, 0
 
 
@@ -225,7 +251,7 @@ def props_from_stats(sp, jinko):
     """attach_stats の結果を、GeoJSONに載せる最小限のキーに刈り込む。"""
     out = {}
     if sp is None:
-        return {"hi": 1}                 # 統計未突合も「データなし」として扱う
+        return {"hi": HI_NOROW}          # 統計未突合(統計表に行が無い)
     for k in ("m", "f", "gk", "a0", "a1", "a2", "a75"):
         if sp.get(k) is not None:
             out[k] = sp[k]
@@ -235,8 +261,8 @@ def props_from_stats(sp, jinko):
         out["nf"] = sp["nf"]
     if sp.get("tt") is not None and sp["tt"] != jinko:
         out["tt"] = sp["tt"]
-    if sp.get("hi") or sp.get("m") is None:
-        out["hi"] = 1
+    if sp.get("hi"):
+        out["hi"] = sp["hi"]
     if sp.get("gs"):
         out["gs"] = 1
     return out
@@ -305,8 +331,14 @@ def build_features(units, stats=None):
         groups.setdefault(gkey, []).append(u)
 
     feats, merged_names = [], []
-    n_hi = n_gs = n_unmatched = 0
+    n_hi = n_gs = n_unmatched = n_dropped_empty = 0
     for gkey, us in groups.items():
+        # 名称が空で人口0・世帯0の単位は境界データ由来の空レコード(統計表に行も無い)。
+        # 地図に出しても「非公表」の誤解を生むだけなので feature 自体を出さない(レビューW-3)
+        if (not (us[0]["name"] or "").strip()
+                and all(u["setai"] == 0 and u["jinko"] == 0 for u in us)):
+            n_dropped_empty += len(us)
+            continue
         # 世帯数の多い単位を先に = ラベルがその単位の本体ポリゴンに載る
         us.sort(key=lambda u: (u["setai"], u["jinko"], max(p["area"] for p in u["parts"])), reverse=True)
         if len(us) > 1:
@@ -341,6 +373,7 @@ def build_features(units, stats=None):
         "units": len(units), "multi_boundary": n_multi_boundary,
         "merged": merged_names, "warns": warns,
         "hi": n_hi, "gs": n_gs, "unmatched": n_unmatched,
+        "dropped_empty": n_dropped_empty,
     }
 
 
@@ -381,7 +414,9 @@ def selfcheck(code, feats, stats):
             known = sum(v for v in vals if v is not None)
             if p.get(k) is not None:
                 shown[k] = shown.get(k, 0) + p[k]
-                if any(v is None for v in vals) or p[k] != known:
+                # 秘匿復元グループでは構成単位に None(X) が混ざるが、受け皿がグループ内なので
+                # 既知値の合計=正値。値は常に「既知値の合計」と一致していなければならない
+                if p[k] != known:
                     probs.append(f"{p['name']}: {label}={p[k]} が構成単位のCSV合計{known}と不一致")
             else:
                 dropped[k] = dropped.get(k, 0) + known
@@ -437,6 +472,8 @@ def _run_selfcheck(code, label, feats, stats, st):
     extra = f" / 秘匿等データなし {st['hi']}件・合算受け皿 {st['gs']}件"
     if st["unmatched"]:
         extra += f" / ⚠️統計CSV未突合 {st['unmatched']}単位"
+    if st.get("dropped_empty"):
+        extra += f" / 無名0人の空レコード除外 {st['dropped_empty']}単位"
     print(f"    属性: {extra}")
     for p in selfcheck(code, feats, stats):
         if p.startswith("INFO"):
