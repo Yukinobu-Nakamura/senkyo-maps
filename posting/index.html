@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=24">
+<link rel="stylesheet" href="../assets/common.css?v=25">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -63,7 +63,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=24"></script>
+<script src="../assets/common.js?v=25"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -109,9 +109,9 @@ addPlaceSearchControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
   `<div class="gTabs">
-    <button class="gTab active" data-pane="gp1" type="button">🖊️ 手で描いて登録</button>
-    <button class="gTab" data-pane="gp2" type="button">📮 GPXを読み込む</button>
-    <button class="gTab" data-pane="gp3" type="button">📂 GeoJSONを共有</button>
+    <button class="gTab active" data-pane="gp1" type="button" data-desc="区域・ルートを描いて、状態や担当を記録する">🖊️ 手で描いて登録</button>
+    <button class="gTab" data-pane="gp2" type="button" data-desc="スマホで記録した歩いたルートを地図に取り込む">📮 GPXを読み込む</button>
+    <button class="gTab" data-pane="gp3" type="button" data-desc="書き出して渡す・受け取って統合する">📂 GeoJSONを共有</button>
   </div>
   <div class="gPane" id="gp1">
     <ol>

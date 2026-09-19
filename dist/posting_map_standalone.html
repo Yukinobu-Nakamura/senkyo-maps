@@ -167,6 +167,37 @@ body.uiHidden .noticebar{ display:none !important; }
    画面いっぱいのシートにする(位置だけの変更。中身・開閉の操作は同じ) */
 @media (max-width:600px){ .guidePanel{position:fixed; left:8px; right:8px; bottom:8px; top:auto; width:auto; max-height:72vh; z-index:2000; background:#fff;} }
 
+/* ガイド1段目=目次(見出しと1行説明だけ)。選ぶと2段目=その項目だけを表示する */
+.guidePanel .gMenu{ display:flex; flex-direction:column; gap:7px; margin:6px 0 2px; }
+.guidePanel .gMenuItem{ display:grid; grid-template-columns:1fr auto; align-items:center; gap:1px 8px;
+  width:100%; text-align:left; font-family:inherit; cursor:pointer; background:#fff;
+  border:1.5px solid #e5e7eb; border-radius:12px; padding:9px 12px; }
+.guidePanel .gMenuItem:hover{ border-color:var(--accent); background:#faf9ff; }
+.guidePanel .gmTtl{ font-size:13.5px; font-weight:bold; color:var(--ink); }
+.guidePanel .gmDesc{ grid-column:1; font-size:11.5px; color:var(--muted); line-height:1.5; }
+.guidePanel .gmArrow{ grid-row:1 / span 2; grid-column:2; font-size:20px; color:var(--accent); line-height:1; }
+.guidePanel .gBack{ display:none; font-family:inherit; font-size:12.5px; font-weight:bold; color:var(--accent);
+  background:#f5f3ff; border:1.5px solid #ddd6fe; border-radius:99px; padding:5px 12px; margin:2px 0 9px; cursor:pointer; }
+.guidePanel .gBack:hover{ background:#ede9fe; }
+.guidePanel .gMenu .gNote{ margin-top:8px; }
+
+/* よくある質問・チーム案内のアコーディオン(1問ずつ開く。通読したい人には「すべて開く」) */
+.faqBody .faqTools{ display:flex; justify-content:flex-end; margin:2px 0 7px; }
+.faqBody .faqAll{ font-family:inherit; font-size:11.5px; font-weight:bold; color:var(--accent); background:#fff;
+  border:1.5px solid #ddd6fe; border-radius:99px; padding:3px 11px; cursor:pointer; }
+.faqBody .faqAll:hover{ background:#f5f3ff; }
+.faqItem{ border:1px solid #e5e7eb; border-radius:10px; margin-bottom:6px; background:#fff; }
+.faqItem[open]{ border-color:#ddd6fe; box-shadow:0 1px 5px rgba(139,92,246,.13); }
+.faqItem > summary{ cursor:pointer; list-style:none; padding:8px 30px 8px 11px; font-weight:bold;
+  font-size:12.5px; line-height:1.55; color:#1e3a5f; position:relative; border-radius:10px; }
+.faqItem > summary::-webkit-details-marker{ display:none; }
+.faqItem > summary::after{ content:"＋"; position:absolute; right:9px; top:7px; color:var(--accent); font-weight:bold; }
+.faqItem[open] > summary::after{ content:"−"; }
+.faqItem > summary:hover{ background:#faf9ff; }
+.faqBody .faqItem .faqA{ border-left:none; margin:0; padding:0 11px 10px; }
+.faqBody .teamSteps{ padding-left:20px; margin:6px 0 10px; }
+.faqBody .teamSteps li{ margin-bottom:5px; }
+
 /* ❓よくある質問(ガイド内。タブ版=.gPane#gFaq / 開閉版=details.faqDetails) */
 .faqDetails{ margin-top:10px; border-top:1px solid #e5e7eb; padding-top:8px; }
 .faqDetails summary{ cursor:pointer; font-weight:bold; color:var(--accent); font-size:12.5px; }
@@ -221,6 +252,11 @@ body.uiHidden .noticebar{ display:none !important; }
   .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11px; padding:5px 8px; }
   .samplebar{ font-size:11px; padding:4px 10px; }
 }
+
+/* 目次の末尾に置く「ちょっとしたコツ」(ページ側の .gNote をたたんで入れる) */
+.guidePanel .gNoteBox{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:7px; }
+.guidePanel .gNoteBox summary{ cursor:pointer; font-size:12px; font-weight:bold; color:var(--accent); }
+.guidePanel .gNoteBox .gNote{ border-top:none; padding-top:5px; margin-top:2px; }
 
 </style>
 <style>
@@ -321,74 +357,193 @@ function addLocateControl(map) {
 }
 
 /* ---- 使い方ガイド(毎回初期表示、❓ボタンで開閉) ---- */
-/* ===== ❓ よくある質問(3マップ共通) =====
+/* ===== ❓ よくある質問／👥 チームでの回し方(3マップ共通) =====
    ガイド(❓ボタン)の中に自動で差し込む。文面はここ1か所を直せば全マップに反映される。
-   ・タブ構造のガイド(ポスティング)  → 最後のタブとして追加
-   ・タブの無いガイド(ポスター・街宣) → 末尾に開閉式で追加
-   「⬇️ アプリを保存」が無いページでは、その項目(.faqDl)を自動で取り除く。 */
+   ・読み手が「必要な1問だけ読む」使い方なので、質問はアコーディオン(details)にして
+     開いた直後は見出しだけ見える状態にする(NN/g: 段階的開示は2段まで・見出しで中身を予告する)
+   ・「⬇️ アプリを保存」が無いページでは .faqDl を、「☁️ 同期」が無いページでは .teamSync を自動で外す */
 const FAQ_HTML = `
 <p class="faqLead">このアプリは<b>データを預かる場所を持たない地図</b>です。描いた内容は<b>あなたの端末の中だけ</b>に保存され、インターネット上には送られません。だから<b>他の人にも作成者にも見えません</b>。人に渡したいときだけ「💾 書出」でファイルにして渡します。</p>
+<div class="faqTools"><button type="button" class="faqAll">すべて開く</button></div>
 
-<div class="faqQ">ダウンロードせず、URLのまま使って大丈夫?</div>
-<div class="faqA"><b>大丈夫です。むしろそれが基本の使い方です。</b>URLを開くと、そのつど<b>まっさらなアプリ</b>が読み込まれ、あなたが描いた内容はその端末の中から復元されます。スマホなら共有ボタン →「ホーム画面に追加」で、アプリのように1タップで開けます。</div>
+<details class="faqItem"><summary>ダウンロードせず、URLのまま使って大丈夫?</summary><div class="faqA"><b>大丈夫です。むしろそれが基本の使い方です。</b>URLを開くと、そのつど<b>まっさらなアプリ</b>が読み込まれ、あなたが描いた内容はその端末の中から復元されます。スマホなら共有ボタン →「ホーム画面に追加」で、アプリのように1タップで開けます。</div></details>
 
-<div class="faqQ">描いた区域やルートは、他の人に見えますか?</div>
-<div class="faqA">見えません。同じURLを他の人が開いても、その人の画面は<b>白紙</b>です。<br>
-<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから「全消去(状態リセット)」しておくと安心です。</span></div>
+<details class="faqItem"><summary>描いた区域やルートは、他の人に見えますか?</summary><div class="faqA">見えません。同じURLを他の人が開いても、その人の画面は<b>白紙</b>です。<br>
+<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから「全消去(状態リセット)」しておくと安心です。</span></div></details>
 
-<div class="faqQ">データはどこに保存されていますか?</div>
-<div class="faqA">端末の<b>ブラウザの中</b>です。写真のように「ファイル」として残るわけではありません。取り出したいときは「💾 書出」を押すとファイルになります。</div>
+<details class="faqItem"><summary>データはどこに保存されていますか?</summary><div class="faqA">端末の<b>ブラウザの中</b>です。写真のように「ファイル」として残るわけではありません。取り出したいときは「💾 書出」を押すとファイルになります。</div></details>
 
-<div class="faqQ faqDl">「⬇️ アプリを保存」は何をするボタン?</div>
-<div class="faqA faqDl"><b>アプリ本体を1つのHTMLファイルにコピーする</b>ボタンです。押すたびに<b>まっさらな状態</b>のコピーが落ちてきます(描いたデータは入りません)。<b>URLを知らせずに人へ渡したいとき</b>のための機能です。<br>
-<span class="faqNote">※チームで使うだけなら、全員が同じURLを開けば十分で、このボタンは使わなくて構いません。</span></div>
+<details class="faqItem faqDl"><summary>「⬇️ アプリを保存」は何をするボタン?</summary><div class="faqA"><b>アプリ本体を1つのHTMLファイルにコピーする</b>ボタンです。押すたびに<b>まっさらな状態</b>のコピーが落ちてきます(描いたデータは入りません)。<b>URLを知らせずに人へ渡したいとき</b>のための機能です。<br>
+<span class="faqNote">※チームで使うだけなら、全員が同じURLを開けば十分で、このボタンは使わなくて構いません。</span></div></details>
 
-<div class="faqQ faqDl">保存したファイルをiPhone・iPadで開くと地図が真っ白です</div>
-<div class="faqA faqDl">iPhone・iPadの仕様です。ダウンロードしたHTMLは「表示するだけ」の扱いになり、地図を描くプログラムが動きません(PC・Androidなら開けます)。<b>iPhone・iPadでは、このページのURLをそのままお使いください。</b>共有ボタン →「ホーム画面に追加」をしておくと、アプリのように1タップで開けます。</div>
+<details class="faqItem faqDl"><summary>保存したファイルをiPhone・iPadで開くと地図が真っ白です</summary><div class="faqA">iPhone・iPadの仕様です。ダウンロードしたHTMLは「表示するだけ」の扱いになり、地図を描くプログラムが動きません(PC・Androidなら開けます)。<b>iPhone・iPadでは、このページのURLをそのままお使いください。</b>共有ボタン →「ホーム画面に追加」をしておくと、アプリのように1タップで開けます。</div></details>
 
-<div class="faqQ">電波のないところでも使えますか?</div>
-<div class="faqA">使えません。地図そのものを毎回インターネットから取り寄せているため、保存したファイル版でも通信が必要です。</div>
+<details class="faqItem"><summary>電波のないところでも使えますか?</summary><div class="faqA">使えません。地図そのものを毎回インターネットから取り寄せているため、保存したファイル版でも通信が必要です。</div></details>
 
-<div class="faqQ">GPX(歩いた記録)を取り込むと、どこに入りますか?</div>
-<div class="faqA">その端末の中に入ります(ネットには送られません)。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。</div>
+<details class="faqItem"><summary>GPX(歩いた記録)を取り込むと、どこに入りますか?</summary><div class="faqA">その端末の中に入ります(ネットには送られません)。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。</div></details>
 
-<div class="faqQ">保存したデータが消えることはありますか?</div>
-<div class="faqA">あります。次の4つに注意してください。
+<details class="faqItem"><summary>保存したデータが消えることはありますか?</summary><div class="faqA">あります。次の4つに注意してください。
 <ol class="faqList">
 <li>ブラウザの<b>履歴・Webサイトデータを削除</b>したとき</li>
 <li><b>プライベートブラウズ</b>で使ったとき(閉じると消えます)</li>
 <li><b>iPhone・iPadで7日間このサイトを開かなかったとき</b>(iOSが自動で消します。「ホーム画面に追加」から開けば対象外)</li>
 <li>保存容量(目安5MB＝長いGPXルートで80本ほど)を超えたとき</li>
 </ol>
-<b>週に1回くらい「💾 書出」で書き出して保管</b>しておけば、どれが起きても元に戻せます。</div>
+<b>週に1回くらい「💾 書出」で書き出して保管</b>しておけば、どれが起きても元に戻せます。</div></details>
 
-<div class="faqQ">パソコンとスマホで同じデータを見たい</div>
-<div class="faqA">自動では揃いません。片方で「💾 書出」→ そのファイルをメールやクラウド経由でもう片方へ送り →「📂 読込」で取り込むと、同じ状態になります。</div>
+<details class="faqItem"><summary>パソコンとスマホで同じデータを見たい</summary><div class="faqA">自動では揃いません。片方で「💾 書出」→ そのファイルをメールやクラウド経由でもう片方へ送り →「📂 読込」で取り込むと、同じ状態になります。</div></details>
 
-<div class="faqQ">チームで共有するには?</div>
-<div class="faqA">全員が<b>同じURL</b>を開いて使い、担当者が「💾 書出」したファイルを配って、各自「📂 読込」で取り込みます。取り込みは<b>統合</b>なので、同じ図形が二重に増えることはありません。<br>
-<span class="faqNote">※やり取りなしで自動的に揃えたいチームは「☁️ 同期」も使えます(チーム自身がGoogleスプレッドシートを用意する方式。ポスティングマップのみ)。</span></div>
+<details class="faqItem"><summary>チームで共有するには?</summary><div class="faqA">全員が<b>同じURL</b>を開いて使い、担当者が「💾 書出」したファイルを配って、各自「📂 読込」で取り込みます。取り込みは<b>統合</b>なので、同じ図形が二重に増えることはありません。<br>
+<span class="faqNote">※手順と注意点は、目次の「👥 チームでの回し方」にまとめてあります。</span></div></details>
 
-<div class="faqQ">「保存できませんでした」と出ました</div>
-<div class="faqA">端末の保存容量がいっぱいです。まず「💾 書出」で書き出してから、不要な図形(とくに長いGPXルート)を削除してください。</div>
+<details class="faqItem"><summary>「保存できませんでした」と出ました</summary><div class="faqA">端末の保存容量がいっぱいです。まず「💾 書出」で書き出してから、不要な図形(とくに長いGPXルート)を削除してください。</div></details>
 
-<div class="faqQ">同じ地図を2つのタブで開いてもいい?</div>
-<div class="faqA"><b>1つにしてください。</b>両方で編集すると、あとから保存した側で上書きされ、片方の変更が消えます(検知すると画面の上に警告が出ます)。</div>
+<details class="faqItem"><summary>同じ地図を2つのタブで開いてもいい?</summary><div class="faqA"><b>1つにしてください。</b>両方で編集すると、あとから保存した側で上書きされ、片方の変更が消えます(検知すると画面の上に警告が出ます)。</div></details>
 
-<div class="faqQ">地図が見づらい。凡例やボタンを消せますか?</div>
-<div class="faqA"><b>消せます。</b>やり方は3つあります。
-<ol class="faqList">
-<li><b>地図の何もない所をタップ</b> — <b>上のボタン帯も含めて</b>まとめて消え、<b>地図が画面いっぱい</b>になります。<b>もう一度タップ</b>(または画面下の「⛶ ツールを表示」)で戻ります</li>
-<li><b>左上の「⛶」ボタン</b> — 同じく全部隠します(図形や世帯数レイヤが重なっていて、タップすると説明が出てしまう場所ではこちら)</li>
-<li><span class="faqNote">※上の紫のボタン帯・説明・注意書きも一緒に隠れます。戻すと元どおり出てきます。</span></li>
-<li><b>凡例の「»」</b> — その凡例だけを<b>画面の右端へ畳みます</b>(細いタブだけが残ります。タブを押すと戻ります)</li>
-</ol>
-<span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div>
-
-<div class="faqQ">自分のデータが作成者や他のチームに送られることはありますか?</div>
-<div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
-<span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div>
+<details class="faqItem"><summary>自分のデータが作成者や他のチームに送られることはありますか?</summary><div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
+<span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div></details>
 `;
+
+/* ===== 👥 チームでの回し方(1枚) =====
+   ファイル(💾書出→📂読込)でチームを回すときの手順と、実測で分かった注意点。
+   「取り込み＝丸ごと上書き」ではなく「図形ごとに更新時刻の新しい方を採用」する仕組みを
+   ひとことで説明しておかないと、管理者が『他人の分で自分の編集が消える』と誤解する。 */
+const TEAM_HTML = `
+<p class="faqLead">配る → 各自が編集 → 返す → 取り込む、の繰り返しです。取り込みは<b>丸ごと上書きではなく「図形ごとに新しい方を採用」</b>なので、<b>誰から取り込んでも先に取り込んだ人の分は消えません</b>。</p>
+
+<ol class="teamSteps">
+<li><b>管理者</b>：区域・地点を用意して<b>担当を割り当て</b> →「💾 書出」→ 全員に配る(LINE・メール可)</li>
+<li><b>メンバー</b>：受け取ったファイルを「📂 読込」→ <b>自分の担当分だけ</b>編集</li>
+<li><b>メンバー</b>：終わったら「💾 書出」→ 管理者へ返す</li>
+<li><b>管理者</b>：返ってきたファイルを順に「📂 読込」(順番は問いません) → 統合後に<b>もう一度「💾 書出」して日付つきで保管</b>(例 master_0918)</li>
+</ol>
+
+<div class="faqTools"><button type="button" class="faqAll">すべて開く</button></div>
+
+<details class="faqItem"><summary>Aさんの分を取り込んだ後にBさんの分を取り込むと、Aさんの分は消えませんか?</summary><div class="faqA"><b>消えません。</b>図形1つずつに更新時刻が入っていて、<b>新しい方だけ</b>が採用されます。Bさんが触っていない区域は古いままなので、Aさんの実施内容を上書きしません。管理者が手元で加えた変更も同じ理由で残ります。</div></details>
+
+<details class="faqItem"><summary>気をつけるのは3つだけ</summary><div class="faqA">
+<ol class="faqList">
+<li><b>担当を重ねない</b> — 同じ区域を2人が編集すると、<b>あとから編集した人</b>の内容になります(先の人の分は消えます)</li>
+<li><b>削除は管理者だけ</b> — メンバーが消してもファイルでは伝わらず、逆に<b>管理者が消した区域が、メンバーの古いファイルで復活</b>することがあります。やめる区域は<b>消さずにメモへ「中止」</b>と書くのが安全です</li>
+<li><b>統合したら必ず書き出して保管</b> — データは各自の端末の中だけです。日付つきで残しておけば、誰の端末が消えても復旧できます</li>
+</ol></div></details>
+
+<details class="faqItem"><summary>新しいメンバーが増えたときは?</summary><div class="faqA">最新のマスターファイルを渡して「📂 読込」してもらうだけです。URLとファイルの2つを渡せば、その日から同じ状態で使えます。</div></details>
+
+<details class="faqItem teamSync"><summary>もっと大人数・削除もそろえたい</summary><div class="faqA">「☁️ 同期」を使うと、ファイルのやり取りなしで全員が同じ状態になり、<b>削除も反映</b>されます。チーム自身がGoogleスプレッドシートを用意する方式です(設置10分・作成者はデータを預かりません)。担当が5人を超える、区割の変更が多い、といった規模はこちらが向きます。</div></details>
+`;
+
+/* ガイドを「目次(見出しだけ) → 選んだ1項目」の2段に組み替える。
+   ・タブ型ガイド(ポスティング)は、タブ列を目次に置き換える
+   ・タブの無いガイド(ポスター・街宣)は、既存の本文をまとめて1項目にする
+   ・共通ページ(👥チームでの回し方 / ❓よくある質問)をここで足す
+   根拠: NN/g「段階的開示は2段まで。最初の画面は重要なものだけ、見出しで中身を予告する」 */
+function buildGuideMenu(panel) {
+  const h2 = panel.querySelector("h2");
+  const tabsBar = panel.querySelector(".gTabs");
+  let panes = [].slice.call(panel.querySelectorAll(".gPane"));
+
+  if (tabsBar) {
+    tabsBar.querySelectorAll(".gTab").forEach((t) => {
+      const pane = panel.querySelector("#" + t.dataset.pane);
+      if (!pane) return;
+      pane.dataset.label = t.textContent.trim();
+      if (t.dataset.desc) pane.dataset.desc = t.dataset.desc;
+    });
+    tabsBar.remove();
+  } else {
+    const wrap = document.createElement("div");
+    wrap.className = "gPane";
+    wrap.id = "gMain";
+    wrap.dataset.label = "🖊️ 基本の使い方";
+    wrap.dataset.desc = "読み込み・記録・書き出しの流れ";
+    [].slice.call(panel.childNodes).forEach((n) => {
+      if (n === h2) return;
+      if (n.nodeType === 1 && n.classList.contains("guideClose")) return;
+      wrap.appendChild(n);
+    });
+    panel.appendChild(wrap);
+    panes = [wrap];
+  }
+
+  /* 共通ページを追加 */
+  const addPane = (id, label, desc, html) => {
+    const d = document.createElement("div");
+    d.className = "gPane faqBody";
+    d.id = id;
+    d.dataset.label = label;
+    d.dataset.desc = desc;
+    d.innerHTML = html;
+    panel.appendChild(d);
+    panes.push(d);
+  };
+  addPane("gTeam", "👥 チームでの回し方", "配る→編集→返す→統合の手順と注意3つ", TEAM_HTML);
+  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(13問)", FAQ_HTML);
+
+  /* そのページに無い機能の項目は出さない */
+  if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
+  if (!document.getElementById("syncBtn")) panel.querySelectorAll(".teamSync").forEach((el) => el.remove());
+
+  /* 目次 */
+  const menu = document.createElement("div");
+  menu.className = "gMenu";
+  panes.forEach((pane) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "gMenuItem";
+    b.innerHTML = `<span class="gmTtl">${pane.dataset.label || "案内"}</span>`
+      + (pane.dataset.desc ? `<span class="gmDesc">${pane.dataset.desc}</span>` : "")
+      + `<span class="gmArrow">›</span>`;
+    b.addEventListener("click", () => show(pane.id));
+    menu.appendChild(b);
+  });
+  h2.insertAdjacentElement("afterend", menu);
+
+  /* 一覧に戻る */
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "gBack";
+  back.textContent = "‹ 目次にもどる";
+  back.addEventListener("click", () => show(null));
+  menu.insertAdjacentElement("afterend", back);
+
+  /* ページ全体の注記(.gNote)は目次の末尾に、たたんだ状態で置く(目次を短く保つ) */
+  const notes = [].slice.call(panel.querySelectorAll(".gNote"));
+  if (notes.length) {
+    const box = document.createElement("details");
+    box.className = "gNoteBox";
+    box.innerHTML = "<summary>💡 ちょっとしたコツ</summary>";
+    notes.forEach((n) => box.appendChild(n));
+    menu.appendChild(box);
+  }
+
+  /* 「すべて開く／すべて閉じる」(アコーディオンは1問ずつ開く前提だが、
+     通しで読みたい人・ページ内検索したい人のために一括も用意する) */
+  panel.querySelectorAll(".faqAll").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const items = [].slice.call(btn.closest(".gPane").querySelectorAll(".faqItem"));
+      const openAll = items.some((d) => !d.open);
+      items.forEach((d) => { d.open = openAll; });
+      btn.textContent = openAll ? "すべて閉じる" : "すべて開く";
+    });
+  });
+
+  function show(id) {
+    panes.forEach((p) => {
+      const on = p.id === id;
+      p.style.display = on ? "block" : "none";
+      p.querySelectorAll("video").forEach((v) => {
+        if (on) { v.preload = "auto"; v.play().catch(() => {}); } else { v.pause(); }
+      });
+    });
+    menu.style.display = id ? "none" : "block";
+    back.style.display = id ? "block" : "none";
+    panel.scrollTop = 0;
+  }
+  show(null);
+  return show;
+}
 
 function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   const container = map.getContainer();
@@ -421,7 +576,9 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
     wrap.appendChild(hint);
     if (media.tagName === "VIDEO") {
       // 自動再生がブラウザ都合で止まった場合に再開する保険
-      const ensurePlay = () => { if (!document.hidden && media.paused) media.play().catch(() => {}); };
+      /* 表示中のページの動画だけ再生する(目次表示のまま裏で再生すると通信量を無駄に使う) */
+      media.preload = "none";
+      const ensurePlay = () => { if (!document.hidden && media.paused && media.offsetParent !== null) media.play().catch(() => {}); };
       media.addEventListener("loadeddata", ensurePlay);
       media.addEventListener("pause", ensurePlay);
       document.addEventListener("visibilitychange", ensurePlay);
@@ -465,38 +622,9 @@ function addGuideControl(map, titleHtml, bodyHtml, storageKey) {
   };
   ctl.addTo(map);
 
-  /* ❓よくある質問を差し込む(タブ構造ならタブとして、無ければ末尾に開閉式で) */
-  if (!panel.querySelector(".faqBody")) {
-    const tabsBar = panel.querySelector(".gTabs");
-    if (tabsBar) {
-      tabsBar.insertAdjacentHTML("beforeend", `<button class="gTab" data-pane="gFaq" type="button">❓ よくある質問</button>`);
-      panel.insertAdjacentHTML("beforeend", `<div class="gPane faqBody" id="gFaq">${FAQ_HTML}</div>`);
-    } else {
-      panel.insertAdjacentHTML("beforeend",
-        `<details class="faqDetails"><summary>❓ よくある質問(保存・共有・iPhoneのこと)</summary><div class="faqBody">${FAQ_HTML}</div></details>`);
-    }
-    /* 「⬇️ アプリを保存」が無いページでは、その項目を消す */
-    if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
-  }
-
-  /* ガイド内のタブ切替(.gTab で .gPane を切り替え。動画は表示中のペインだけ再生) */
-  const gTabs = panel.querySelectorAll(".gTab");
-  const gPanes = panel.querySelectorAll(".gPane");
-  if (gTabs.length && gPanes.length) {
-    const showPane = (id) => {
-      gPanes.forEach((p) => {
-        const on = p.id === id;
-        p.style.display = on ? "block" : "none";
-        p.querySelectorAll("video").forEach((v) => { if (on) v.play().catch(() => {}); else v.pause(); });
-      });
-      gTabs.forEach((t) => t.classList.toggle("active", t.dataset.pane === id));
-    };
-    gTabs.forEach((t) => {
-      L.DomEvent.disableClickPropagation(t);
-      t.addEventListener("click", () => showPane(t.dataset.pane));
-    });
-    showPane(gTabs[0].dataset.pane);
-  }
+  /* ガイドの中身を「目次 → 選んだ1項目」の2段にする(段階的開示)。
+     開いた直後に説明を全部並べると読む前に諦められるため、まず見出しだけ見せる。 */
+  buildGuideMenu(panel);
 
   setOpen(true);
 }
@@ -1483,9 +1611,9 @@ addPlaceSearchControl(map);
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
   `<div class="gTabs">
-    <button class="gTab active" data-pane="gp1" type="button">🖊️ 手で描いて登録</button>
-    <button class="gTab" data-pane="gp2" type="button">📮 GPXを読み込む</button>
-    <button class="gTab" data-pane="gp3" type="button">📂 GeoJSONを共有</button>
+    <button class="gTab active" data-pane="gp1" type="button" data-desc="区域・ルートを描いて、状態や担当を記録する">🖊️ 手で描いて登録</button>
+    <button class="gTab" data-pane="gp2" type="button" data-desc="スマホで記録した歩いたルートを地図に取り込む">📮 GPXを読み込む</button>
+    <button class="gTab" data-pane="gp3" type="button" data-desc="書き出して渡す・受け取って統合する">📂 GeoJSONを共有</button>
   </div>
   <div class="gPane" id="gp1">
     <ol>
