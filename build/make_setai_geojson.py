@@ -86,17 +86,160 @@
   1つの番号の territory 自体が離れている=12件(上永谷町・寺家町など)。
 
 使い方:
-  1市区町村: python3 build/make_setai_geojson.py <r2kaXXXXX.shp> <出力geojson>
-  都道府県一括: python3 build/make_setai_geojson.py <r2kaXX.shp> --split <出力ディレクトリ>
+  1市区町村: python3 build/make_setai_geojson.py <r2kaXXXXX.shp> <出力geojson> [--stats <統計CSVディレクトリ>]
+  都道府県一括: python3 build/make_setai_geojson.py <r2kaXX.shp> --split <出力ディレクトリ> [--stats <統計CSVディレクトリ>]
                (市区町村コードごとに setai_<code>.geojson を書き出す)
 依存: pyshp (pip install pyshp)
+
+■ --stats: 小地域集計 表2・表3(属性切替用の追加属性)の結合
+  fetch_stats_csv.py が取得した t2_<県2桁>.csv / t3_<県2桁>.csv を KEY_CODE で突合し、
+  properties に以下を追加する(2026-09-19 実データで一次確認済みの構造):
+    m/f   男・女人口          gk  外国人人口(日本人は表示側で jinko-gk により概算)
+    a0/a1/a2/a75  15歳未満/15〜64/65歳以上/75歳以上(表3の(再掲)列そのまま)
+    ag    5歳階級21値の配列(0〜4…100歳以上、総数系列のみ)
+    nf    年齢「不詳」(>0のときのみ)   tt  表2の人口総数(境界データの jinko と違うときのみ)
+    hi=1  秘匿地域(値はすべて欠落。少人口のため別地域へ合算されている)
+    gs=1  合算受け皿(秘匿地域の値を含むため、境界の人口より大きい値になりうる)
+  - CSVの階層レベル: 1=市区町村計(検算用) / 2=丁目なし町(コード4桁+"00"でKEY_CODE化)
+    / 3=大字計(丁目の合計。結合には使わない) / 4=丁目(コード6桁)
+  - 値の記号: "X"=秘匿 → None、"-"=該当なし → 0
+  - 同名町丁目の統合時は各値を合算。秘匿(None)を含む統合は None のまま(過小表示を防ぐ)
+  - 自己検査: (a)市区町村計との突合 (b)恒等式(男+女=総数 等) (c)秘匿・未突合の件数報告
 """
+import csv
+import io
 import json
 import sys
 from pathlib import Path
 from collections import Counter, OrderedDict
 
 import shapefile
+
+AG_LABELS = ["0～4歳", "5～9歳", "10～14歳", "15～19歳", "20～24歳", "25～29歳",
+             "30～34歳", "35～39歳", "40～44歳", "45～49歳", "50～54歳", "55～59歳",
+             "60～64歳", "65～69歳", "70～74歳", "75～79歳", "80～84歳", "85～89歳",
+             "90～94歳", "95～99歳", "100歳以上"]  # 表3 列13〜33(21階級)
+
+
+def _cell(s):
+    """統計CSVの値セル → int / None。X=秘匿→None、-=該当なし→0。"""
+    s = (s or "").strip()
+    if s == "X":
+        return None
+    if s in ("-", ""):
+        return 0
+    return int(s.replace(",", ""))
+
+
+def load_stats(stats_dir, pref2):
+    """t2_<県>.csv / t3_<県>.csv を読み、KEY_CODE(11桁) -> 属性dict を返す。
+
+    戻り値: {"units": {key11: dict}, "muni": {市区町村5桁: 市区町村計dict}}
+    """
+    stats_dir = Path(stats_dir)
+    units, muni = {}, {}
+
+    def norm_key(city, code, level):
+        # 境界データの KEY_CODE は 丁目あり=11桁(市5+町字4+丁目2) / 丁目なし=9桁(市5+町字4)。
+        # 統計CSVは lv4(丁目)=6桁コード, lv2(丁目なし町)=4桁コード なので、そのまま連結すれば一致する。
+        if level == "4":                 # 丁目 → 11桁
+            return city + code
+        if level == "2":                 # 丁目なし町 → 9桁
+            return city + code
+        return None                      # lv1/lv3 は結合対象外
+
+    def rows(path):
+        raw = path.read_bytes().decode("cp932")
+        return list(csv.reader(io.StringIO(raw)))[5:]
+
+    for r in rows(stats_dir / f"t2_{pref2}.csv"):
+        city, code, level, himitsu = r[1], r[2], r[3], r[4]
+        d = {"tt": _cell(r[11]), "m": _cell(r[12]), "f": _cell(r[13]),
+             "gk": _cell(r[14]), "st2": _cell(r[15]),
+             "hi": himitsu == "秘匿地域", "gs": himitsu == "合算地域あり"}
+        if level == "1":
+            muni[city] = d
+            continue
+        k = norm_key(city, code, level)
+        if k is None:
+            continue
+        if k in units:
+            raise SystemExit(f"表2 KEY_CODE衝突: {k}(lv2の正規化とlv4が重なった。構造要確認)")
+        units[k] = d
+
+    for r in rows(stats_dir / f"t3_{pref2}.csv"):
+        if r[1] != "総数":               # 総数系列のみ使う(男女×年齢は容量都合で収録しない)
+            continue
+        city, code, level = r[2], r[3], r[4]
+        d = {"ag": [_cell(x) for x in r[13:34]], "nf": _cell(r[34]),
+             "a0": _cell(r[35]), "a1": _cell(r[36]), "a2": _cell(r[37]), "a75": _cell(r[38])}
+        if level == "1":
+            if city in muni:
+                muni[city].update(d)
+            continue
+        k = norm_key(city, code, level)
+        if k is None:
+            continue
+        if k in units:
+            units[k].update(d)
+        else:
+            units[k] = d
+    return {"units": units, "muni": muni}
+
+
+def _sum_vals(vals):
+    """統合用の合算。1つでも None(秘匿) が混ざれば None。"""
+    out = 0
+    for v in vals:
+        if v is None:
+            return None
+        out += v
+    return out
+
+
+STAT_KEYS = ("m", "f", "gk", "a0", "a1", "a2", "a75", "nf", "tt")
+
+
+def attach_stats(us, stats):
+    """統合済みグループ us(units のリスト)の統計値を合算して props 断片を返す。"""
+    parts = [stats["units"].get(u["key"]) for u in us]
+    found = [p for p in parts if p is not None]
+    if not found:
+        return None, len(us)            # 全構成単位が統計CSVに無い(未突合)
+    p = {}
+    for k in STAT_KEYS:
+        p[k] = _sum_vals([d.get(k) for d in found] + ([0] if len(found) == len(parts) else [None]))
+        # ↑構成単位の一部がCSVに無い統合は、値が過小になるため None 扱いにする
+    ags = [d.get("ag") for d in found]
+    if any(a is None for a in ags) or len(found) != len(parts):
+        p["ag"] = None
+    else:
+        cols = [_sum_vals(col) for col in zip(*ags)]
+        p["ag"] = None if any(c is None for c in cols) else cols
+    p["hi"] = any(d.get("hi") for d in found)
+    p["gs"] = any(d.get("gs") for d in found)
+    return p, 0
+
+
+def props_from_stats(sp, jinko):
+    """attach_stats の結果を、GeoJSONに載せる最小限のキーに刈り込む。"""
+    out = {}
+    if sp is None:
+        return {"hi": 1}                 # 統計未突合も「データなし」として扱う
+    for k in ("m", "f", "gk", "a0", "a1", "a2", "a75"):
+        if sp.get(k) is not None:
+            out[k] = sp[k]
+    if sp.get("ag") is not None:
+        out["ag"] = sp["ag"]
+    if sp.get("nf"):                     # 年齢不詳は >0 のときだけ
+        out["nf"] = sp["nf"]
+    if sp.get("tt") is not None and sp["tt"] != jinko:
+        out["tt"] = sp["tt"]
+    if sp.get("hi") or sp.get("m") is None:
+        out["hi"] = 1
+    if sp.get("gs"):
+        out["gs"] = 1
+    return out
 
 
 def read_municipalities(src: str):
@@ -140,7 +283,7 @@ def read_municipalities(src: str):
     return munis
 
 
-def build_features(units):
+def build_features(units, stats=None):
     """1市区町村分の units から GeoJSON の features を作る。"""
     n_multi_boundary = 0
     for u in units.values():
@@ -162,6 +305,7 @@ def build_features(units):
         groups.setdefault(gkey, []).append(u)
 
     feats, merged_names = [], []
+    n_hi = n_gs = n_unmatched = 0
     for gkey, us in groups.items():
         # 世帯数の多い単位を先に = ラベルがその単位の本体ポリゴンに載る
         us.sort(key=lambda u: (u["setai"], u["jinko"], max(p["area"] for p in u["parts"])), reverse=True)
@@ -171,22 +315,93 @@ def build_features(units):
             if len(k1s) > 1:
                 warns.append(f"{us[0]['name']}: 町字コードが複数 {sorted(k1s)} — "
                              f"同名でも別の町の可能性があるので地図で位置を確認すること")
+        props = {
+            "name": us[0]["name"],
+            "setai": sum(u["setai"] for u in us),
+            "jinko": sum(u["jinko"] for u in us),
+            "key": us[0]["key"],
+            "units": len(us),
+        }
+        if len(us) > 1:
+            props["mkeys"] = [u["key"] for u in us]  # 検査用。書き出し前に落とす
+        if stats is not None:
+            sp, unmatched = attach_stats(us, stats)
+            n_unmatched += unmatched
+            extra = props_from_stats(sp, props["jinko"])
+            n_hi += 1 if extra.get("hi") else 0
+            n_gs += 1 if extra.get("gs") else 0
+            props.update(extra)
         feats.append({
             "type": "Feature",
-            "properties": {
-                "name": us[0]["name"],
-                "setai": sum(u["setai"] for u in us),
-                "jinko": sum(u["jinko"] for u in us),
-                "key": us[0]["key"],
-                "units": len(us),
-            },
+            "properties": props,
             "geometry": merge_geoms([p["geom"] for u in us for p in u["parts"]]),
         })
 
     return feats, {
         "units": len(units), "multi_boundary": n_multi_boundary,
         "merged": merged_names, "warns": warns,
+        "hi": n_hi, "gs": n_gs, "unmatched": n_unmatched,
     }
+
+
+def selfcheck(code, feats, stats):
+    """自己検査。(a)市区町村計との突合 (b)恒等式 (c)比率の分布。問題は文字列リストで返す。"""
+    probs = []
+    # (b) 恒等式(秘匿でない feature のみ)
+    for ft in feats:
+        p = ft["properties"]
+        if p.get("hi"):
+            continue
+        tt = p.get("tt", p["jinko"])
+        nf = p.get("nf", 0)
+        if p.get("m") is not None and p.get("f") is not None and p["m"] + p["f"] != tt:
+            probs.append(f"{p['name']}: 男{p['m']}+女{p['f']} != 総数{tt}")
+        if p.get("gk") is not None and p["gk"] > tt:
+            probs.append(f"{p['name']}: 外国人{p['gk']} > 総数{tt}")
+        if all(p.get(k) is not None for k in ("a0", "a1", "a2")) and p["a0"] + p["a1"] + p["a2"] + nf != tt:
+            probs.append(f"{p['name']}: 年齢3区分+不詳 != 総数 ({p['a0']}+{p['a1']}+{p['a2']}+{nf} != {tt})")
+        if p.get("ag") is not None and sum(p["ag"]) + nf != tt:
+            probs.append(f"{p['name']}: 5歳階級計+不詳 != 総数")
+    # (a) 「境界に実在する地域のCSV値を、結合・統合の過程で1人も落としていない」ことの検算。
+    #     母集合 = CSVの結合対象行(lv2/lv4)のうち KEY_CODE が境界データに存在するもの。
+    #     ・市区町村計そのものとは一致しない(秘匿値が大字計(lv3)や別大字の受け皿へ
+    #       合算されるケースがあり、町丁目には配れない=表示不能分 → INFO表示)
+    #     ・境界に無いCSV地域(水面調査区など。例: 港区0310 大字名「‐」)も INFO表示
+    # feature単位: 「値を出した feature は、構成単位のCSV値の合計と厳密一致」を検算。
+    # 値を出せなかった feature(秘匿混在の統合など)の既知値は dropped に集計して INFO。
+    shown = {}
+    dropped = {}
+    bkeys = set()
+    for ft in feats:
+        p = ft["properties"]
+        keys = p.get("mkeys") or [p["key"]]
+        bkeys.update(keys)
+        for k, label in (("m", "男"), ("f", "女"), ("gk", "外国人"), ("a2", "65歳以上")):
+            vals = [stats["units"].get(k11, {}).get(k) for k11 in keys]
+            known = sum(v for v in vals if v is not None)
+            if p.get(k) is not None:
+                shown[k] = shown.get(k, 0) + p[k]
+                if any(v is None for v in vals) or p[k] != known:
+                    probs.append(f"{p['name']}: {label}={p[k]} が構成単位のCSV合計{known}と不一致")
+            else:
+                dropped[k] = dropped.get(k, 0) + known
+    # CSVにあって境界に無い地域(水面調査区など)
+    csv_only = [(k11, d.get("tt")) for k11, d in stats["units"].items()
+                if k11.startswith(code) and k11 not in bkeys
+                and any(d.get(k) for k in ("m", "f", "gk"))]
+    mt = stats["muni"].get(code)
+    if mt and mt.get("m") is not None:
+        gap = mt["m"] - shown.get("m", 0) - sum(
+            d.get("m") or 0 for k11, d in stats["units"].items()
+            if k11.startswith(code) and k11 not in bkeys)
+        if gap:
+            probs.append(f"INFO 秘匿等で町丁目に配れない人数: 男{gap:,}人(うち統合による表示不能 男{dropped.get('m', 0):,}人。データ由来で正常)")
+    if csv_only:
+        probs.append(f"INFO 境界に無いCSV地域(水面等) {len(csv_only)}件: "
+                     + ", ".join(f"{k}(総数{t})" for k, t in csv_only[:3]))
+    return probs
+
+
 
 
 def write_geojson(feats, dst):
@@ -206,28 +421,64 @@ def report(label, feats, st, verbose=True):
         print(f"    ⚠️ {w}")
 
 
-def convert(src: str, dst: str) -> None:
+def _stats_for(code, stats_dir, cache):
+    """市区町村コードから都道府県の統計CSVを(キャッシュしつつ)読む。"""
+    if stats_dir is None:
+        return None
+    pref2 = code[:2]
+    if pref2 not in cache:
+        cache[pref2] = load_stats(stats_dir, pref2)
+    return cache[pref2]
+
+
+def _run_selfcheck(code, label, feats, stats, st):
+    if stats is None:
+        return
+    extra = f" / 秘匿等データなし {st['hi']}件・合算受け皿 {st['gs']}件"
+    if st["unmatched"]:
+        extra += f" / ⚠️統計CSV未突合 {st['unmatched']}単位"
+    print(f"    属性: {extra}")
+    for p in selfcheck(code, feats, stats):
+        if p.startswith("INFO"):
+            print(f"    ℹ️ {p[5:]}")
+        else:
+            print(f"    ❌検査: {p}")
+
+
+def convert(src: str, dst: str, stats_dir=None) -> None:
     """1市区町村のshpを1つのgeojsonへ(従来の使い方)。"""
     munis = read_municipalities(src)
     if len(munis) != 1:
         sys.exit(f"エラー: {src} に {len(munis)} 市区町村が入っています。"
                  f"都道府県一括データは --split を使ってください。")
     code, m = next(iter(munis.items()))
-    feats, st = build_features(m["units"])
-    write_geojson(feats, dst)
+    stats = _stats_for(code, stats_dir, {})
+    feats, st = build_features(m["units"], stats)
     report(dst, feats, st)
+    _run_selfcheck(code, dst, feats, stats, st)
+    _strip_workkeys(feats)
+    write_geojson(feats, dst)
 
 
-def convert_split(src: str, outdir: str) -> None:
+def convert_split(src: str, outdir: str, stats_dir=None) -> None:
     """都道府県一括などの複数市区町村shpを、市区町村ごとの geojson に分けて出す。"""
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     munis = read_municipalities(src)
+    cache = {}
     for code, m in munis.items():
-        feats, st = build_features(m["units"])
-        write_geojson(feats, outdir / f"setai_{code}.geojson")
+        stats = _stats_for(code, stats_dir, cache)
+        feats, st = build_features(m["units"], stats)
         report(f"{code} {m['pref']}{m['city']}", feats, st, verbose=False)
+        _run_selfcheck(code, f"{code}", feats, stats, st)
+        _strip_workkeys(feats)
+        write_geojson(feats, outdir / f"setai_{code}.geojson")
     print(f"--- {src}: {len(munis)} 市区町村を書き出し ---")
+
+
+def _strip_workkeys(feats):
+    for ft in feats:
+        ft["properties"].pop("mkeys", None)
 
 
 def merge_geoms(geoms):
@@ -254,9 +505,15 @@ def round_geom(geom, nd):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 3:
-        convert(sys.argv[1], sys.argv[2])
-    elif len(sys.argv) == 4 and sys.argv[2] == "--split":
-        convert_split(sys.argv[1], sys.argv[3])
+    args = sys.argv[1:]
+    stats_dir = None
+    if "--stats" in args:
+        i = args.index("--stats")
+        stats_dir = args[i + 1]
+        args = args[:i] + args[i + 2:]
+    if len(args) == 2 and args[0] != "--split" and args[1] != "--split":
+        convert(args[0], args[1], stats_dir)
+    elif len(args) == 3 and args[1] == "--split":
+        convert_split(args[0], args[2], stats_dir)
     else:
         sys.exit(__doc__)
