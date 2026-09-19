@@ -368,6 +368,9 @@ const FAQ_HTML = `
 </ol>
 <b>週に1回くらい「💾 書出」で書き出して保管</b>しておけば、どれが起きても元に戻せます。</div></details>
 
+<details class="faqItem"><summary>書き出したファイル、ちゃんと中身が入っていますか?</summary><div class="faqA"><b>ファイルの大きさで分かります。「49バイト」なら中身は空</b>です(図形が1件も無い状態で書き出したファイル)。図形が1つでもあれば<b>数百バイト以上</b>になります。<br>
+<span class="faqNote">※iPhone・iPadでは、書き出すとプレビュー画面が開きます。そのまま閉じると残らないことがあるので、<b>画面下の共有ボタン →「"ファイル"に保存」</b>で保管してください。保存したファイルは「📂 読込」で元に戻せます(別の端末への引っ越しもこれでできます)。</span></div></details>
+
 <details class="faqItem"><summary>パソコンとスマホで同じデータを見たい</summary><div class="faqA">自動では揃いません。片方で「💾 書出」→ そのファイルをメールやクラウド経由でもう片方へ送り →「📂 読込」で取り込むと、同じ状態になります。</div></details>
 
 <details class="faqItem"><summary>チームで共有するには?</summary><div class="faqA">全員が<b>同じURL</b>を開いて使い、担当者が「💾 書出」したファイルを配って、各自「📂 読込」で取り込みます。取り込みは<b>統合</b>なので、同じ図形が二重に増えることはありません。<br>
@@ -465,7 +468,7 @@ function buildGuideMenu(panel) {
     panes.push(d);
   };
   addPane("gTeam", "👥 チームでの回し方", "配る→編集→返す→統合の手順と注意3つ", TEAM_HTML);
-  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(14問)", FAQ_HTML);
+  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(15問)", FAQ_HTML);
 
   /* そのページに無い機能の項目は出さない */
   if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
