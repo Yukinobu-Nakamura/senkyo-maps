@@ -239,8 +239,12 @@ def attach_stats(us, stats):
         cols = [_sum_vals(col) for col in zip(*ags)]
         p["ag"] = None if any(c is None for c in cols) else cols
     if p.get("m") is None:
-        # 値を出せない理由を区別する(C-1: 「少人口のため」と一括表示しない)
-        p["hi"] = HI_MERGE if (secret and len(us) > 1) else HI_SECRET
+        # 値を出せない理由を区別する(C-1: 「少人口のため」と一括表示しない)。
+        # 秘匿が無いのに値を出せない=CSV未突合の混在 → 「秘匿」と誤説明しない(レビューS-2。現データでは0件)
+        if not secret:
+            p["hi"] = HI_NOROW
+        else:
+            p["hi"] = HI_MERGE if len(us) > 1 else HI_SECRET
     else:
         p["hi"] = 0
     p["gs"] = any(d.get("gs") for d in found) or recover

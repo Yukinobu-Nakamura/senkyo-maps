@@ -1003,10 +1003,13 @@ function addSetaiLayers(map, opts) {
     });
     curBins = setaiMakeBins(values, curMetric.unit);
   }
+  /* 名称が空の実在区域が全国に48件ある(境界・統計とも名称なし。人口は持つ)。
+     数字だけのラベルにならないよう、町丁字コードでフォールバック表示する */
+  function setaiName(p) { return p.name || `(名称なし: ${p.key.slice(5)})`; }
   function labelHtml(p) {
     const v = metricVal(p);
     const unit = v == null ? "" : (curMetric.unit === "%" ? "" : curMetric.unit);
-    return `<span class="setaiNm">${p.name}</span><br>${setaiFmt(v, curMetric.unit)}<span class="setaiUnit">${unit}</span>`;
+    return `<span class="setaiNm">${setaiName(p)}</span><br>${setaiFmt(v, curMetric.unit)}<span class="setaiUnit">${unit}</span>`;
   }
   function popupHtml(p) {
     const tt = setaiTT(p);
@@ -1015,7 +1018,7 @@ function addSetaiLayers(map, opts) {
       `<tr><td style="color:#555;padding-right:8px">${label}</td><td style="text-align:right"><b>${setaiFmt(v, unit)}</b>${unit === "%" || v == null ? "" : unit}${extra || ""}</td></tr>`;
     /* 「人口」は統計表の総数(tt)を優先して男女・年齢の内訳と母数を揃える。
        ttがある(=境界のjinkoと異なる=秘匿合算の受け皿)ときは境界区域の集計も併記(C-2) */
-    let html = `<b>${p.name}</b><br><table style="border-collapse:collapse;font-size:12px">` +
+    let html = `<b>${setaiName(p)}</b><br><table style="border-collapse:collapse;font-size:12px">` +
       row("世帯数", p.setai, "世帯") + row("人口", p.hi ? p.jinko : tt, "人");
     if (p.tt != null && !p.hi) {
       html += `<tr><td></td><td style="text-align:right">${gray(`(境界区域の集計 ${p.jinko.toLocaleString()}人)`)}</td></tr>`;
@@ -1046,7 +1049,9 @@ function addSetaiLayers(map, opts) {
           `</table></details>`;
       }
       const notes = [];
-      if (p.gs) notes.push("※秘匿処理された近隣地域の人数を含む(国勢調査の合算先)");
+      /* 受け皿には2種類ある: 近隣の別町丁目の合算先/同一町名内の秘匿単位を含む復元値。
+         どちらも「秘匿された集計単位の人数を含む」が正確(「近隣地域」だと後者で誤解を生む) */
+      if (p.gs) notes.push("※国勢調査で秘匿処理された集計単位の人数を含む(合算先)");
       if (p.gk != null) notes.push("※日本人=総数−外国人の概算(国籍不詳を含む)");
       if (notes.length) html += `<br>` + gray(notes.join("<br>"));
     }
@@ -1335,6 +1340,7 @@ function addSetaiLayers(map, opts) {
       curBins.map(b => legendRow(`<i class="sq" style="background:${b.color}"></i>`, b.label)).join("") +
       (hasNoData ? legendRow(`<i class="sq" style="background:${SETAI_NODATA}"></i>`, "データなし(秘匿等)") : "") +
       (curMetric.id === "nihon" ? `<div style="font-size:9.5px;color:#888;margin-top:2px;max-width:150px">総数−外国人の概算(国籍不詳を含む)</div>` : "") +
+      (curMetric.id === "jinko" ? `<div style="font-size:9.5px;color:#888;margin-top:2px;max-width:150px">※秘匿地域を合算した区域は統計表の総数(近隣分を含む)</div>` : "") +
       `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
       `<div style="margin-top:3px"><a href="#" class="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
     const rl = body.querySelector(".setaiReqLink");
