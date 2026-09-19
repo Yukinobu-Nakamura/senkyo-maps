@@ -97,6 +97,10 @@ body.uiHidden .noticebar{ display:none !important; }
 .setaiCtl .stPanel{ margin-top:4px; width:min(268px, calc(100vw - 24px)); max-height:min(70vh, 460px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent, #8b5cf6); border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.25); font-size:12.5px; }
 .setaiCtl .stHead{ position:sticky; top:0; background:#f5f3ff; border-bottom:1px solid #ddd6fe; border-radius:11px 11px 0 0; padding:7px 10px; font-weight:700; }
 .setaiCtl .stClose{ float:right; border:1px solid #d1d5db; background:#fff; border-radius:6px; width:22px; height:22px; cursor:pointer; line-height:1; }
+/* 指標セレクタ(色分けの切替)。stBody の外にあるので開閉で選択状態が飛ばない */
+.setaiCtl .stMetric{ background:#faf9ff; padding:6px 10px; border-bottom:1px solid #f1f5f9; font-size:12px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.setaiCtl .stMetric label{ display:flex; align-items:center; gap:5px; font-weight:700; color:#4c1d95; }
+.setaiCtl .stMetric select{ font-size:12px; border:1.5px solid #d1d5db; border-radius:7px; padding:3px 4px; max-width:172px; background:#fff; min-height:24px; }
 .setaiCtl .stSearch{ position:sticky; top:31px; background:#fff; padding:6px 10px 4px; border-bottom:1px solid #f1f5f9; }
 .setaiCtl .stQ{ width:100%; box-sizing:border-box; border:1.5px solid #d1d5db; border-radius:7px; padding:4px 7px; font-size:12px; }
 .setaiCtl .stBody{ padding:6px 10px 9px; }

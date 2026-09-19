@@ -106,6 +106,10 @@ body.uiHidden .noticebar{ display:none !important; }
 .setaiCtl .stPanel{ margin-top:4px; width:min(268px, calc(100vw - 24px)); max-height:min(70vh, 460px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent, #8b5cf6); border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.25); font-size:12.5px; }
 .setaiCtl .stHead{ position:sticky; top:0; background:#f5f3ff; border-bottom:1px solid #ddd6fe; border-radius:11px 11px 0 0; padding:7px 10px; font-weight:700; }
 .setaiCtl .stClose{ float:right; border:1px solid #d1d5db; background:#fff; border-radius:6px; width:22px; height:22px; cursor:pointer; line-height:1; }
+/* 指標セレクタ(色分けの切替)。stBody の外にあるので開閉で選択状態が飛ばない */
+.setaiCtl .stMetric{ background:#faf9ff; padding:6px 10px; border-bottom:1px solid #f1f5f9; font-size:12px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.setaiCtl .stMetric label{ display:flex; align-items:center; gap:5px; font-weight:700; color:#4c1d95; }
+.setaiCtl .stMetric select{ font-size:12px; border:1.5px solid #d1d5db; border-radius:7px; padding:3px 4px; max-width:172px; background:#fff; min-height:24px; }
 .setaiCtl .stSearch{ position:sticky; top:31px; background:#fff; padding:6px 10px 4px; border-bottom:1px solid #f1f5f9; }
 .setaiCtl .stQ{ width:100%; box-sizing:border-box; border:1.5px solid #d1d5db; border-radius:7px; padding:4px 7px; font-size:12px; }
 .setaiCtl .stBody{ padding:6px 10px 9px; }
@@ -1161,7 +1165,73 @@ const SETAI_BINS = [
   { min: 0,    color: "#eff3ff", label: "〜999世帯" },
 ];
 function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
-const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データを加工して作成";
+const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域集計・小地域境界データを加工して作成";
+
+/* ===== 表示指標の切替(2026-09 属性追加) =====
+   GeoJSON properties(make_setai_geojson.py --stats が付与):
+     m/f=男女, gk=外国人, a0/a1/a2/a75=15歳未満/15〜64/65歳以上/75歳以上,
+     ag=[5歳階級21値(0〜4…100歳以上・総数)], nf=年齢不詳, tt=表2総数(jinkoと違うときのみ),
+     hi=1 秘匿等データなし, gs=1 合算受け皿(秘匿地域の人数を含む)
+   ・日本人人口は直接の統計が無いため「総数−外国人」の概算(国籍不詳を含む)
+   ・「未成年(18歳未満)」は5歳階級から作れない(15〜19歳が分割不能)ので置かない */
+const SETAI_RAMP = ["#eff3ff", "#c6dbef", "#9ecae1", "#6baed6", "#3182bd", "#08519c"]; /* 淡→濃 */
+const SETAI_NODATA = "#d9dde3";      /* 秘匿等データなしの塗り */
+const SETAI_AGES = ["0〜4歳", "5〜9歳", "10〜14歳", "15〜19歳", "20〜24歳", "25〜29歳",
+  "30〜34歳", "35〜39歳", "40〜44歳", "45〜49歳", "50〜54歳", "55〜59歳", "60〜64歳",
+  "65〜69歳", "70〜74歳", "75〜79歳", "80〜84歳", "85〜89歳", "90〜94歳", "95〜99歳", "100歳以上"];
+function setaiTT(p){ return (p.tt != null ? p.tt : p.jinko) || 0; }
+function setaiPct(a, b){ return b > 0 ? Math.round(a / b * 1000) / 10 : null; }
+/* val: properties(+選択中の年齢階級index) -> 数値 or null(データなし) */
+const SETAI_METRICS = [
+  { id: "setai", grp: "基本", label: "世帯数", unit: "世帯", val: p => p.setai },
+  { id: "jinko", grp: "基本", label: "人口総数", unit: "人", val: p => p.jinko },
+  { id: "nihon", grp: "基本", label: "日本人人口(概算)", unit: "人", val: p => p.gk == null ? null : setaiTT(p) - p.gk },
+  { id: "gk", grp: "基本", label: "外国人人口", unit: "人", val: p => p.gk == null ? null : p.gk },
+  { id: "gkr", grp: "基本", label: "外国人比率", unit: "%", val: p => p.gk == null ? null : setaiPct(p.gk, setaiTT(p)) },
+  { id: "m", grp: "男女", label: "男性人口", unit: "人", val: p => p.m == null ? null : p.m },
+  { id: "f", grp: "男女", label: "女性人口", unit: "人", val: p => p.f == null ? null : p.f },
+  { id: "fr", grp: "男女", label: "女性比率", unit: "%", val: p => p.f == null ? null : setaiPct(p.f, setaiTT(p)) },
+  { id: "a0", grp: "世代", label: "年少人口(15歳未満)", unit: "人", val: p => p.a0 == null ? null : p.a0 },
+  { id: "a1", grp: "世代", label: "生産年齢人口(15〜64歳)", unit: "人", val: p => p.a1 == null ? null : p.a1 },
+  { id: "a2", grp: "世代", label: "老年人口(65歳以上)", unit: "人", val: p => p.a2 == null ? null : p.a2 },
+  { id: "a75", grp: "世代", label: "75歳以上人口", unit: "人", val: p => p.a75 == null ? null : p.a75 },
+  { id: "a0r", grp: "世代", label: "年少人口比率", unit: "%", val: p => p.a0 == null ? null : setaiPct(p.a0, setaiTT(p)) },
+  { id: "a2r", grp: "世代", label: "高齢化率(65歳以上)", unit: "%", val: p => p.a2 == null ? null : setaiPct(p.a2, setaiTT(p)) },
+  { id: "ag", grp: "詳細年齢", label: "年齢5歳階級", unit: "人", age: true, val: (p, ai) => p.ag ? p.ag[ai] : null },
+];
+function setaiMetricById(id){ return SETAI_METRICS.find(m => m.id === id) || SETAI_METRICS[0]; }
+function setaiFmt(v, unit){
+  if (v == null) return "−";
+  return unit === "%" ? v.toFixed(1) + "%" : v.toLocaleString();
+}
+/* 表示中の値集合から6段階の等分位ビンを作る(指標ごとにスケールが違うため固定閾値にしない)。
+   戻り値は SETAI_BINS と同じ {min,color,label} の降順配列。世帯数だけは従来の固定ビンを使う */
+function setaiMakeBins(values, unit){
+  const vs = values.filter(v => v != null).sort((a, b) => a - b);
+  if (!vs.length) return [{ min: -Infinity, color: SETAI_RAMP[0], label: "データなし" }];
+  const edges = [];
+  for (let i = 1; i < 6; i++) {
+    const e = vs[Math.min(vs.length - 1, Math.floor(vs.length * i / 6))];
+    if (!edges.length || e > edges[edges.length - 1]) edges.push(e);
+  }
+  const fmt = v => unit === "%" ? (Math.round(v * 10) / 10) + "%" : Math.round(v).toLocaleString();
+  const bins = [];
+  for (let i = edges.length; i >= 0; i--) {
+    const lo = i === 0 ? -Infinity : edges[i - 1];
+    const hi = i === edges.length ? null : edges[i];
+    const color = SETAI_RAMP[Math.round(i * (SETAI_RAMP.length - 1) / Math.max(1, edges.length))];
+    const label = i === 0 ? `〜${fmt(edges[0])}未満`
+      : hi == null ? `${fmt(lo)}〜`
+      : `${fmt(lo)}〜${fmt(hi)}未満`;
+    bins.push({ min: lo, color, label });
+  }
+  return bins;
+}
+function setaiBinColor(bins, v){
+  if (v == null) return SETAI_NODATA;
+  for (const b of bins) { if (v >= b.min) return b.color; }
+  return bins[bins.length - 1].color;
+}
 /* 収録自治体の一覧は data/setai_index.json から取得する(コードに埋め込まない)。
    配布版(dist)のHTMLも公開URLの同じJSONを見に行くため、あとから自治体を足しても
    **既に配ったHTMLがそのまま新しい一覧を拾える**(配り直し不要)。
@@ -1204,22 +1274,104 @@ function addSetaiLayers(map, opts) {
      地図への追加は読込完了後に追いつく(読込中もチェックは入ったまま) */
   const desired = new Set();
 
+  /* ===== 表示指標(色分け・ラベル・凡例を切り替える) ===== */
+  const MKEY = (opts.sessionKey || "senkyoMaps") + ".setaiMetric";
+  let curMetric = setaiMetricById("setai");
+  let curAge = 0;                      /* 年齢5歳階級のとき見る階級index(0〜20) */
+  try {
+    const mv = JSON.parse(sessionStorage.getItem(MKEY) || "{}");
+    if (mv.id) curMetric = setaiMetricById(mv.id);
+    if (mv.age >= 0 && mv.age < SETAI_AGES.length) curAge = mv.age;
+  } catch (e) { /* 壊れていたら既定のまま */ }
+  let curBins = SETAI_BINS;            /* 世帯数=従来の固定ビン。他は表示中の値から等分位 */
+
+  function metricVal(p) { return curMetric.val(p, curAge); }
+  function metricTitle() {
+    return curMetric.age ? `${curMetric.label} ${SETAI_AGES[curAge]}` : curMetric.label;
+  }
+  function recomputeBins() {
+    if (curMetric.id === "setai") { curBins = SETAI_BINS; return; }
+    const values = [];
+    Object.keys(wards).forEach(code => {
+      const ent = wards[code];
+      if (!ent.loaded || !desired.has(code)) return;
+      ent.grp.eachLayer(l => { if (l.feature) values.push(metricVal(l.feature.properties)); });
+    });
+    curBins = setaiMakeBins(values, curMetric.unit);
+  }
+  function labelHtml(p) {
+    const v = metricVal(p);
+    const unit = v == null ? "" : (curMetric.unit === "%" ? "" : curMetric.unit);
+    return `<span class="setaiNm">${p.name}</span><br>${setaiFmt(v, curMetric.unit)}<span class="setaiUnit">${unit}</span>`;
+  }
+  function popupHtml(p) {
+    const tt = setaiTT(p);
+    const gray = (t) => `<span style="font-size:10.5px;color:#888">${t}</span>`;
+    const row = (label, v, unit, extra) =>
+      `<tr><td style="color:#555;padding-right:8px">${label}</td><td style="text-align:right"><b>${setaiFmt(v, unit)}</b>${unit === "%" || v == null ? "" : unit}${extra || ""}</td></tr>`;
+    let html = `<b>${p.name}</b><br><table style="border-collapse:collapse;font-size:12px">` +
+      row("世帯数", p.setai, "世帯") + row("人口", p.jinko, "人");
+    if (p.hi) {
+      html += `</table>` + gray("※男女・外国人・年齢別は非公表(少人口のため国勢調査が別地域へ合算=秘匿処理)") ;
+    } else {
+      html += `<tr><td style="color:#555;padding-right:8px">男 / 女</td><td style="text-align:right"><b>${setaiFmt(p.m, "人")}</b> / <b>${setaiFmt(p.f, "人")}</b>${p.m != null ? "人" : ""}</td></tr>` +
+        row("外国人", p.gk, "人", p.gk != null ? gray(` (${setaiFmt(setaiPct(p.gk, tt), "%")})`) : "") +
+        row("日本人(概算)", p.gk == null ? null : tt - p.gk, "人") +
+        row("15歳未満", p.a0, "人", p.a0 != null ? gray(` (${setaiFmt(setaiPct(p.a0, tt), "%")})`) : "") +
+        row("15〜64歳", p.a1, "人") +
+        row("65歳以上", p.a2, "人", p.a2 != null ? gray(` (${setaiFmt(setaiPct(p.a2, tt), "%")})`) : "") +
+        row("&nbsp;うち75歳以上", p.a75, "人") + `</table>`;
+      if (p.ag) {
+        html += `<details style="margin-top:3px"><summary style="cursor:pointer;font-size:11px;color:#555">年齢5歳階級の内訳</summary>` +
+          `<table style="border-collapse:collapse;font-size:11px">` +
+          p.ag.map((v, i) => `<tr><td style="color:#555;padding-right:8px">${SETAI_AGES[i]}</td><td style="text-align:right">${v.toLocaleString()}人</td></tr>`).join("") +
+          (p.nf ? `<tr><td style="color:#555;padding-right:8px">年齢不詳</td><td style="text-align:right">${p.nf.toLocaleString()}人</td></tr>` : "") +
+          `</table></details>`;
+      }
+      const notes = [];
+      if (p.gs) notes.push("※秘匿処理された近隣地域の人数を含む(国勢調査の合算先)");
+      if (p.tt != null && p.tt !== p.jinko) notes.push(`※男女・年齢等の母数は統計表の総数${p.tt.toLocaleString()}人`);
+      if (notes.length) html += `<br>` + gray(notes.join("<br>"));
+    }
+    if (p.units > 1) html += `<br>` + gray(`※国勢調査の集計単位${p.units}区分を合算(同一町名)`);
+    return html + `<br>` + gray("2020年国勢調査時点。" + SETAI_CREDIT);
+  }
+  function styleOf(p) {
+    return { color: "#0f172a", weight: 2, opacity: 0.85,     /* 区画の境界をはっきり見せる */
+             fillColor: setaiBinColor(curBins, metricVal(p)), fillOpacity: 0.45 };
+  }
+  /* 指標変更・読込完了時に、載っている全図形の塗りとラベルを描き直す */
+  function restyleAll() {
+    recomputeBins();
+    Object.keys(wards).forEach(code => {
+      const ent = wards[code];
+      if (!ent.loaded) return;
+      ent.grp.eachLayer(l => {
+        if (!l.feature) return;
+        const p = l.feature.properties;
+        l.setStyle(styleOf(p));
+        if (l.getTooltip()) l.setTooltipContent(labelHtml(p));
+      });
+    });
+    refreshLegend();
+  }
+  function setMetric(id, age) {
+    curMetric = setaiMetricById(id);
+    if (age != null) curAge = age;
+    try { sessionStorage.setItem(MKEY, JSON.stringify({ id: curMetric.id, age: curAge })); } catch (e) { /* 保存不可でも動作は継続 */ }
+    restyleAll();
+  }
+
   function fill(ent, gj) {
     L.geoJSON(gj, {
       pane: "setaiPane",
       renderer,
-      style: f => ({
-        color: "#0f172a", weight: 2, opacity: 0.85,          /* 区画の境界をはっきり見せる */
-        fillColor: setaiColor(f.properties.setai), fillOpacity: 0.45,
-      }),
+      style: f => styleOf(f.properties),
       onEachFeature: (f, ly) => {
         const p = f.properties;
-        ly.bindTooltip(`<span class="setaiNm">${p.name}</span><br>${p.setai.toLocaleString()}<span class="setaiUnit">世帯</span>`, { permanent: true, direction: "center", className: "setaiLabel" });
-        /* units>1 = 同じ町名が国勢調査の集計単位で分かれていたものを合算した町丁目
-           (丁目に当たらない区分で、住所には現れない。例: 泉区 岡津町=2区分) */
-        const note = p.units > 1
-          ? `<br><span style="font-size:10.5px;color:#888">※国勢調査の集計単位${p.units}区分を合算(同一町名)</span>` : "";
-        ly.bindPopup(`<b>${p.name}</b><br>世帯数: <b>${p.setai.toLocaleString()}世帯</b><br>人口: ${p.jinko.toLocaleString()}人${note}<br><span style="font-size:10.5px;color:#888">${SETAI_CREDIT}</span>`);
+        ly.bindTooltip(labelHtml(p), { permanent: true, direction: "center", className: "setaiLabel" });
+        /* 内訳・注記は開くたびに現在の属性で組み立てる(units>1=同一町名の集計単位合算 等) */
+        ly.bindPopup(() => popupHtml(p));
       },
     }).eachLayer(l => ent.grp.addLayer(l));
   }
@@ -1241,12 +1393,12 @@ function addSetaiLayers(map, opts) {
             desired.delete(code);   /* 取れなかった区はチェックを戻す */
             alert(`世帯数データを読み込めませんでした(${ent.name})。インターネット接続を確認してください: ${err.message}`);
           })
-          .then(() => { ent.fetching = false; pending--; save(); renderPanel(); refreshLegend(); });
+          .then(() => { ent.fetching = false; pending--; save(); renderPanel(); restyleAll(); });
       } else if (map.hasLayer(ent.grp)) {
         map.removeLayer(ent.grp);
       }
     });
-    save(); refreshLegend();
+    save(); restyleAll();
   }
 
   /* 選択状態は sessionStorage = 再読み込みでは残り、タブ/ブラウザを閉じると消える */
@@ -1357,10 +1509,27 @@ function addSetaiLayers(map, opts) {
        (自治体の追加リクエスト)にも効いて、文字が26px幅に縦折り返しされてしまう。
        見た目は .setaiCtl / .stToggle 側で作っているので不要。 */
     panelWrap = L.DomUtil.create("div", "setaiCtl");
+    /* 指標セレクタは stBody の外(=innerHTMLで作り直されない場所)に置く。
+       検索欄と同じ理由で、開閉のたびに選択状態が飛ぶのを防ぐ */
+    const metricOptions = () => {
+      const grps = [];
+      SETAI_METRICS.forEach(m => {
+        let g = grps.find(x => x.name === m.grp);
+        if (!g) { g = { name: m.grp, items: [] }; grps.push(g); }
+        g.items.push(m);
+      });
+      return grps.map(g => `<optgroup label="${g.name}">` +
+        g.items.map(m => `<option value="${m.id}"${m.id === curMetric.id ? " selected" : ""}>${m.label}</option>`).join("") +
+        `</optgroup>`).join("");
+    };
     panelWrap.innerHTML =
       `<button type="button" class="stToggle" title="世帯数レイヤを選ぶ">🏠</button>
        <div class="stPanel" hidden>
-         <div class="stHead">🏠 世帯数(2020国勢調査)<button type="button" class="stClose" aria-label="閉じる">✕</button></div>
+         <div class="stHead">🏠 世帯数・人口(2020国勢調査)<button type="button" class="stClose" aria-label="閉じる">✕</button></div>
+         <div class="stMetric">
+           <label>色分け <select class="stMSel">${metricOptions()}</select></label>
+           <select class="stASel"${curMetric.age ? "" : " hidden"}>${SETAI_AGES.map((a, i) => `<option value="${i}"${i === curAge ? " selected" : ""}>${a}</option>`).join("")}</select>
+         </div>
          <div class="stSearch"><input type="search" class="stQ" placeholder="🔍 自治体名で絞り込み(例: 横浜)" autocomplete="off"></div>
          <div class="stBody"></div>
        </div>`;
@@ -1386,6 +1555,15 @@ function addSetaiLayers(map, opts) {
        中に入れると入力のたびにフォーカスとカーソル位置が飛ぶ */
     const q = panelWrap.querySelector(".stQ");
     q.addEventListener("input", () => { query = q.value.trim(); renderPanel(); });
+
+    /* 指標の切替 → 塗り・ラベル・凡例を描き直す */
+    const mSel = panelWrap.querySelector(".stMSel");
+    const aSel = panelWrap.querySelector(".stASel");
+    mSel.addEventListener("change", () => {
+      aSel.hidden = !setaiMetricById(mSel.value).age;
+      setMetric(mSel.value, +aSel.value);
+    });
+    aSel.addEventListener("change", () => setMetric(mSel.value, +aSel.value));
 
     panelBody.addEventListener("change", (ev) => {
       const t = ev.target;
@@ -1433,24 +1611,31 @@ function addSetaiLayers(map, opts) {
      世帯数を全部OFFにすると凡例ごと消え、次に選び直したときにまた開いて出る。
      (メンバー要望 2026-09-18) */
   let legendCtl = null, legendBox = null;
+  function legendBody(body) {
+    /* 表示中の指標に合わせた凡例。秘匿等データなし(グレー)の行は常に添える */
+    const hasNoData = curMetric.id !== "setai" && curMetric.id !== "jinko";
+    body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 ${metricTitle()}(2020国勢調査)</div>` +
+      curBins.map(b => legendRow(`<i class="sq" style="background:${b.color}"></i>`, b.label)).join("") +
+      (hasNoData ? legendRow(`<i class="sq" style="background:${SETAI_NODATA}"></i>`, "データなし(秘匿等)") : "") +
+      (curMetric.id === "nihon" ? `<div style="font-size:9.5px;color:#888;margin-top:2px;max-width:150px">総数−外国人の概算(国籍不詳を含む)</div>` : "") +
+      `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
+      `<div style="margin-top:3px"><a href="#" class="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
+    const rl = body.querySelector(".setaiReqLink");
+    if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
+  }
   function refreshLegend() {
     const active = desired.size > 0 || (opts.extra && map.hasLayer(opts.extra.layer));
     if (active && !legendCtl) {
       legendCtl = L.control({ position: "bottomright" });
       legendCtl.onAdd = () => {
         const div = L.DomUtil.create("div", "legend");
-        legendBox = addBoxCollapse(div, "🏠 世帯数", null, (body) => {
-          body.innerHTML = `<div style="font-weight:700;margin-bottom:2px">🏠 世帯数(2020国勢調査)</div>` +
-            SETAI_BINS.map(b => legendRow(`<i class="sq" style="background:${b.color}"></i>`, b.label)).join("") +
-            `<div style="font-size:9.5px;color:#888;margin-top:3px;max-width:150px">${SETAI_CREDIT}</div>` +
-            `<div style="margin-top:3px"><a href="#" class="setaiReqLink" style="font-size:10.5px">➕ 自治体の追加をリクエスト</a></div>`;
-          const rl = body.querySelector(".setaiReqLink");
-          if (rl) rl.onclick = (ev) => { ev.preventDefault(); openReqModal(); };
-        });
+        legendBox = addBoxCollapse(div, "🏠 世帯数・人口", null, legendBody);
         return div;
       };
       legendCtl.addTo(map);
       if (legendBox) legendBox.setOpen(true); /* 出るときは必ず開いた状態で */
+    } else if (active && legendBox) {
+      if (legendBox.isOpen()) legendBox.redraw();   /* 指標変更を凡例に反映 */
     } else if (!active && legendCtl) {
       map.removeControl(legendCtl);
       legendCtl = null;
