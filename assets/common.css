@@ -101,6 +101,15 @@ body.uiHidden .noticebar{ display:none !important; }
 .setaiCtl .stMetric{ background:#faf9ff; padding:6px 10px; border-bottom:1px solid #f1f5f9; font-size:12px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
 .setaiCtl .stMetric label{ display:flex; align-items:center; gap:5px; font-weight:700; color:#4c1d95; }
 .setaiCtl .stMetric select{ font-size:12px; border:1.5px solid #d1d5db; border-radius:7px; padding:3px 4px; max-width:172px; background:#fff; min-height:24px; }
+/* 複数選択(男女・世代・年齢5歳階級)のチェック群。タップ目標はWCAG 2.5.8の24px以上 */
+.setaiCtl .stMSub{ width:100%; }
+.setaiCtl .stMChk{ display:flex; flex-wrap:wrap; gap:2px 10px; margin-top:4px; }
+.setaiCtl .stMChk label{ display:flex; align-items:center; gap:4px; font-weight:400; color:#334155; min-height:24px; white-space:nowrap; }
+.setaiCtl .stMChk.big{ max-height:132px; overflow-y:auto; border:1px solid #eef2f7; border-radius:7px; padding:2px 6px; }
+.setaiCtl .stMChk.big label{ width:46%; }
+.setaiCtl .stMFoot{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:3px; flex-wrap:wrap; }
+.setaiCtl .stMRatio{ display:flex; align-items:center; gap:4px; font-weight:700; color:#4c1d95; min-height:24px; }
+.setaiCtl .stMSum{ font-size:11px; color:#64748b; }
 .setaiCtl .stSearch{ position:sticky; top:31px; background:#fff; padding:6px 10px 4px; border-bottom:1px solid #f1f5f9; }
 .setaiCtl .stQ{ width:100%; box-sizing:border-box; border:1.5px solid #d1d5db; border-radius:7px; padding:4px 7px; font-size:12px; }
 .setaiCtl .stBody{ padding:6px 10px 9px; }

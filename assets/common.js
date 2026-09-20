@@ -892,18 +892,57 @@ const SETAI_METRICS = [
   { id: "nihon", grp: "基本", label: "日本人人口(概算)", unit: "人", val: p => p.gk == null ? null : setaiTT(p) - p.gk },
   { id: "gk", grp: "基本", label: "外国人人口", unit: "人", val: p => p.gk == null ? null : p.gk },
   { id: "gkr", grp: "基本", label: "外国人比率", unit: "%", val: p => p.gk == null ? null : setaiPct(p.gk, setaiTT(p)) },
-  { id: "m", grp: "男女", label: "男性人口", unit: "人", val: p => p.m == null ? null : p.m },
-  { id: "f", grp: "男女", label: "女性人口", unit: "人", val: p => p.f == null ? null : p.f },
-  { id: "fr", grp: "男女", label: "女性比率", unit: "%", val: p => p.f == null ? null : setaiPct(p.f, setaiTT(p)) },
-  { id: "a0", grp: "世代", label: "年少人口(15歳未満)", unit: "人", val: p => p.a0 == null ? null : p.a0 },
-  { id: "a1", grp: "世代", label: "生産年齢人口(15〜64歳)", unit: "人", val: p => p.a1 == null ? null : p.a1 },
-  { id: "a2", grp: "世代", label: "老年人口(65歳以上)", unit: "人", val: p => p.a2 == null ? null : p.a2 },
-  { id: "a75", grp: "世代", label: "75歳以上人口", unit: "人", val: p => p.a75 == null ? null : p.a75 },
-  { id: "a0r", grp: "世代", label: "年少人口比率", unit: "%", val: p => p.a0 == null ? null : setaiPct(p.a0, setaiTT(p)) },
-  { id: "a2r", grp: "世代", label: "高齢化率(65歳以上)", unit: "%", val: p => p.a2 == null ? null : setaiPct(p.a2, setaiTT(p)) },
-  { id: "ag", grp: "詳細年齢", label: "年齢5歳階級", unit: "人", age: true, val: (p, ai) => p.ag ? p.ag[ai] : null },
+  /* 男女・世代・詳細年齢は複数選択(チェックして合算)方式(2026-09-20 中村さん指示)。
+     選択肢の実体は SETAI_MULTI。従来の単一指標(女性比率・高齢化率等)は
+     「1つだけチェック+人口比トグル」で同じものが作れる(旧セッション保存値は互換変換する) */
+  { id: "mf", grp: "組合せ(複数選択)", label: "男女(選んで合算)", multi: "mf" },
+  { id: "gen", grp: "組合せ(複数選択)", label: "世代(選んで合算)", multi: "gen" },
+  { id: "ag", grp: "組合せ(複数選択)", label: "年齢5歳階級(選んで合算)", multi: "ag" },
 ];
 function setaiMetricById(id){ return SETAI_METRICS.find(m => m.id === id) || SETAI_METRICS[0]; }
+/* 複数選択モードの選択肢。
+   世代・年齢は ag(5歳階級21値)のインデックス集合の和集合で計算する。
+   これにより「老年」と「75歳以上」(老年の内数)を同時に選んでも二重計上にならない
+   (レビュー確認済みの恒等式 ag[13:]計=a2 / ag[15:]計=a75 により再掲列と同値)。 */
+const SETAI_MULTI = {
+  mf:  { items: [{ k: "m", label: "男", short: "男性" }, { k: "f", label: "女", short: "女性" }], def: ["f"] },
+  gen: { items: [
+      { k: "a0",  label: "年少(15歳未満)",        short: "年少",     ages: [0, 1, 2] },
+      { k: "a1",  label: "生産年齢(15〜64歳)",    short: "生産年齢", ages: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12] },
+      { k: "a2",  label: "老年(65歳以上)",        short: "老年",     ages: [13, 14, 15, 16, 17, 18, 19, 20] },
+      { k: "a75", label: "75歳以上(老年の内数)",  short: "75歳以上", ages: [15, 16, 17, 18, 19, 20] },
+    ], def: ["a0"] },
+  ag:  { items: SETAI_AGES.map((a, i) => ({ k: "g" + i, label: a, ages: [i] })), def: ["g0"] },
+};
+/* 選択の合算値。人数はいずれかの元値が欠落(秘匿)なら null。ratio=true で総数比(%) */
+function setaiMultiVal(mode, sel, ratio, p) {
+  let v = 0;
+  if (mode === "mf") {
+    for (const k of sel) { if (p[k] == null) return null; v += p[k]; }
+  } else {
+    if (!p.ag) return null;
+    const ages = new Set();
+    SETAI_MULTI[mode].items.forEach(it => { if (sel.indexOf(it.k) >= 0) it.ages.forEach(i => ages.add(i)); });
+    ages.forEach(i => { v += p.ag[i]; });
+  }
+  return ratio ? setaiPct(v, setaiTT(p)) : v;
+}
+/* 選択内容の要約(凡例タイトル用)。年齢は連続していれば「20〜39歳」のようにまとめる */
+function setaiMultiTitle(mode, sel, ratio) {
+  const items = SETAI_MULTI[mode].items.filter(it => sel.indexOf(it.k) >= 0);
+  let t;
+  if (mode === "ag") {
+    const idx = items.map(it => it.ages[0]).sort((a, b) => a - b);
+    const contiguous = idx.every((v, i) => i === 0 || v === idx[i - 1] + 1);
+    if (!contiguous) t = `${SETAI_AGES[idx[0]]}ほか計${idx.length}階級`;
+    else if (idx.length === 1) t = SETAI_AGES[idx[0]];
+    else if (idx[idx.length - 1] === 20) t = `${idx[0] * 5}歳以上`;
+    else t = `${idx[0] * 5}〜${idx[idx.length - 1] * 5 + 4}歳`;
+  } else {
+    t = items.map(it => it.short || it.label).join("+");
+  }
+  return t + (ratio ? "の人口比" : "の人口");
+}
 function setaiFmt(v, unit){
   if (v == null) return "−";
   return unit === "%" ? v.toFixed(1) + "%" : v.toLocaleString();
@@ -981,17 +1020,41 @@ function addSetaiLayers(map, opts) {
   /* ===== 表示指標(色分け・ラベル・凡例を切り替える) ===== */
   const MKEY = (opts.sessionKey || "senkyoMaps") + ".setaiMetric";
   let curMetric = setaiMetricById("setai");
-  let curAge = 0;                      /* 年齢5歳階級のとき見る階級index(0〜20) */
+  /* 複数選択モードの選択状態(モードごとに保持。切り替えても選択が残る)と人口比トグル */
+  const curSel = { mf: ["f"], gen: ["a0"], ag: ["g0"] };
+  let curRatio = false;
   try {
     const mv = JSON.parse(sessionStorage.getItem(MKEY) || "{}");
-    if (mv.id) curMetric = setaiMetricById(mv.id);
-    if (mv.age >= 0 && mv.age < SETAI_AGES.length) curAge = mv.age;
+    /* 旧形式(単一指標id+age)との互換変換 */
+    const OLD = { m: ["mf", ["m"], 0], f: ["mf", ["f"], 0], fr: ["mf", ["f"], 1],
+      a0: ["gen", ["a0"], 0], a1: ["gen", ["a1"], 0], a2: ["gen", ["a2"], 0], a75: ["gen", ["a75"], 0],
+      a0r: ["gen", ["a0"], 1], a2r: ["gen", ["a2"], 1] };
+    if (OLD[mv.id]) {
+      curMetric = setaiMetricById(OLD[mv.id][0]);
+      curSel[OLD[mv.id][0]] = OLD[mv.id][1];
+      curRatio = !!OLD[mv.id][2];
+    } else if (mv.id === "ag" && !mv.sel && mv.age >= 0) {
+      curMetric = setaiMetricById("ag");
+      curSel.ag = ["g" + mv.age];
+    } else if (mv.id) {
+      curMetric = setaiMetricById(mv.id);
+      if (mv.sel) Object.keys(curSel).forEach(k => {
+        if (Array.isArray(mv.sel[k]) && mv.sel[k].length &&
+            mv.sel[k].every(x => SETAI_MULTI[k].items.some(it => it.k === x))) curSel[k] = mv.sel[k];
+      });
+      curRatio = !!mv.ratio;
+    }
   } catch (e) { /* 壊れていたら既定のまま */ }
   let curBins = SETAI_BINS;            /* 世帯数=従来の固定ビン。他は表示中の値から等分位 */
 
-  function metricVal(p) { return curMetric.val(p, curAge); }
+  function metricUnit() { return curMetric.multi ? (curRatio ? "%" : "人") : curMetric.unit; }
+  function metricVal(p) {
+    return curMetric.multi ? setaiMultiVal(curMetric.multi, curSel[curMetric.multi], curRatio, p)
+                           : curMetric.val(p);
+  }
   function metricTitle() {
-    return curMetric.age ? `${curMetric.label} ${SETAI_AGES[curAge]}` : curMetric.label;
+    return curMetric.multi ? setaiMultiTitle(curMetric.multi, curSel[curMetric.multi], curRatio)
+                           : curMetric.label;
   }
   function recomputeBins() {
     if (curMetric.id === "setai") { curBins = SETAI_BINS; return; }
@@ -1001,15 +1064,16 @@ function addSetaiLayers(map, opts) {
       if (!ent.loaded || !desired.has(code)) return;
       ent.grp.eachLayer(l => { if (l.feature) values.push(metricVal(l.feature.properties)); });
     });
-    curBins = setaiMakeBins(values, curMetric.unit);
+    curBins = setaiMakeBins(values, metricUnit());
   }
   /* 名称が空の実在区域が全国に48件ある(境界・統計とも名称なし。人口は持つ)。
      数字だけのラベルにならないよう、町丁字コードでフォールバック表示する */
   function setaiName(p) { return p.name || `(名称なし: ${p.key.slice(5)})`; }
   function labelHtml(p) {
     const v = metricVal(p);
-    const unit = v == null ? "" : (curMetric.unit === "%" ? "" : curMetric.unit);
-    return `<span class="setaiNm">${setaiName(p)}</span><br>${setaiFmt(v, curMetric.unit)}<span class="setaiUnit">${unit}</span>`;
+    const mu = metricUnit();
+    const unit = v == null ? "" : (mu === "%" ? "" : mu);
+    return `<span class="setaiNm">${setaiName(p)}</span><br>${setaiFmt(v, mu)}<span class="setaiUnit">${unit}</span>`;
   }
   function popupHtml(p) {
     const tt = setaiTT(p);
@@ -1077,10 +1141,8 @@ function addSetaiLayers(map, opts) {
     });
     refreshLegend();
   }
-  function setMetric(id, age) {
-    curMetric = setaiMetricById(id);
-    if (age != null) curAge = age;
-    try { sessionStorage.setItem(MKEY, JSON.stringify({ id: curMetric.id, age: curAge })); } catch (e) { /* 保存不可でも動作は継続 */ }
+  function applyMetric() {
+    try { sessionStorage.setItem(MKEY, JSON.stringify({ id: curMetric.id, sel: curSel, ratio: curRatio })); } catch (e) { /* 保存不可でも動作は継続 */ }
     restyleAll();
   }
 
@@ -1250,7 +1312,7 @@ function addSetaiLayers(map, opts) {
          <div class="stHead">🏠 世帯数・人口(2020国勢調査)<button type="button" class="stClose" aria-label="閉じる">✕</button></div>
          <div class="stMetric">
            <label>色分け <select class="stMSel">${metricOptions()}</select></label>
-           <select class="stASel"${curMetric.age ? "" : " hidden"}>${SETAI_AGES.map((a, i) => `<option value="${i}"${i === curAge ? " selected" : ""}>${a}</option>`).join("")}</select>
+           <div class="stMSub" hidden></div>
          </div>
          <div class="stSearch"><input type="search" class="stQ" placeholder="🔍 自治体名で絞り込み(例: 横浜)" autocomplete="off"></div>
          <div class="stBody"></div>
@@ -1278,14 +1340,49 @@ function addSetaiLayers(map, opts) {
     const q = panelWrap.querySelector(".stQ");
     q.addEventListener("input", () => { query = q.value.trim(); renderPanel(); });
 
-    /* 指標の切替 → 塗り・ラベル・凡例を描き直す */
+    /* 指標の切替 → 塗り・ラベル・凡例を描き直す。
+       男女・世代・年齢5歳階級はチェックボックスの複数選択(合算)+人口比トグル */
     const mSel = panelWrap.querySelector(".stMSel");
-    const aSel = panelWrap.querySelector(".stASel");
+    const mSub = panelWrap.querySelector(".stMSub");
+    function renderSub() {
+      const mode = curMetric.multi;
+      mSub.hidden = !mode;
+      if (!mode) { mSub.innerHTML = ""; return; }
+      const def = SETAI_MULTI[mode];
+      mSub.innerHTML =
+        `<div class="stMChk${mode === "ag" ? " big" : ""}">` +
+        def.items.map(it =>
+          `<label><input type="checkbox" data-mk="${it.k}"${curSel[mode].indexOf(it.k) >= 0 ? " checked" : ""}>${it.label}</label>`).join("") +
+        `</div>
+         <div class="stMFoot">
+           <label class="stMRatio"><input type="checkbox" class="stRatio"${curRatio ? " checked" : ""}>人口比(%)で塗る</label>
+           <span class="stMSum">= ${metricTitle()}</span>
+         </div>`;
+    }
     mSel.addEventListener("change", () => {
-      aSel.hidden = !setaiMetricById(mSel.value).age;
-      setMetric(mSel.value, +aSel.value);
+      curMetric = setaiMetricById(mSel.value);
+      renderSub();
+      applyMetric();
     });
-    aSel.addEventListener("change", () => setMetric(mSel.value, +aSel.value));
+    mSub.addEventListener("change", (ev) => {
+      const t = ev.target;
+      const mode = curMetric.multi;
+      if (!mode) return;
+      if (t.classList.contains("stRatio")) {
+        curRatio = t.checked;
+      } else if (t.dataset.mk) {
+        const sel = curSel[mode];
+        if (t.checked) { if (sel.indexOf(t.dataset.mk) < 0) sel.push(t.dataset.mk); }
+        else {
+          if (sel.length <= 1) { t.checked = true; return; }  /* 最後の1つは外せない */
+          sel.splice(sel.indexOf(t.dataset.mk), 1);
+        }
+      }
+      const sum = mSub.querySelector(".stMSum");
+      if (sum) sum.textContent = "= " + metricTitle();
+      applyMetric();
+    });
+    renderSub();
 
     panelBody.addEventListener("change", (ev) => {
       const t = ev.target;
