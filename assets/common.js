@@ -1126,24 +1126,58 @@ function addSetaiLayers(map, opts) {
     return { color: "#0f172a", weight: 2, opacity: 0.85,     /* 区画の境界をはっきり見せる */
              fillColor: setaiBinColor(curBins, metricVal(p)), fillOpacity: 0.45 };
   }
-  /* 指標変更・読込完了時に、載っている全図形の塗りとラベルを描き直す */
-  function restyleAll() {
+  /* ===== 描き直しの軽量化(2026-09-21) =====
+     v=30〜33 は指標切替・自治体の読込/ON/OFFのたびに「表示中の全図形」の
+     スタイルとラベルを無条件で作り直していた(横浜全区で数千件×毎回)。次の4点で軽くする:
+       1) 120ms のデバウンス(チェック連打・連続読込で1回にまとめる)
+       2) 差分更新: 色もラベル文字列も前回と同じ図形は触らない
+       3) ラベルは Leaflet の setTooltipContent(位置再計算つき)を避け、DOM を直接差し替える
+       4) 既定の「世帯数」(固定ビン)ではレイヤ追加/削除時に描き直し不要(凡例更新のみ)。
+          等分位ビンの指標のときだけ、表示集合の変化でビンが動くので描き直す
+     非表示レイヤは触らず、styleGen(世代番号)で「再表示時にそのレイヤだけ」整合させる */
+  let styleGen = 0;
+  let restyleTimer = null;
+  function restyleEnt(ent) {
+    ent.gen = styleGen;
+    ent.grp.eachLayer(l => {
+      if (!l.feature) return;
+      const p = l.feature.properties;
+      const fc = setaiBinColor(curBins, metricVal(p));
+      if (l._fc !== fc) { l._fc = fc; l.setStyle({ fillColor: fc }); }
+      const html = labelHtml(p);
+      if (l._lh !== html) {
+        l._lh = html;
+        const tip = l.getTooltip();
+        if (tip) {
+          tip._content = html;                       /* 次回の再表示用(非公開だがLeaflet 1.xで安定) */
+          const el = tip.getElement && tip.getElement();
+          if (el) el.innerHTML = html;               /* 表示中は位置再計算なしで差し替え */
+        }
+      }
+    });
+  }
+  function doRestyle() {
+    restyleTimer = null;
     recomputeBins();
+    styleGen++;
     Object.keys(wards).forEach(code => {
       const ent = wards[code];
-      if (!ent.loaded) return;
-      ent.grp.eachLayer(l => {
-        if (!l.feature) return;
-        const p = l.feature.properties;
-        l.setStyle(styleOf(p));
-        if (l.getTooltip()) l.setTooltipContent(labelHtml(p));
-      });
+      if (ent.loaded && map.hasLayer(ent.grp)) restyleEnt(ent);
     });
     refreshLegend();
   }
+  function scheduleRestyle() {
+    if (restyleTimer) clearTimeout(restyleTimer);
+    restyleTimer = setTimeout(doRestyle, 120);
+  }
+  /* レイヤ構成が変わったとき(読込完了・ON/OFF)。固定ビンの世帯数なら凡例だけでよい */
+  function afterLayerChange() {
+    if (curMetric.id === "setai") refreshLegend();
+    else scheduleRestyle();
+  }
   function applyMetric() {
     try { sessionStorage.setItem(MKEY, JSON.stringify({ id: curMetric.id, sel: curSel, ratio: curRatio })); } catch (e) { /* 保存不可でも動作は継続 */ }
-    restyleAll();
+    scheduleRestyle();
   }
 
   function fill(ent, gj) {
@@ -1153,11 +1187,16 @@ function addSetaiLayers(map, opts) {
       style: f => styleOf(f.properties),
       onEachFeature: (f, ly) => {
         const p = f.properties;
-        ly.bindTooltip(labelHtml(p), { permanent: true, direction: "center", className: "setaiLabel" });
+        const html = labelHtml(p);
+        ly.bindTooltip(html, { permanent: true, direction: "center", className: "setaiLabel" });
+        /* 差分更新用キャッシュ(fill時のスタイル・ラベルと一致させる) */
+        ly._fc = setaiBinColor(curBins, metricVal(p));
+        ly._lh = html;
         /* 内訳・注記は開くたびに現在の属性で組み立てる(units>1=同一町名の集計単位合算 等) */
         ly.bindPopup(() => popupHtml(p));
       },
     }).eachLayer(l => ent.grp.addLayer(l));
+    ent.gen = styleGen;   /* 現在のビンで塗った、の印 */
   }
 
   /* desired の中身を地図に反映する。未読込のものは取得してから載せる */
@@ -1166,7 +1205,13 @@ function addSetaiLayers(map, opts) {
     Object.keys(wards).forEach(code => {
       const ent = wards[code];
       if (desired.has(code)) {
-        if (ent.loaded) { if (!map.hasLayer(ent.grp)) map.addLayer(ent.grp); return; }
+        if (ent.loaded) {
+          if (!map.hasLayer(ent.grp)) {
+            map.addLayer(ent.grp);
+            if (ent.gen !== styleGen) restyleEnt(ent);  /* 非表示中に指標が変わっていた分を追いつかせる */
+          }
+          return;
+        }
         if (ent.fetching) return;
         ent.fetching = true;
         pending++; renderPanel();
@@ -1177,12 +1222,12 @@ function addSetaiLayers(map, opts) {
             desired.delete(code);   /* 取れなかった区はチェックを戻す */
             alert(`世帯数データを読み込めませんでした(${ent.name})。インターネット接続を確認してください: ${err.message}`);
           })
-          .then(() => { ent.fetching = false; pending--; save(); renderPanel(); restyleAll(); });
+          .then(() => { ent.fetching = false; pending--; save(); renderPanel(); afterLayerChange(); });
       } else if (map.hasLayer(ent.grp)) {
         map.removeLayer(ent.grp);
       }
     });
-    save(); restyleAll();
+    save(); afterLayerChange();
   }
 
   /* 選択状態は sessionStorage = 再読み込みでは残り、タブ/ブラウザを閉じると消える */
