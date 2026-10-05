@@ -357,7 +357,8 @@ function saveLocal(key, value) {
    しかし「再表示のたびに消えて毎回選び直しになる」というメンバー要望を受け、
    端末保存(localStorage)に変更した(2026-10-06)。
    中身は公開データの表示設定だけで、図形・担当者などの活動データは含まない。
-   消したいときはアプリの「全消去」で clearPref() が呼ばれる。
+   消したいときは各マップの消去ボタン(ポスティング=「全消去」/ポスター=「状態リセット」)が
+   setaiCtl.clearSelection() を呼び、そこから clearPref() が走る。
    旧版の sessionStorage に値が残っている端末では、それを引き継いでから移行する。 */
 function loadPref(key) {
   try {
@@ -367,9 +368,17 @@ function loadPref(key) {
   try { return sessionStorage.getItem(key); } catch (e) { return null; }
 }
 function savePref(key, value) {
-  try { localStorage.setItem(key, value); } catch (e) { /* 保存不可でも動作は継続 */ }
-  /* 旧キーを残すと、次に開いたとき古い選択が復活して見えるので捨てる */
-  try { sessionStorage.removeItem(key); } catch (e) { /* 無視 */ }
+  let saved = false;
+  try { localStorage.setItem(key, value); saved = true; }
+  catch (e) { /* プライベートブラウズ・容量超過・一部WebViewでは書けない */ }
+  try {
+    /* 端末に書けたときだけ旧キーを捨てる(残すと次に開いたとき古い選択が復活して見える)。
+       書けなかったときは sessionStorage に退避する。ここを無条件に削除すると、
+       localStorage が使えない環境で「リロードすると選択が残る」という
+       従来できていたことまで失う(savePref だけが片方向に潰す非対称になる) */
+    if (saved) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, value);
+  } catch (e) { /* どちらも不可なら諦める(動作は継続) */ }
 }
 function clearPref(key) {
   try { localStorage.removeItem(key); } catch (e) { /* 無視 */ }
@@ -1363,7 +1372,9 @@ function addSetaiLayers(map, opts) {
       : "";
     const head = indexState === "loading" ? `<div class="stLoadBar">収録自治体の一覧を読み込み中…</div>`
       : indexState === "error" ? `<div class="stLoadBar">一覧を読み込めませんでした。インターネット接続を確認して開き直してください。</div>`
-      : `<div class="stNote">選択内容と色分けは<b>この端末に保存</b>され、次に開いたときもそのままです(消すときは上の「全消去」)</div>`;
+      /* ボタン名はマップごとに違う(ポスティング=「全消去」/ポスター=「状態リセット」)。
+         片方の名前を書くともう片方で「そんなボタンは無い」案内になるので、名前に依存しない表現にする */
+      : `<div class="stNote">選択内容と色分けは<b>この端末に保存</b>され、次に開いたときもそのままです(消すときは画面上部の消去/リセットのボタンから)</div>`;
     panelBody.innerHTML = head + rows + extra +
       (pending ? `<div class="stLoadBar">世帯数データを読み込み中… 残り${pending}件</div>` : "") +
       `<div class="stReq"><a href="#" data-req="1">➕ 自治体の追加をリクエスト</a></div>`;

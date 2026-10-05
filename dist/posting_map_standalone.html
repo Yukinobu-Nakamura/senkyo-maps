@@ -301,7 +301,9 @@ body.uiHidden .noticebar{ display:none !important; }
   .legend .lgPick::-webkit-color-swatch-wrapper{ padding:0; }
   .legend .lgPick::-webkit-color-swatch{ border:none; border-radius:3px; }
   .legend .lgPick::-moz-color-swatch{ border:none; border-radius:3px; }
-  .legend .lgReset{ margin-top:5px; width:100%; min-height:24px; font-size:11px; border:1px solid #d1d5db; border-radius:6px; background:#f9fafb; color:#374151; cursor:pointer; }
+  /* 凡例の幅は最長の .lgRow で決まる(width:100% は固有幅に効かない)ので、
+     長いラベルを入れると狭い画面で2行に折り返す。短い文言＋nowrap で1行に保つ */
+  .legend .lgReset{ margin-top:5px; width:100%; min-height:24px; font-size:11px; white-space:nowrap; border:1px solid #d1d5db; border-radius:6px; background:#f9fafb; color:#374151; cursor:pointer; }
   .legend .lgReset:hover{ background:#f3f4f6; }
   /* 図形ポップアップの色スウォッチ */
   .cSwatches{ display:flex; gap:4px; flex-wrap:wrap; align-items:center; margin:2px 0 4px; }
@@ -713,7 +715,8 @@ function saveLocal(key, value) {
    しかし「再表示のたびに消えて毎回選び直しになる」というメンバー要望を受け、
    端末保存(localStorage)に変更した(2026-10-06)。
    中身は公開データの表示設定だけで、図形・担当者などの活動データは含まない。
-   消したいときはアプリの「全消去」で clearPref() が呼ばれる。
+   消したいときは各マップの消去ボタン(ポスティング=「全消去」/ポスター=「状態リセット」)が
+   setaiCtl.clearSelection() を呼び、そこから clearPref() が走る。
    旧版の sessionStorage に値が残っている端末では、それを引き継いでから移行する。 */
 function loadPref(key) {
   try {
@@ -723,9 +726,17 @@ function loadPref(key) {
   try { return sessionStorage.getItem(key); } catch (e) { return null; }
 }
 function savePref(key, value) {
-  try { localStorage.setItem(key, value); } catch (e) { /* 保存不可でも動作は継続 */ }
-  /* 旧キーを残すと、次に開いたとき古い選択が復活して見えるので捨てる */
-  try { sessionStorage.removeItem(key); } catch (e) { /* 無視 */ }
+  let saved = false;
+  try { localStorage.setItem(key, value); saved = true; }
+  catch (e) { /* プライベートブラウズ・容量超過・一部WebViewでは書けない */ }
+  try {
+    /* 端末に書けたときだけ旧キーを捨てる(残すと次に開いたとき古い選択が復活して見える)。
+       書けなかったときは sessionStorage に退避する。ここを無条件に削除すると、
+       localStorage が使えない環境で「リロードすると選択が残る」という
+       従来できていたことまで失う(savePref だけが片方向に潰す非対称になる) */
+    if (saved) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, value);
+  } catch (e) { /* どちらも不可なら諦める(動作は継続) */ }
 }
 function clearPref(key) {
   try { localStorage.removeItem(key); } catch (e) { /* 無視 */ }
@@ -1719,7 +1730,9 @@ function addSetaiLayers(map, opts) {
       : "";
     const head = indexState === "loading" ? `<div class="stLoadBar">収録自治体の一覧を読み込み中…</div>`
       : indexState === "error" ? `<div class="stLoadBar">一覧を読み込めませんでした。インターネット接続を確認して開き直してください。</div>`
-      : `<div class="stNote">選択内容と色分けは<b>この端末に保存</b>され、次に開いたときもそのままです(消すときは上の「全消去」)</div>`;
+      /* ボタン名はマップごとに違う(ポスティング=「全消去」/ポスター=「状態リセット」)。
+         片方の名前を書くともう片方で「そんなボタンは無い」案内になるので、名前に依存しない表現にする */
+      : `<div class="stNote">選択内容と色分けは<b>この端末に保存</b>され、次に開いたときもそのままです(消すときは画面上部の消去/リセットのボタンから)</div>`;
     panelBody.innerHTML = head + rows + extra +
       (pending ? `<div class="stLoadBar">世帯数データを読み込み中… 残り${pending}件</div>` : "") +
       `<div class="stReq"><a href="#" data-req="1">➕ 自治体の追加をリクエスト</a></div>`;
@@ -2098,7 +2111,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
       <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます。<b>色と濃さ</b>も図形ごとに指定できます(「自動」=状態の色、8色パレット、右端の<b>カラーピッカーで完全に自由な色</b>も可。ルートを目立たせない時は濃さを「薄め/最薄」に)</li>
       <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
       <li><b>探す</b> — 左上の<b>📃で図形の一覧</b>を表示。行をタップするとその図形へジャンプします(取り込んだデータがどこにあるか分からない時に)</li>
-      <li><b>状態の色を変える</b> — 右下の凡例<b>「🎨 状態の色」の色見本をタップ</b>すると、予定/配布中/済それぞれの色を好きな色に変えられます。<b>すでに描いた図形も一緒に塗り替わり</b>(色を「自動」にしているもの)、この端末に保存されるので次に開いたときもそのままです。もどしたいときは同じ凡例の「色を初期値にもどす」</li>
+      <li><b>状態の色を変える</b> — 右下の凡例<b>「🎨 状態の色」の色見本をタップ</b>すると、予定/配布中/済それぞれの色を好きな色に変えられます。<b>すでに描いた図形も一緒に塗り替わり</b>(色を「自動」にしているもの)、この端末に保存されるので次に開いたときもそのままです。もどしたいときは同じ凡例に出る「色をもどす」</li>
     </ol>
     <video class="gVideo" src="https://yukinobu-nakamura.github.io/senkyo-maps/assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
     <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
@@ -2121,7 +2134,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイールとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上の<b>「全消去」</b>をどうぞ。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイール・ダブルタップとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上の<b>「全消去」</b>をどうぞ。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -2152,7 +2165,7 @@ legendCtl.onAdd = () => {
     body.innerHTML = SHAPE_STATUSES.map(s => legendRow(
       `<input type="color" class="lgPick" data-id="${s.id}" value="${s.color}" aria-label="「${s.label}」の色を変える" title="タップすると「${s.label}」の色を変えられます">`,
       s.label)).join("")
-      + `<button type="button" class="lgReset" title="3色とも最初の色にもどします" hidden>色を初期値にもどす</button>`;
+      + `<button type="button" class="lgReset" title="3色とも最初の色にもどします" hidden>色をもどす</button>`;
     /* 「もどす」は既定色から変えたときだけ出す。常時出すと iPhone SE(320×568)で
        凡例が地図の約6割を覆ってしまう(実測 117px / 地図200px)。
        表示切替は hidden 属性だけで行い、redraw() は呼ばない
@@ -2190,13 +2203,16 @@ legendCtl.addTo(map);
    計算は WCAG 2.x の相対輝度(sRGB→線形化してから係数を掛ける)。 */
 function textOn(bg) {
   const m = /^#([0-9a-fA-F]{6})$/.exec(bg || "");
-  if (!m) return "#111827";
+  if (!m) return "#000000";
   const n = parseInt(m[1], 16);
   const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
   const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
-  /* 0.179 は「白文字と黒文字のコントラストが等しくなる輝度」。
-     これより明るい背景は黒文字、暗い背景は白文字にすると常にAAを満たす */
-  return L > 0.179 ? "#111827" : "#ffffff";
+  /* 0.179 は「白文字と黒文字のコントラストが釣り合う輝度」。これより明るい背景なら黒、
+     暗ければ白を選ぶと、その背景で取れる最大のコントラストになる。
+     ★ 文字色は純黒・純白にすること。#111827 のような“ほぼ黒”にすると
+        中間色(例 #8b5cf6)で 4.96:1 → 4.09:1 まで落ちて AA(4.5:1)を割る。
+        純黒・純白なら最悪ケース(L=0.179)でも 4.58:1 で全色AAを満たす。 */
+  return L > 0.179 ? "#000000" : "#ffffff";
 }
 /* 既定色から1つでも変わっていれば「もどす」ボタンを出す(なければ隠す)。
    scope を渡さなければ現在の凡例から探す */
@@ -2205,12 +2221,22 @@ function syncResetBtn(scope) {
   if (!btn) return;
   btn.hidden = SHAPE_STATUSES.every(s => s.color.toLowerCase() === STATUS_DEFAULT_COLORS[s.id].toLowerCase());
 }
-/* 状態の色を1つ変える。save=false は画面の反映だけ(ピッカーをドラッグ中の連続更新用) */
+/* 状態の色を1つ変える。
+   save=false = ピッカーをドラッグ中のプレビュー。<input type="color"> の input は
+   連続発火するので、ここで重い描き直しまでやるとスマホで目に見えて引っかかる。
+   軽い図形の塗り替えだけ即時に行い、重い再構築(管理表の点をN件作り直す等)は
+   120ms のデバウンスに逃がす。世帯数レイヤが同じ理由で採っている方式に揃えた
+   (assets/common.js の scheduleRestyle)。 */
 function setStatusColor(id, color, save) {
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
   const st = SHAPE_STATUSES.find(s => s.id === id);
   if (!st) return;
-  if (st.color !== color) { st.color = color; applyStatusColors(); }
+  if (st.color !== color) {
+    st.color = color;
+    restyleShapes();              /* 軽い: 図形の setStyle だけ */
+    if (save) applyHeavy();        /* 確定時は即時に */
+    else scheduleHeavy();          /* ドラッグ中はまとめて */
+  }
   syncResetBtn();
   if (save) saveStatusColors();
 }
@@ -2219,20 +2245,29 @@ function saveStatusColors() {
   SHAPE_STATUSES.forEach(s => { o[s.id] = s.color; });
   saveLocal(KEY_STATUS_COLORS, o);
 }
-/* 色を変えたあと、その色を使っている表示をまとめて描き直す。
-   対象=「自動」(状態の色)の図形・進捗ボックス・📃オブジェクト一覧・管理表CSVの点。
-   図形ごとに色を指定したもの(props.color)は、意図した色なので変えない。 */
-function applyStatusColors() {
+/* 図形の塗り替えだけ(軽い)。色を指定した図形(props.color)は意図した色なので変えない */
+function restyleShapes() {
   shapesLayer.eachLayer(l => {
     if (l.setStyle) l.setStyle(styleFor((l.feature && l.feature.properties) || {}));
   });
-  renderStats();
+}
+/* 進捗ボックス・📃一覧・管理表CSVの点(重い)。管理表は点とラベルを全数作り直す */
+function applyHeavy() {
+  clearTimeout(heavyTimer); heavyTimer = null;
   refreshObjectList();
   /* 管理表CSVの点も同じ3色を使う。割り当て済みの色を捨てて引き直す
      (未知ステータスへの自動割当は manageRows の順に決まるので結果は安定する) */
   Object.keys(mgColorMap).forEach(k => delete mgColorMap[k]);
-  if (manageRows.length) renderManage();
+  if (manageRows.length) renderManage();   /* 中で renderStats() も走る */
+  else renderStats();
 }
+let heavyTimer = null;
+function scheduleHeavy() {
+  clearTimeout(heavyTimer);
+  heavyTimer = setTimeout(applyHeavy, 120);
+}
+/* 色を変えたあと、その色を使っている表示をまとめて描き直す(即時・確定時用) */
+function applyStatusColors() { restyleShapes(); applyHeavy(); }
 /* 📃オブジェクト一覧は下のブロック内で定義される。開いていなければ何もしない */
 let refreshObjectList = () => {};
 
@@ -2267,7 +2302,7 @@ function popupHtml(props) {
   /* 「自動」=状態の色。各自が色を変えられるようになったので、実際に何色になるかを
      ボタン自体の背景で見せる(以前は灰色固定で、押すまで色が分からなかった) */
   const autoColor = statusOf(props.status).color;
-  const swatches = `<button type="button" class="cSw auto ${props.color ? "" : "sel"}" data-color="" title="状態の色(${autoColor})を使う" style="background:${autoColor};color:#fff;text-shadow:0 0 2px rgba(0,0,0,.6)">自動</button>`
+  const swatches = `<button type="button" class="cSw auto ${props.color ? "" : "sel"}" data-color="" title="状態の色(${autoColor})を使う" style="background:${autoColor};color:${textOn(autoColor)}">自動</button>`
     + SHAPE_PALETTE.map(c => `<button type="button" class="cSw ${props.color === c ? "sel" : ""}" data-color="${c}" style="background:${c}" title="${c}"></button>`).join("")
     + `<input type="color" id="sCustom" class="cSwPick ${props.color && !inPalette ? "sel" : ""}" value="${props.color && !inPalette ? props.color : "#e11d48"}" title="自由な色を選ぶ">`;
   return `<div class="sPlace" id="sPlace"></div>` +
@@ -2321,6 +2356,7 @@ function wireLayer(layer) {
     if (statusSel && autoBtn) statusSel.onchange = () => {
       const c = statusOf(statusSel.value).color;
       autoBtn.style.background = c;
+      autoBtn.style.color = textOn(c);   /* 背景に合わせて文字色も切り替える(白固定だと消える) */
       autoBtn.title = `状態の色(${c})を使う`;
     };
     node.querySelector("#sSave").onclick = () => {
@@ -2516,19 +2552,49 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
       `取り込んだルートを「済」として記録しますか?\n\n` +
       `［OK］      歩き終わった記録として「済」にする(色は「済」の色＝いまは ${doneColor})\n` +
       `［キャンセル］「予定」のままにする(従来どおりの赤 ${GPX_DEFAULT_COLOR})`);
-    const name = myName(false);
+    /* 外側の onFileSelected コールバック引数が name(ファイル名) なので別名にする。
+       同名 const で影にすると、このブロックでファイル名を使った瞬間 ReferenceError になる */
+    const ownerName = myName(false);
     gj.features.forEach(f => {
       const p = f.properties = f.properties || {};
       if (p.opacity == null || p.opacity === "") p.opacity = "0.5";
+      /* 「済」を選んだら色指定は外して“自動”(=済の色)に追従させる。
+         GPX側に色が入っていても上書きする(状態と色が食い違う方が混乱するため) */
       if (asDone) { p.status = "done"; p.color = ""; }
       else if (!p.color) p.color = GPX_DEFAULT_COLOR;
-      if (!p.owner && name) p.owner = name;
+      if (!p.owner && ownerName) p.owner = ownerName;
       p.mtime = Date.now();
     });
     const rg = mergeGeoJson(gj);
     if (shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
     persist();
-    if (rg.skipped) alert(`追加 ${rg.added} 本(取込済みと同じルート ${rg.skipped} 本はスキップ)`);
+    if (rg.skipped) {
+      /* GPXはfidを付けずに統合するので、同じルートを取り込み直すと形が一致して
+         全部スキップされる(mergeGeoJson)。上の「済にしますか?」を押し間違えても
+         取り直しでは直せない、という行き止まりになるので、ここで救済する。
+         探す鍵は mergeGeoJson と同じ geomKey(l.feature.geometry) なので、
+         スキップされた図形は必ず見つかる。 */
+      const want = asDone ? "done" : "plan";
+      const keys = new Set((gj.features || []).map(f => geomKey(f.geometry)));
+      const targets = [];
+      shapesLayer.eachLayer(l => {
+        if (!l.feature) return;
+        if (keys.has(geomKey(l.feature.geometry)) && ((l.feature.properties || {}).status || "plan") !== want) targets.push(l);
+      });
+      const head = `追加 ${rg.added} 本(取込済みと同じルート ${rg.skipped} 本はスキップ)`;
+      if (targets.length && confirm(`${head}\n\n取込済みの ${targets.length} 本を「${statusOf(want).label}」に変更しますか?`)) {
+        targets.forEach(l => {
+          const p = l.feature.properties;
+          p.status = want;
+          if (asDone) p.color = "";          /* 色は「自動」=済の色に追従させる */
+          stampFeature(p);
+          if (l.setStyle) l.setStyle(styleFor(p));
+        });
+        persist(); renderStats(); refreshObjectList();
+      } else {
+        alert(head + (targets.length ? "" : "\n※状態を変えたいときは、地図上の線をタップしてください。"));
+      }
+    }
     return;
   }
   /* GeoJSON: 賢い統合(重複は増やさず、同じ図形は新しい方を採用) */
@@ -2686,7 +2752,7 @@ document.getElementById("nameBtn").onclick = () => {
 document.getElementById("resetBtn").onclick = () => {
   /* 表示設定(状態の色・世帯数の選択と色分け)も端末に保存するようになったので、
      ここで一緒に消す。端末を人に貸すときなどに「全部消した」が本当に全部になる */
-  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択)を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択と色分け)を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
   shapesLayer.clearLayers();
   localStorage.removeItem(KEY_SHAPES);
   localStorage.removeItem(KEY_TOMB);
@@ -2695,6 +2761,9 @@ document.getElementById("resetBtn").onclick = () => {
   localStorage.removeItem(KEY_MANAGE);
   usRows = [];
   usLayer.clearLayers();
+  /* 中身を空にするだけでは地図に載ったままで、世帯数凡例が「表示中」と判定して
+     空の凡例を出し続ける(common.js の refreshLegend の active 判定)。レイヤごと外す */
+  if (map.hasLayer(usLayer)) map.removeLayer(usLayer);
   localStorage.removeItem(KEY_USETAI);
   /* 状態の色を既定に戻す */
   localStorage.removeItem(KEY_STATUS_COLORS);
