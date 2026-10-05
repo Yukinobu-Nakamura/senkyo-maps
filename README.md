@@ -97,7 +97,7 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 
 - **非商用**の目的であれば、候補者ご本人や政治活動のボランティアを含め、**誰でも無償で**複製・改変・再配布して利用できます
 - **営利目的での利用・販売・複製・再配布は許可していません**。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは法的措置を含め厳正に対処します
-- 再配布・改変して配布する場合は、ライセンス全文(またはそのURL)と Required Notice(`Copyright (c) 2026 Yukinobu Nakamura`)を必ず添付してください
+- 再配布・改変して配布する場合は、ライセンス全文(またはそのURL)と Required Notice(`Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)`)を必ず添付してください
 - 正式な利用条件は `LICENSE` が優先します(本節は要約)
 
 ### ライセンス変更の経緯(非遡及)
@@ -110,7 +110,7 @@ LICENSE は 2026-09-12 に MIT License から PolyForm Noncommercial License 1.0
 
 - Leaflet / Leaflet-Geoman 等の外部ライブラリ(CDN参照・非同梱)
 - 地図タイル(国土地理院・OpenStreetMap)
-- `data/setai_*.geojson` の原データ(政府統計の総合窓口 e-Stat 国勢調査(2020年)小地域境界データ。商用利用可の政府標準利用規約系)
+- `data/setai_*.geojson` の原データ(政府統計の総合窓口 e-Stat 国勢調査(2020年)小地域境界データ。政府標準利用規約(第2.0版)に準拠＝商用利用可・加工可(出典表示必須、加工時は加工した旨の明記が必要))
 - 国土地理院API(逆ジオコーダ・住所検索)
 
 チームみらい版 [team-mirai-volunteer/poster-map](https://github.com/team-mirai-volunteer/poster-map)(GPL-3.0)の仕組みを参考にした独自実装(コード非流用)。

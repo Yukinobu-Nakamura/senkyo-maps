@@ -1,5 +1,27 @@
 Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)
 
+## 本ライセンスの対象範囲 / Scope of this license
+
+本ライセンス(the software)の対象は、本リポジトリのうち**作成者が作成したコード及びコンテンツ**
+(HTML・CSS・JavaScript・解説文・図表)に限ります。次のものは対象外であり、各提供元の利用条件に従います。
+本ライセンスがそれらの原典からの取得・利用を制限することはありません。
+
+- 外部ライブラリ(Leaflet / Leaflet-Geoman 等。CDN参照・非同梱)
+- 地図タイル(国土地理院 / OpenStreetMap contributors)
+- `data/setai_*.geojson` の原データ(政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データ。
+  政府標準利用規約(第2.0版)に準拠＝商用利用可・加工可。出典表示必須、加工時は加工した旨の明記が必要)
+- 国土地理院API(逆ジオコーダ・住所検索)
+
+The scope of "the software" under these terms is limited to the code and content authored by the licensor.
+Third-party components (external libraries, map tiles, and the e-Stat source data) are NOT covered and remain
+governed by their own terms.
+
+## ライセンス変更の経緯(非遡及) / License change (not retroactive)
+
+This repository was licensed under the MIT License until 2026-09-12 (last MIT commit: `3e4efeb`).
+Copies obtained under the MIT License remain governed by it.
+Versions from 2026-09-12 onward are governed by the PolyForm Noncommercial License 1.0.0.
+
 # PolyForm Noncommercial License 1.0.0
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>
