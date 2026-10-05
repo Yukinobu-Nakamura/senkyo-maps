@@ -1623,14 +1623,21 @@ function addSetaiLayers(map, opts) {
       if (Array.isArray(v)) v.forEach(c => { if (wards[c]) desired.add(c); });
     } catch (e) { /* 壊れていたら無視 */ }
   }
-  /* 「全消去」用。選んだ自治体と色分け設定を地図からも端末からも消す */
+  /* 「全消去」用。選んだ自治体と色分け設定を、地図からも端末からも、
+     画面に出ている状態からも消して初期状態に戻す。 */
   function clearSelection() {
     desired.clear();
-    clearPref(SKEY);
+    apply();              /* 地図から外す。内部で save() が走り空の選択 "[]" が保存される */
+    clearPref(SKEY);      /* その "[]" ごと消す(次に開いたときキー自体が無い状態にする) */
+    /* 色分けの指標もメモリ上を既定(世帯数)に戻す。ここを戻さないと、全消去のあとに
+       自治体を選び直した瞬間、消したはずの指標が applyMetric() で再保存されてしまう */
+    curMetric = setaiMetricById("setai");
+    curSel.mf = ["f"]; curSel.gen = ["a0"]; curSel.ag = ["g0"];
+    curRatio = false;
+    curBins = SETAI_BINS;
     clearPref(MKEY);
-    apply();      /* 地図から外す(内部で save() が走り、空の選択が保存される) */
-    clearPref(SKEY);
     renderPanel();
+    refreshLegend();
   }
 
   /* ===== 選択パネル(都道府県 > 自治体 > 区の3階層 + 絞り込み) =====
