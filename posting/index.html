@@ -209,7 +209,12 @@ legendCtl.onAdd = () => {
     body.innerHTML = SHAPE_STATUSES.map(s => legendRow(
       `<input type="color" class="lgPick" data-id="${s.id}" value="${s.color}" aria-label="「${s.label}」の色を変える" title="タップすると「${s.label}」の色を変えられます">`,
       s.label)).join("")
-      + `<button type="button" class="lgReset" title="3色とも最初の色にもどします">色を初期値にもどす</button>`;
+      + `<button type="button" class="lgReset" title="3色とも最初の色にもどします" hidden>色を初期値にもどす</button>`;
+    /* 「もどす」は既定色から変えたときだけ出す。常時出すと iPhone SE(320×568)で
+       凡例が地図の約6割を覆ってしまう(実測 117px / 地図200px)。
+       表示切替は hidden 属性だけで行い、redraw() は呼ばない
+       (開いているカラーピッカーごと input が DOM から外れるため) */
+    syncResetBtn(body);
     body.querySelectorAll(".lgPick").forEach(pick => {
       /* input = ドラッグ中のプレビュー(連続発火するので保存はしない)
          change = 確定して端末に保存。
@@ -236,12 +241,20 @@ legendCtl.onAdd = () => {
 };
 legendCtl.addTo(map);
 
+/* 既定色から1つでも変わっていれば「もどす」ボタンを出す(なければ隠す)。
+   scope を渡さなければ現在の凡例から探す */
+function syncResetBtn(scope) {
+  const btn = (scope || document).querySelector(".lgReset");
+  if (!btn) return;
+  btn.hidden = SHAPE_STATUSES.every(s => s.color.toLowerCase() === STATUS_DEFAULT_COLORS[s.id].toLowerCase());
+}
 /* 状態の色を1つ変える。save=false は画面の反映だけ(ピッカーをドラッグ中の連続更新用) */
 function setStatusColor(id, color, save) {
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
   const st = SHAPE_STATUSES.find(s => s.id === id);
   if (!st) return;
   if (st.color !== color) { st.color = color; applyStatusColors(); }
+  syncResetBtn();
   if (save) saveStatusColors();
 }
 function saveStatusColors() {
