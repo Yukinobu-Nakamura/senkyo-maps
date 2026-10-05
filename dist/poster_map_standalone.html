@@ -1879,13 +1879,14 @@ function addSetaiLayers(map, opts) {
     });
   }
 
-  /* 閉じる前の忠告。選択が何も無いときは邪魔しない。
-     ブラウザ仕様により文言は指定できず、再読み込みでも同じ確認が出る */
-  window.addEventListener("beforeunload", (ev) => {
-    if (!desired.size && !(opts.extra && map.hasLayer(opts.extra.layer))) return;
-    ev.preventDefault();
-    ev.returnValue = "";
-  });
+  /* 【削除済み】閉じる前の確認ダイアログ(beforeunload)
+     2026-09-17(1044c2b)に入れたもので、目的は「選択は sessionStorage なので
+     タブを閉じると消えます」と知らせること **だけ** だった。
+     2026-10-06 に選択を端末保存(localStorage)へ移し、開き直せば復元されるように
+     なったため、警告する理由そのものが無くなった。
+     残したままだと、一度でも自治体を選んだ人は閉じる/リロードのたびに
+     ブラウザの離脱確認が出続ける(文言はブラウザ仕様で指定できないので、
+     利用者には理由の分からない警告になる)。よって削除する。 */
 
   /* 収録一覧を取ってからレイヤを組み立てる。
      ここで一覧を外部JSONにしているので、自治体を追加しても配布済みHTMLが追従できる。
