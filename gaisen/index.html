@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=34">
+<link rel="stylesheet" href="../assets/common.css?v=35">
 <style>
   /* 種別ピン(絵文字divIcon) */
   .gm-pin{
@@ -47,7 +47,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=34"></script>
+<script src="../assets/common.js?v=35"></script>
 <script>
 "use strict";
 
@@ -86,7 +86,9 @@ function catOf(id){ return CATS.find(c => c.id === id) || CATS.find(c=>c.id==="s
 function esc(v){ return (v==null?"":String(v)).replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 /* ===== 地図 ===== */
-const map = L.map("map", { preferCanvas:false }).setView([35.6994, 139.6363], 14); // 杉並区役所付近
+/* zoomSnap/zoomDelta=0.5: 拡大縮小を半段ずつにする(3マップ共通。理由は posting/index.html 参照) */
+const map = L.map("map", { preferCanvas:false, zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 120 })
+  .setView([35.6994, 139.6363], 14); // 杉並区役所付近
 const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 

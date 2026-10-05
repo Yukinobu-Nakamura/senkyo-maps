@@ -351,6 +351,31 @@ function saveLocal(key, value) {
   }
 }
 
+/* ---- 表示オプションの保存(端末に残す) ----
+   世帯数レイヤの「どの自治体を選んだか」「どの指標で色分けするか」は、以前は
+   タブを閉じると消える sessionStorage に置いていた(端末に何も残さない配慮)。
+   しかし「再表示のたびに消えて毎回選び直しになる」というメンバー要望を受け、
+   端末保存(localStorage)に変更した(2026-10-06)。
+   中身は公開データの表示設定だけで、図形・担当者などの活動データは含まない。
+   消したいときはアプリの「全消去」で clearPref() が呼ばれる。
+   旧版の sessionStorage に値が残っている端末では、それを引き継いでから移行する。 */
+function loadPref(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (v != null) return v;
+  } catch (e) { /* 読めない環境なら下の sessionStorage を見る */ }
+  try { return sessionStorage.getItem(key); } catch (e) { return null; }
+}
+function savePref(key, value) {
+  try { localStorage.setItem(key, value); } catch (e) { /* 保存不可でも動作は継続 */ }
+  /* 旧キーを残すと、次に開いたとき古い選択が復活して見えるので捨てる */
+  try { sessionStorage.removeItem(key); } catch (e) { /* 無視 */ }
+}
+function clearPref(key) {
+  try { localStorage.removeItem(key); } catch (e) { /* 無視 */ }
+  try { sessionStorage.removeItem(key); } catch (e) { /* 無視 */ }
+}
+
 /* ---- ファイル入出力 ---- */
 /* iOS Safari 対策で2点:
    (1) アンカーを DOM に入れてから click する
@@ -999,7 +1024,8 @@ const SETAI_STROKE_BY_ZOOM = { 13: 1.1, 14: 1.4, 15: 1.8, 16: 2.2, 17: 2.6, 18: 
 
 /* map に世帯数レイヤ一式と、その選択パネル(自治体 > 区の2階層)を追加する。
    opts.extra: {layer, label} 取込CSV等、パネル最下段に並べる追加レイヤ(任意)
-   opts.sessionKey: 選択状態を sessionStorage に覚えるときのキー接頭辞
+   opts.sessionKey: 選択状態・色分け設定を端末に覚えるときのキー接頭辞
+     (名前は経緯で sessionKey のままだが、保存先は localStorage。loadPref を参照)
    戻り値.refreshLegend: 追加レイヤ側から凡例を出し直したいときに呼ぶ */
 function addSetaiLayers(map, opts) {
   opts = opts || {};
@@ -1024,7 +1050,7 @@ function addSetaiLayers(map, opts) {
   const curSel = { mf: ["f"], gen: ["a0"], ag: ["g0"] };
   let curRatio = false;
   try {
-    const mv = JSON.parse(sessionStorage.getItem(MKEY) || "{}");
+    const mv = JSON.parse(loadPref(MKEY) || "{}");
     /* 旧形式(単一指標id+age)との互換変換 */
     const OLD = { m: ["mf", ["m"], 0], f: ["mf", ["f"], 0], fr: ["mf", ["f"], 1],
       a0: ["gen", ["a0"], 0], a1: ["gen", ["a1"], 0], a2: ["gen", ["a2"], 0], a75: ["gen", ["a75"], 0],
@@ -1176,7 +1202,7 @@ function addSetaiLayers(map, opts) {
     else scheduleRestyle();
   }
   function applyMetric() {
-    try { sessionStorage.setItem(MKEY, JSON.stringify({ id: curMetric.id, sel: curSel, ratio: curRatio })); } catch (e) { /* 保存不可でも動作は継続 */ }
+    savePref(MKEY, JSON.stringify({ id: curMetric.id, sel: curSel, ratio: curRatio }));
     scheduleRestyle();
   }
 
@@ -1230,15 +1256,25 @@ function addSetaiLayers(map, opts) {
     save(); afterLayerChange();
   }
 
-  /* 選択状態は sessionStorage = 再読み込みでは残り、タブ/ブラウザを閉じると消える */
+  /* 選択状態は端末に保存する(loadPref/savePref)。次に開いたときもそのまま残る。
+     「全消去」から clearSelection() を呼べば選択も保存も消える */
   function save() {
-    try { sessionStorage.setItem(SKEY, JSON.stringify([...desired])); } catch (e) { /* 保存不可でも動作は継続 */ }
+    savePref(SKEY, JSON.stringify([...desired]));
   }
   function restore() {
     try {
-      const v = JSON.parse(sessionStorage.getItem(SKEY) || "[]");
+      const v = JSON.parse(loadPref(SKEY) || "[]");
       if (Array.isArray(v)) v.forEach(c => { if (wards[c]) desired.add(c); });
     } catch (e) { /* 壊れていたら無視 */ }
+  }
+  /* 「全消去」用。選んだ自治体と色分け設定を地図からも端末からも消す */
+  function clearSelection() {
+    desired.clear();
+    clearPref(SKEY);
+    clearPref(MKEY);
+    apply();      /* 地図から外す(内部で save() が走り、空の選択が保存される) */
+    clearPref(SKEY);
+    renderPanel();
   }
 
   /* ===== 選択パネル(都道府県 > 自治体 > 区の3階層 + 絞り込み) =====
@@ -1320,7 +1356,7 @@ function addSetaiLayers(map, opts) {
       : "";
     const head = indexState === "loading" ? `<div class="stLoadBar">収録自治体の一覧を読み込み中…</div>`
       : indexState === "error" ? `<div class="stLoadBar">一覧を読み込めませんでした。インターネット接続を確認して開き直してください。</div>`
-      : `<div class="stNote">選択内容は<b>再読み込みでは残り</b>、タブを閉じると消えます</div>`;
+      : `<div class="stNote">選択内容と色分けは<b>この端末に保存</b>され、次に開いたときもそのままです(消すときは上の「全消去」)</div>`;
     panelBody.innerHTML = head + rows + extra +
       (pending ? `<div class="stLoadBar">世帯数データを読み込み中… 残り${pending}件</div>` : "") +
       `<div class="stReq"><a href="#" data-req="1">➕ 自治体の追加をリクエスト</a></div>`;
@@ -1508,9 +1544,12 @@ function addSetaiLayers(map, opts) {
     }
   }
 
-  /* ラベル文字サイズと枠線の太さをズームに連動させる */
+  /* ラベル文字サイズと枠線の太さをズームに連動させる。
+     ★ Math.round 必須: ズームを 0.5 刻み(zoomSnap)にすると getZoom() が 15.5 等の
+     小数を返し、整数キーの SETAI_*_BY_ZOOM 参照が undefined になってフォールバック
+     (5.5px / 0.9px)へ落ちる = ラベルが読めない大きさに縮む。丸めてから引くこと。 */
   function zoomRefresh() {
-    const z = Math.min(map.getZoom(), 18);
+    const z = Math.min(Math.round(map.getZoom()), 18);
     const cs = map.getContainer().style;
     cs.setProperty("--setaiFs", (SETAI_FONT_BY_ZOOM[z] || 5.5) + "px");
     cs.setProperty("--setaiSw", (SETAI_STROKE_BY_ZOOM[z] || 0.9) + "px");
@@ -1559,7 +1598,7 @@ function addSetaiLayers(map, opts) {
     .catch(() => { indexState = "error"; })
     .then(() => renderPanel());
 
-  return { refreshLegend, layers: wards, desired };
+  return { refreshLegend, layers: wards, desired, clearSelection };
 }
 
 /* ===== 🏠 自治体追加リクエスト(世帯数レイヤ) =====

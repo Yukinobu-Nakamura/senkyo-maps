@@ -7,13 +7,21 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=34">
+<link rel="stylesheet" href="../assets/common.css?v=35">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
   .mglegend .mgrow{ display:flex; align-items:center; gap:6px; margin:2px 0; }
   .mglegend i{ width:12px; height:12px; border-radius:50%; border:1px solid #333; display:inline-block; }
   .mglegend .mgttl{ font-weight:700; margin-bottom:2px; }
+  /* 凡例「🎨 状態の色」の色見本=カラーピッカー。タップ目標はWCAG 2.5.8に合わせて24×24px確保。
+     ブラウザ既定の内側余白と枠を消さないと、小さい四角に色が埋もれて見本にならない */
+  .legend .lgPick{ width:24px; height:24px; flex:none; padding:0; border:1.5px solid #555; border-radius:5px; background:none; cursor:pointer; }
+  .legend .lgPick::-webkit-color-swatch-wrapper{ padding:0; }
+  .legend .lgPick::-webkit-color-swatch{ border:none; border-radius:3px; }
+  .legend .lgPick::-moz-color-swatch{ border:none; border-radius:3px; }
+  .legend .lgReset{ margin-top:5px; width:100%; min-height:24px; font-size:11px; border:1px solid #d1d5db; border-radius:6px; background:#f9fafb; color:#374151; cursor:pointer; }
+  .legend .lgReset:hover{ background:#f3f4f6; }
   /* 図形ポップアップの色スウォッチ */
   .cSwatches{ display:flex; gap:4px; flex-wrap:wrap; align-items:center; margin:2px 0 4px; }
   .cSw{ width:22px; height:22px; border-radius:6px; border:2px solid #d1d5db; cursor:pointer; padding:0; }
@@ -58,12 +66,12 @@
     <a href="../" style="align-self:center;">← トップ</a>
   </div>
 </header>
-<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択は<b>再読み込みでは残り、タブを閉じると消えます</b>)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
+<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択と色分けは<b>この端末に保存され、次に開いたときもそのまま</b>です)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=34"></script>
+<script src="../assets/common.js?v=35"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -71,12 +79,32 @@
 if (window.matchMedia("(max-width: 1024px)").matches) {
   document.getElementById("introBar").removeAttribute("open");
 }
+/* 状態の色。既定値は STATUS_DEFAULT_COLORS、実際に使う値は SHAPE_STATUSES[].color。
+   右下の凡例「🎨 状態の色」から各自が変更でき、端末に保存される
+   (メンバー要望 2026-10-06「予定・配布中・完了の色ごとに設定できるといい」)。 */
+const STATUS_DEFAULT_COLORS = {
+  plan:  "#1e88e5",
+  doing: "#eab308", /* 黄色系(メンバー要望。白地図でも見える濃さ) */
+  done:  "#8b5cf6",
+};
 const SHAPE_STATUSES = [
-  { id: "plan",  label: "予定",   color: "#1e88e5" },
-  { id: "doing", label: "配布中", color: "#eab308" }, /* 黄色系(メンバー要望。白地図でも見える濃さ) */
-  { id: "done",  label: "済",     color: "#8b5cf6" },
+  { id: "plan",  label: "予定",   color: STATUS_DEFAULT_COLORS.plan },
+  { id: "doing", label: "配布中", color: STATUS_DEFAULT_COLORS.doing },
+  { id: "done",  label: "済",     color: STATUS_DEFAULT_COLORS.done },
 ];
-const GPX_DEFAULT_COLOR = "#e11d48"; /* GPX取込ルート(ルートヒストリー)の既定色=赤系(メンバー要望) */
+const KEY_STATUS_COLORS = "postingMap.statusColors";
+/* 端末に保存した色を読み出して当てる。取込ファイル由来ではないが、
+   localStorage は人の手で書き換えられるので styleFor/HTML へ渡る前に形式を検証する */
+(function loadStatusColors() {
+  const saved = loadLocal(KEY_STATUS_COLORS, null);
+  if (!saved || typeof saved !== "object") return;
+  SHAPE_STATUSES.forEach(s => {
+    const c = saved[s.id];
+    if (typeof c === "string" && /^#[0-9a-fA-F]{6}$/.test(c)) s.color = c;
+  });
+})();
+
+const GPX_DEFAULT_COLOR = "#e11d48"; /* GPX取込ルートを「予定」で取り込むときの色=赤系(メンバー要望) */
 const KEY_SHAPES = "postingMap.shapes";
 const KEY_NAME = "postingMap.userName";
 
@@ -99,8 +127,16 @@ function stampFeature(props) {
   props.mtime = Date.now();
 }
 
-/* renderer padding=1: 画面外1画面分まで先行描画し、ピンチ/パン時に図形が画面端で切れて見える(クリップ)のを防ぐ */
-const map = L.map("map", { renderer: L.svg({ padding: 1 }) }).setView([35.7295, 139.7109], 14);
+/* renderer padding=1: 画面外1画面分まで先行描画し、ピンチ/パン時に図形が画面端で切れて見える(クリップ)のを防ぐ
+   zoomSnap/zoomDelta=0.5: 拡大縮小を「1段」から「半段」ずつに細かくする
+     (メンバー要望 2026-10-06「拡大縮小の幅を細かく。特に地域を拡大したくらいのところ」)。
+     地図タイルは整数ズームの画像なので、刻みを細かくするほどCSS拡縮でわずかにぼける。
+     0.25 まで下げず 0.5 に留めているのはそのトレードオフ(淡色地図は線画主体でぼけが目立つ)。
+   wheelPxPerZoomLevel=120: マウスホイールも既定60→120で半分の速さにして揃える。
+   ⚠️ 小数ズームを入れたので common.js の zoomRefresh() は Math.round してから
+      SETAI_FONT_BY_ZOOM を引くこと(整数キーのため undefined で最小値に落ちる) */
+const map = L.map("map", { renderer: L.svg({ padding: 1 }), zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 120 })
+  .setView([35.7295, 139.7109], 14);
 const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 const layersCtl = L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
@@ -119,6 +155,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
       <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます。<b>色と濃さ</b>も図形ごとに指定できます(「自動」=状態の色、8色パレット、右端の<b>カラーピッカーで完全に自由な色</b>も可。ルートを目立たせない時は濃さを「薄め/最薄」に)</li>
       <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
       <li><b>探す</b> — 左上の<b>📃で図形の一覧</b>を表示。行をタップするとその図形へジャンプします(取り込んだデータがどこにあるか分からない時に)</li>
+      <li><b>状態の色を変える</b> — 右下の凡例<b>「🎨 状態の色」の色見本をタップ</b>すると、予定/配布中/済それぞれの色を好きな色に変えられます。<b>すでに描いた図形も一緒に塗り替わり</b>(色を「自動」にしているもの)、この端末に保存されるので次に開いたときもそのままです。もどしたいときは同じ凡例の「色を初期値にもどす」</li>
     </ol>
     <video class="gVideo" src="../assets/posting_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ポリゴンツールで池袋二丁目を囲って新規登録し予定で保存、実施後に済へ変更する流れ"></video>
     <div class="gVideoCap">▲ 操作デモ(ポリゴンで配布区域を囲って新規登録→状態・担当・メモを保存→実施後に状態を更新)</div>
@@ -127,7 +164,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     <ol>
       <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
       <li>スマホの記録アプリ等で保存した<b>GPXファイル</b>を選ぶ(複数をまとめた<b>結合GPX</b>も可)</li>
-      <li>「〇本のルートを読み込みました」の確認 → <b>配布ルート(線)</b>として地図に追加(履歴用に既定で<b>赤系・薄め</b>表示。図形タップで色・濃さ変更可)</li>
+      <li>「〇本のルートを読み込みました」の確認 → つづけて<b>「『済』として記録しますか?」</b>を聞かれます。<b>［OK］=歩き終わった記録として「済」</b>(色は「済」の色・既定は紫)、<b>［キャンセル］=「予定」のまま</b>(従来どおりの赤)。どちらも薄め表示で、あとから図形タップで変更できます</li>
       <li>あとは通常どおり、線をタップして状態・担当・メモを記録</li>
     </ol>
     <div class="gPrep">🎬 GPX読み込みの操作デモ動画は準備中です。</div>
@@ -141,7 +178,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイールとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上の<b>「全消去」</b>をどうぞ。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -160,16 +197,74 @@ let statDiv;
 statCtl.onAdd = () => { statDiv = L.DomUtil.create("div", "statbox"); return statDiv; };
 statCtl.addTo(map);
 
-/* 凡例(✕でたためる。中身の作り方は共通の addBoxCollapse を参照) */
+/* 凡例(「»」で画面の端へ畳める。中身の作り方は共通の addBoxCollapse を参照)。
+   各行の色見本は <input type="color"> で、タップするとその状態の色を変えられる
+   (メンバー要望 2026-10-06「右下の3項目の見本ウィンドウをクリックで変更できたら」)。
+   ネイティブのカラーピッカーが開くので、スマホでも追加のUIなしで選べる。 */
+let legendBox = null;
 const legendCtl = L.control({ position: "bottomright" });
 legendCtl.onAdd = () => {
   const div = L.DomUtil.create("div", "legend");
-  addBoxCollapse(div, "🎨 状態の色", "postingLegend", (body) => {
-    body.innerHTML = SHAPE_STATUSES.map(s => legendRow(`<i class="sq" style="background:${s.color}"></i>`, s.label)).join("");
+  legendBox = addBoxCollapse(div, "🎨 状態の色", "postingLegend", (body) => {
+    body.innerHTML = SHAPE_STATUSES.map(s => legendRow(
+      `<input type="color" class="lgPick" data-id="${s.id}" value="${s.color}" aria-label="「${s.label}」の色を変える" title="タップすると「${s.label}」の色を変えられます">`,
+      s.label)).join("")
+      + `<button type="button" class="lgReset" title="3色とも最初の色にもどします">色を初期値にもどす</button>`;
+    body.querySelectorAll(".lgPick").forEach(pick => {
+      /* input = ドラッグ中のプレビュー(連続発火するので保存はしない)
+         change = 確定して端末に保存。
+         ここで legendBox.redraw() を呼んではいけない。開いているネイティブの
+         カラーピッカーごと input が DOM から外れてしまう。
+         ピッカーの value は利用者が変えた値そのものなので描き直す必要もない。 */
+      pick.oninput = () => setStatusColor(pick.dataset.id, pick.value, false);
+      pick.onchange = () => setStatusColor(pick.dataset.id, pick.value, true);
+    });
+    body.querySelector(".lgReset").onclick = (ev) => {
+      ev.preventDefault();
+      /* 直後の redraw() でこのボタンが DOM から外れる。そうなると Leaflet の
+         「コントロール上のクリックは地図に伝えない」判定(親を辿る)が効かなくなり、
+         押しただけでツールが一括非表示になる(addBoxCollapse と同じ罠・2026-09-18)。
+         自分で伝播を止めること。 */
+      ev.stopPropagation();
+      SHAPE_STATUSES.forEach(s => { s.color = STATUS_DEFAULT_COLORS[s.id]; });
+      saveStatusColors();
+      applyStatusColors();
+      legendBox.redraw();
+    };
   });
   return div;
 };
 legendCtl.addTo(map);
+
+/* 状態の色を1つ変える。save=false は画面の反映だけ(ピッカーをドラッグ中の連続更新用) */
+function setStatusColor(id, color, save) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  const st = SHAPE_STATUSES.find(s => s.id === id);
+  if (!st) return;
+  if (st.color !== color) { st.color = color; applyStatusColors(); }
+  if (save) saveStatusColors();
+}
+function saveStatusColors() {
+  const o = {};
+  SHAPE_STATUSES.forEach(s => { o[s.id] = s.color; });
+  saveLocal(KEY_STATUS_COLORS, o);
+}
+/* 色を変えたあと、その色を使っている表示をまとめて描き直す。
+   対象=「自動」(状態の色)の図形・進捗ボックス・📃オブジェクト一覧・管理表CSVの点。
+   図形ごとに色を指定したもの(props.color)は、意図した色なので変えない。 */
+function applyStatusColors() {
+  shapesLayer.eachLayer(l => {
+    if (l.setStyle) l.setStyle(styleFor((l.feature && l.feature.properties) || {}));
+  });
+  renderStats();
+  refreshObjectList();
+  /* 管理表CSVの点も同じ3色を使う。割り当て済みの色を捨てて引き直す
+     (未知ステータスへの自動割当は manageRows の順に決まるので結果は安定する) */
+  Object.keys(mgColorMap).forEach(k => delete mgColorMap[k]);
+  if (manageRows.length) renderManage();
+}
+/* 📃オブジェクト一覧は下のブロック内で定義される。開いていなければ何もしない */
+let refreshObjectList = () => {};
 
 /* 地図の何もない所をタップすると、ボタン・凡例・パネルをまとめて隠す(もう一度タップで戻る)。
    左上の⛶ボタンでも隠せる。作図・編集モード中はタップが作図操作なので切り替えない。 */
@@ -199,7 +294,10 @@ function popupHtml(props) {
   const opOpts = SHAPE_OPACITIES.map(o => `<option value="${o.v}" ${o.v === curOp ? "selected" : ""}>${o.label}</option>`).join("")
     + (SHAPE_OPACITIES.some(o => o.v === curOp) ? "" : `<option value="${esc(curOp)}" selected>カスタム(${curOp})</option>`);
   const inPalette = SHAPE_PALETTE.includes(props.color);
-  const swatches = `<button type="button" class="cSw auto ${props.color ? "" : "sel"}" data-color="" title="状態の色を使う">自動</button>`
+  /* 「自動」=状態の色。各自が色を変えられるようになったので、実際に何色になるかを
+     ボタン自体の背景で見せる(以前は灰色固定で、押すまで色が分からなかった) */
+  const autoColor = statusOf(props.status).color;
+  const swatches = `<button type="button" class="cSw auto ${props.color ? "" : "sel"}" data-color="" title="状態の色(${autoColor})を使う" style="background:${autoColor};color:#fff;text-shadow:0 0 2px rgba(0,0,0,.6)">自動</button>`
     + SHAPE_PALETTE.map(c => `<button type="button" class="cSw ${props.color === c ? "sel" : ""}" data-color="${c}" style="background:${c}" title="${c}"></button>`).join("")
     + `<input type="color" id="sCustom" class="cSwPick ${props.color && !inPalette ? "sel" : ""}" value="${props.color && !inPalette ? props.color : "#e11d48"}" title="自由な色を選ぶ">`;
   return `<div class="sPlace" id="sPlace"></div>` +
@@ -247,6 +345,14 @@ function wireLayer(layer) {
     const pick = node.querySelector("#sCustom");
     pick.oninput = () => selectColor(pick);
     pick.onclick = () => selectColor(pick);
+    /* 状態を選び直したら「自動」ボタンの色も合わせる(保存前に何色になるか見えるように) */
+    const statusSel = node.querySelector("#sStatus");
+    const autoBtn = node.querySelector("#sColors .cSw.auto");
+    if (statusSel && autoBtn) statusSel.onchange = () => {
+      const c = statusOf(statusSel.value).color;
+      autoBtn.style.background = c;
+      autoBtn.title = `状態の色(${c})を使う`;
+    };
     node.querySelector("#sSave").onclick = () => {
       props.status = node.querySelector("#sStatus").value;
       const selEl = node.querySelector("#sColors .sel");
@@ -428,17 +534,27 @@ onFileSelected(document.getElementById("gjIn"), (text, name) => {
     return alert("GPXから配布ルート(トラック/ルート)を取り出せませんでした。\n位置情報を含むGPXか確認してください。​‌‌​​​‌​‌‌​‌");
   }
   if (isGpx) {
-    // ルートヒストリー用途を想定し、GPX取込の線は既定「赤系・薄め」(あとから図形タップで変更可)
+    // ルートヒストリー用途を想定し、GPX取込の線は既定「薄め」(あとから図形タップで変更可)
     // fidは付けずにマージに回す=同じGPXを再読込しても形一致で重複しない(fidは保存・書出時に付与される)
+    if (!confirm(`GPXから ${gj.features.length} 本のルートを読み込みました。現在のマップに追加します。よろしいですか?`)) return;
+    /* 歩いた記録なのに状態が「予定」のまま赤で入り、紫の「済」と意味が二重になっていた
+       (メンバー要望 2026-10-06「せっかく完了が紫なので紫が完了色だと見やすい」)。
+       取り込むときにどちらで記録するかを選べるようにする。
+       「済」を選んだときは色を指定しない=「自動」にして、状態の色(既定は紫)に追従させる。 */
+    const doneColor = statusOf("done").color;
+    const asDone = confirm(
+      `取り込んだルートを「済」として記録しますか?\n\n` +
+      `［OK］      歩き終わった記録として「済」にする(色は「済」の色＝いまは ${doneColor})\n` +
+      `［キャンセル］「予定」のままにする(従来どおりの赤 ${GPX_DEFAULT_COLOR})`);
     const name = myName(false);
     gj.features.forEach(f => {
       const p = f.properties = f.properties || {};
       if (p.opacity == null || p.opacity === "") p.opacity = "0.5";
-      if (!p.color) p.color = GPX_DEFAULT_COLOR;
+      if (asDone) { p.status = "done"; p.color = ""; }
+      else if (!p.color) p.color = GPX_DEFAULT_COLOR;
       if (!p.owner && name) p.owner = name;
       p.mtime = Date.now();
     });
-    if (!confirm(`GPXから ${gj.features.length} 本のルートを読み込みました。現在のマップに追加します。よろしいですか?`)) return;
     const rg = mergeGeoJson(gj);
     if (shapesLayer.getLayers().length) map.fitBounds(shapesLayer.getBounds(), { padding: [30, 30] });
     persist();
@@ -598,7 +714,9 @@ document.getElementById("nameBtn").onclick = () => {
 };
 
 document.getElementById("resetBtn").onclick = () => {
-  if (!confirm("すべての図形と管理表データを消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+  /* 表示設定(状態の色・世帯数の選択と色分け)も端末に保存するようになったので、
+     ここで一緒に消す。端末を人に貸すときなどに「全部消した」が本当に全部になる */
+  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択)を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
   shapesLayer.clearLayers();
   localStorage.removeItem(KEY_SHAPES);
   localStorage.removeItem(KEY_TOMB);
@@ -608,8 +726,17 @@ document.getElementById("resetBtn").onclick = () => {
   usRows = [];
   usLayer.clearLayers();
   localStorage.removeItem(KEY_USETAI);
+  /* 状態の色を既定に戻す */
+  localStorage.removeItem(KEY_STATUS_COLORS);
+  SHAPE_STATUSES.forEach(s => { s.color = STATUS_DEFAULT_COLORS[s.id]; });
+  if (legendBox) legendBox.redraw();
+  Object.keys(mgColorMap).forEach(k => delete mgColorMap[k]);
+  /* 世帯数レイヤの選択と色分け設定を地図からも端末からも消す */
+  setaiCtl.clearSelection();
+  renderManageLegend();
   setaiLegendRefresh();
   renderStats();
+  refreshObjectList();
 };
 
 /* ===== ポスティング管理表(CSV)取り込み ===== */
@@ -634,21 +761,26 @@ const MG_COL = {
   lat:   ["緯度","lat","latitude"],
   long:  ["経度","long","lng","longitude"],
 };
-/* ステータス→色。既知の日本語を優先し、未知は自動割当(安定) */
+/* ステータス→色。既知の日本語を優先し、未知は自動割当(安定)。
+   手描き図形と同じ意味の3つ(完了/配布中/予定)は status で SHAPE_STATUSES を引く。
+   色を直接書くと、凡例から状態の色を変えたときに管理表の点だけ旧色のまま残ってズレる。 */
 const MG_STATUS_RULES = [
-  { kw:["完了","済","配布済","終了"],       color:"#8b5cf6" },
-  { kw:["配布中","実施中","進行中"],         color:"#eab308" }, /* 手描き図形の「配布中」と同色に統一 */
-  { kw:["予約","予定"],                     color:"#1e88e5" },
+  { kw:["完了","済","配布済","終了"],       status:"done"  },
+  { kw:["配布中","実施中","進行中"],         status:"doing" },
+  { kw:["予約","予定"],                     status:"plan"  },
   { kw:["対象保留","保留","未着手","未対応","未"], color:"#9e9e9e" },
   { kw:["対象外","除外","不可"],             color:"#cbd5e1" },
 ];
 const MG_PALETTE = ["#16a34a","#e11d48","#0891b2","#7c3aed","#c2410c","#4d7c0f"];
+/* 割り当て済みの色。状態の色を変えたときは applyStatusColors() が中身を捨てて引き直す */
 const mgColorMap = {};
 function mgColorFor(status){
   const s = (status||"").trim();
   if (mgColorMap[s]) return mgColorMap[s];
   let c = null;
-  for (const r of MG_STATUS_RULES){ if (r.kw.some(k => s.indexOf(k) >= 0)){ c = r.color; break; } }
+  for (const r of MG_STATUS_RULES){
+    if (r.kw.some(k => s.indexOf(k) >= 0)){ c = r.status ? statusOf(r.status).color : r.color; break; }
+  }
   if (!c) c = MG_PALETTE[Object.keys(mgColorMap).length % MG_PALETTE.length];
   mgColorMap[s] = c; return c;
 }
@@ -738,14 +870,19 @@ let usRows = loadLocal(KEY_USETAI, []) || [];
 /* ===== 世帯数レイヤ(国勢調査2020 小地域・町丁目) =====
    実装はポスターマップと共通のため assets/common.js の addSetaiLayers() にある。
    収録自治体の一覧は data/setai_index.json から読み込む(このファイルは触らない)。
-   右上の🏠ボタンから「自治体 > 区」の2階層で選ぶ。選択はタブを開いている間だけ残る。 */
+   右上の🏠ボタンから「自治体 > 区」の2階層で選ぶ。
+   選んだ自治体と色分けの指標は、この端末に保存され次に開いたときも残る
+   (メンバー要望 2026-10-06「再表示するたびに消えてしまう」)。
+   消すのは「全消去」→ setaiCtl.clearSelection()。 */
 const setaiCtl = addSetaiLayers(map, {
   sessionKey: "postingMap",
   extra: { layer: usLayer, label: "取込CSV(自分で読み込んだ世帯数)" },
 });
 const setaiLegendRefresh = setaiCtl.refreshLegend;
-/* ベースマップと地図の位置を、タブを開いている間だけ覚える
-   (再読み込みで消えない／閉じると消える。手描き図形は従来どおり端末に保存) */
+/* ベースマップと地図の位置は、意図して「タブを開いている間だけ」のまま残す。
+   端末に覚えさせると、次に開いたとき前回見ていた場所から始まることになり、
+   メンバーの要望(表示オプションを覚えてほしい)の範囲を超えるため(2026-10-06 中村さん判断)。
+   手描き図形は従来どおり端末に保存。 */
 rememberMapSession(map, "postingMap", { baseLayers, overlays: {} });
 
 /* 同じマップを別タブ・別ウィンドウでも開いているときに警告する。
@@ -887,6 +1024,8 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
     if (listBtn) listBtn.classList.toggle("on", open);
     if (open) renderList();
   }
+  /* 状態の色を変えたとき、開いている一覧の色チップも追従させる(閉じていれば何もしない) */
+  refreshObjectList = () => { if (panel.style.display !== "none") renderList(); };
   const ctl = L.control({ position: "topleft" });
   ctl.onAdd = () => {
     listBtn = L.DomUtil.create("button", "listBtn");

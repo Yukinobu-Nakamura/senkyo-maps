@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポスターマップ — 掲示板の貼付け管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=34">
+<link rel="stylesheet" href="../assets/common.css?v=35">
 </head>
 <body>
 <header class="appbar">
@@ -23,7 +23,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=34"></script>
+<script src="../assets/common.js?v=35"></script>
 <script>
 "use strict";
 /* ステータス定義(ここを書き換えれば増減可能) */
@@ -37,7 +37,13 @@ const STATUSES = [
 const KEY_BOARDS = "posterMap.boards";   // CSV読込後のデータ一式
 const KEY_EDITS  = "posterMap.edits";    // サンプルデータへの編集差分 {id:{status,note}}
 
-const map = L.map("map", { preferCanvas: true }).setView([35.7295, 139.7109], 14);
+/* zoomSnap/zoomDelta: 拡大縮小を 0.5 段ずつにする(メンバー要望 2026-10-06
+   「拡大縮小の幅を細かく。特に地域を拡大したくらいのところ」)。
+   ラスタタイルは整数ズームの画像をCSSで拡縮するため、刻みを細かくするほど
+   わずかにぼける。0.25 ではなく 0.5 に留めているのはそのトレードオフ。
+   ※小数ズームを入れたら common.js の zoomRefresh() の Math.round が必須 */
+const map = L.map("map", { preferCanvas: true, zoomSnap: 0.5, zoomDelta: 0.5, wheelPxPerZoomLevel: 120 })
+  .setView([35.7295, 139.7109], 14);
 const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 const statusLayers = {};
@@ -59,7 +65,7 @@ addGuideControl(map, "🗺️ ポスターマップの使い方",
     <li><b>掲示場データを読み込む</b> — 右上「📂 CSV読込」で選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示はダミーのサンプル)</li>
     <li><b>ピンをタップ</b> — ステータス(未/完了/予約/要確認/異常)とメモを保存。色が変わり右上の完了率も更新されます</li>
     <li><b>表示を絞る</b> — 右上のレイヤボタンでステータス別に表示切替、左の📍で現在地表示</li>
-    <li><b>🏠 世帯数を重ねる</b> — 右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックで配下の区が全部ON</b>、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に(この選択は再読み込みでは残り、タブを閉じると消えます)。未収録の自治体は「➕ 自治体の追加をリクエスト」から</li>
+    <li><b>🏠 世帯数を重ねる</b> — 右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックで配下の区が全部ON</b>、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に(この選択と色分けはこの端末に保存され、次に開いたときもそのままです)。未収録の自治体は「➕ 自治体の追加をリクエスト」から</li>
     <li><b>共有・バックアップ</b> — 「💾 CSV書出」で保存し、メンバーはそのCSVを「読込」すると同じ状態を再現できます</li>
   </ol>
   <video class="gVideo" src="../assets/poster_demo.mp4?v=2" autoplay muted loop playsinline width="2560" height="1262" aria-label="操作デモ: ピンをタップしてステータスとメモを保存すると色と完了率が更新される"></video>
