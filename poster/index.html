@@ -56,7 +56,7 @@ L.control.scale({ imperial: false }).addTo(map);
    addSetaiLayers() と data/setai_index.json にあり、ポスティングマップと共通。
    右上の🏠ボタンから自治体>区の2階層で選ぶ。
    掲示場ピンより下のペインに描くので、ピンのタップ操作の邪魔はしない。 */
-addSetaiLayers(map, { sessionKey: "posterMap" });
+const setaiCtl = addSetaiLayers(map, { sessionKey: "posterMap" });
 /* ベースマップ・ステータス別表示・地図の位置を、タブを開いている間だけ覚える
    (再読み込みで消えない／閉じると消える) */
 rememberMapSession(map, "posterMap", { baseLayers, overlays: statusLayers });
@@ -189,9 +189,12 @@ document.getElementById("csvOut").onclick = () => {
 };
 
 document.getElementById("resetBtn").onclick = () => {
-  if (!confirm("保存済みのステータス・メモ・読込データをすべて消去してサンプルに戻します。よろしいですか?\n(必要ならまず「CSV書出」でバックアップしてください)")) return;
+  /* 世帯数の選択・色分けも端末に保存するようになったので、ここで一緒に消す
+     (端末に残す以上、利用者が消せる手段を必ず置く) */
+  if (!confirm("保存済みのステータス・メモ・読込データと、表示設定(世帯数の選択)をすべて消去してサンプルに戻します。よろしいですか?\n(必要ならまず「CSV書出」でバックアップしてください)")) return;
   localStorage.removeItem(KEY_BOARDS);
   localStorage.removeItem(KEY_EDITS);
+  setaiCtl.clearSelection();
   location.reload();
 };
 

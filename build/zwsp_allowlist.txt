@@ -1,0 +1,6 @@
+# ゼロ幅文字を許可する箇所(file または file:line)
+# 複製検知の識別子など、意図して埋めているもの
+assets/common.js
+dist/poster_map_standalone.html
+dist/posting_map_standalone.html
+posting/index.html
