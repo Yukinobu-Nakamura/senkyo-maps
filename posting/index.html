@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=35">
+<link rel="stylesheet" href="../assets/common.css?v=38">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -51,11 +51,39 @@
   /* 説明文バー(details化): スマホでは初期折りたたみで地図を広く使う(開閉はJS不要のネイティブ動作) */
   details.samplebar summary{ cursor:pointer; font-weight:700; }
   details.samplebar .introBody{ margin-top:3px; }
+  /* 証紙ビラの警告は「畳める説明」の中に入れてはいけない(スマホでは初期状態で閉じているため)。
+     帯は増やさず、説明バーの先頭=summary に常時表示で置く。赤は「やると罰則」の意味に限定。 */
+  details.samplebar summary .pstAlert{ display:block; text-align:left; font-weight:700;
+    background:#fef2f2; border-left:4px solid #dc2626; color:#7f1d1d;
+    border-radius:5px; padding:5px 8px; margin:0 0 4px; line-height:1.7; }
+  details.samplebar summary .introOpen{ display:block; font-size:12px; }
+  /* 既定の開閉マーカー(▶)は、中身をブロックにした今は赤い警告枠の上に単独で1行ぽつんと出る。
+     開閉の合図は .introOpen の「(タップで開閉)」が担うのでマーカーは消す。 */
+  details.samplebar > summary{ list-style:none; }
+  details.samplebar > summary::-webkit-details-marker{ display:none; }
+  /* ☰ ツール: 狭い画面でボタン帯が何段にも積み上がり、地図と左の編集ツール・一覧・⛶ が
+     画面の外へ落ちて操作できなくなるのを防ぐ。閉じているときは見出しと同じ行に収まる。
+     ※3マップで同じ指定(将来 assets/common.css へ集約してよい) */
+  header.appbar details.toolWrap > summary{ list-style:none; display:inline-block; cursor:pointer;
+    font-size:12px; font-weight:bold; background:rgba(255,255,255,.18); color:#fff;
+    border-radius:8px; padding:6px 10px; }
+  header.appbar details.toolWrap > summary::-webkit-details-marker{ display:none; }
+  header.appbar details.toolWrap > summary:hover{ background:rgba(255,255,255,.32); }
+  header.appbar details.toolWrap[open]{ flex:1 1 100%; }
+  header.appbar details.toolWrap[open] > summary{ margin-bottom:6px; }
+  /* 世帯数パネルが画面の下へ落ちて3割しか見えない問題の対策。狭い/低い画面では
+     画面の下端を基準に開き、パネル全体が必ず画面内に収まるようにする。 */
+  @media (max-width:700px), (max-height:700px){
+    .setaiCtl .stPanel{ position:fixed; right:10px; top:auto; bottom:12px;
+      width:min(268px, calc(100vw - 20px)); max-height:calc(100vh - 110px); }
+  }
 </style>
 </head>
 <body>
 <header class="appbar">
   <h1>📮 ポスティングマップ</h1>
+  <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer" style="align-self:center;" title="政治活動・選挙運動のルール解説(別タブで開きます)">📖 ルールを確認</a>
+  <details class="toolWrap" id="toolWrap" open><summary>☰ ツール</summary>
   <div class="toolbar">
     <label class="filebtn">📂 読込(GeoJSON/GPX)<input type="file" id="gjIn"></label>
     <label class="filebtn">📋 管理表CSV取込<input type="file" id="mgIn"></label>
@@ -67,13 +95,15 @@
     <a class="dlbtn" href="../dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="../" style="align-self:center;">← トップ</a>
   </div>
+  </details>
 </header>
-<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択と色分けは<b>この端末に保存され、次に開いたときもそのまま</b>です)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
+<noscript><div class="samplebar" style="background:#fef2f2; border-bottom:2px solid #dc2626; color:#7f1d1d; font-weight:700;">⚠️ このページは JavaScript が無効だと地図を表示できません。ブラウザの設定で JavaScript を有効にしてください。ルールの解説(読みもの)は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/">📖 選挙と政治活動の歩き方</a> でご覧いただけます。</div></noscript>
+<details class="samplebar" id="introBar" open><summary><span class="pstAlert">🚫 選挙運動用ビラ(<b>証紙ビラ</b>)を郵便受けに<b>投函・郵送するのは禁止</b>です(罰則あり)。このマップは<b>政治活動用ビラ・政党機関紙誌</b>の配布管理用。<b>「チラシお断り」のポスト・立入禁止の建物には入らない。</b></span><span class="introOpen">📖 配れる場所のルールと使い方(タップで開閉)</span></summary><div class="introBody"><b>🚫 証紙ビラを配れるのは ①新聞折込 ②選挙事務所の中 ③個人演説会の会場の中 ④街頭演説の場所での手渡し だけです</b>(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">公選法142条6項・7項</a>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>)。<b>政党の機関紙誌も、選挙期間中は条件つき</b>です(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a>。条件を外れた団体の頒布は<b>100万円以下の罰金</b>)。<b>実施前に所轄の選挙管理委員会へ照会してください。</b><br><b>🚪 現場での線引き</b>: 「チラシお断り」の表示があるポスト、オートロックの内側、「立入禁止」「関係者以外立入禁止」の表示がある敷地・建物には<b>入らない</b>でください(住居侵入・軽犯罪法の問題になります)。管理人・住人に止められたらその場で引き返す。ルールの全体は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer">📖 選挙と政治活動の歩き方</a> へ。<br>左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択と色分けは<b>この端末に保存され、次に開いたときもそのまま</b>です)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>。<b>GitHubの「公開Issue」として投稿されるので、書いた内容は誰でも読めます</b>。必要なのは<b>都道府県と自治体名だけ</b>で、陣営名・候補者名・活動時期・連絡先は書かないでください)。</div></details>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=35"></script>
+<script src="../assets/common.js?v=38"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -164,7 +194,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
   </div>
   <div class="gPane" id="gp2">
     <ol>
-      <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
+      <li>上部の<b>「☰ ツール」</b>を開いて<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
       <li>スマホの記録アプリ等で保存した<b>GPXファイル</b>を選ぶ(複数をまとめた<b>結合GPX</b>も可)</li>
       <li>「〇本のルートを読み込みました」の確認 → つづけて<b>「『済』として記録しますか?」</b>を聞かれます。<b>［OK］=歩き終わった記録として「済」</b>(色は「済」の色・既定は紫)、<b>［キャンセル］=「予定」のまま</b>(従来どおりの赤)。どちらも薄め表示で、あとから図形タップで変更できます</li>
       <li>あとは通常どおり、線をタップして状態・担当・メモを記録</li>
@@ -173,14 +203,14 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
   </div>
   <div class="gPane" id="gp3">
     <ol>
-      <li>まず上部の<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
+      <li>まず上部の<b>「☰ ツール」</b>を開いて<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
       <li>各メンバーが<b>「💾GeoJSON書出」</b>→ファイルを取りまとめ役に送る</li>
       <li>取りまとめ役が<b>「📂読込」</b>で順に読み込む → <b>賢く統合</b>されます(同じ図形は更新が新しい方を採用・重複は増えない)。統合結果を書出して全員に配り直せば完了</li>
       <li>(任意)ファイルの受け渡しなしで共有したいチームは<b>「☁️ 同期」</b>も使えます。<b>仕組み</b>=チームの“共有倉庫”(チームのGoogleスプレッドシート)と送受信して全員のマップを同じ状態にします。<b>メンバーのやること</b>=①代表者から<b>URLと合言葉(トークン)</b>を受け取る→②「☁️ 同期」を押して貼り付ける→③以後は作業の前後に「☁️ 同期」を押すだけ。<b>何度押しても図形は増えません</b>(同じ図形は自動で1つに整理)。<b>代表者のやること</b>=“倉庫”の設置(約10分・無料。手順: <a href="https://github.com/Yukinobu-Nakamura/senkyo-maps/blob/main/templates/team-sync/README.md" target="_blank" rel="noopener noreferrer">templates/team-sync の設置手順</a>)→URLと合言葉をメンバーに配布。入力し直したいときは「☁️ 同期」を<b>Shift+クリック(PC)または長押し(スマホ)</b></li>
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイール・ダブルタップとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上の<b>「全消去」</b>をどうぞ。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイール・ダブルタップとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上部の<b>「☰ ツール」</b>の中の<b>「全消去」</b>をどうぞ。<br><b>📂読込・📋管理表CSV取込・🏠世帯数CSV・💾GeoJSON書出・👤名前・☁️同期・全消去</b>は、画面がせまいときは<b>上部の「☰ ツール」の中</b>にまとまっています。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -705,12 +735,57 @@ function syncSetup() {
     alert("チーム同期を解除しました。");
     return null;
   }
+  /* 送信先は「チーム自身が設置した Google Apps Script」だけに限る。
+     偽のURLを貼られると、担当者名・メモを含む全データがそこへ送られ、
+     返り値で手元の図形を消させることもできる(READMEにも「これ以外のあて先を入れてはいけません」と書いた)。 */
+  if (!/^https:\/\/script\.google\.com\/(a\/macros\/[^/]+|macros)\/s\/[\w-]+\/exec$/.test(url.trim())) {
+    alert("⚠️ このURLは設定できません。\n\n" +
+      "チーム同期のあて先は、チーム自身が設置した Google Apps Script だけです。\n" +
+      "https://script.google.com/macros/s/…/exec の形のURLを貼り付けてください。\n" +
+      "(他のあて先を入れると、担当者名やメモを含むデータがその相手に送られます)");
+    return null;
+  }
   const token = prompt("② 合言葉(トークン。代表者から配られた文字列を貼り付け)", cur.token || "");
   if (token === null) return null;
   const cfg = { url: url.trim(), token: (token || "").trim() };
   saveLocal(KEY_SYNC, cfg);
   alert("チーム同期を設定しました。「☁️ 同期」を押すたびに送受信します。");
   return cfg;
+}
+
+/* 同期の応答を読む。JSON以外(Googleのログイン/エラーのHTML)が返ったときは、
+   原因の分からない「Unexpected token <」ではなく何を直せばよいかを出す。
+   ・デプロイ設定(アクセスできるユーザー=全員 / 新しいデプロイ)が最頻の原因
+   ・ここで失敗しても手元のデータは消えない(送信できていないだけ) */
+async function syncReadJson(res, where) {
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const text = await res.text();
+  const looksHtml = /^\s*(<!doctype|<html)/i.test(text) || ct.indexOf("text/html") >= 0;
+  if (looksHtml) {
+    throw new Error(
+      `${where}でGoogleから「画面(HTML)」が返ってきました。合言葉ではなく\n` +
+      "【デプロイの設定】が原因です。代表者に次を確認してもらってください。\n" +
+      "  ・[デプロイを管理]→[編集] で「アクセスできるユーザー: 全員」\n" +
+      "  ・「次のユーザーとして実行: 自分」\n" +
+      "  ・バージョンを「新バージョン」にして再デプロイ\n" +
+      "※手元のデータは消えていません(送信できなかっただけです)。");
+  }
+  if (!res.ok) {
+    throw new Error(`${where}でエラーが返りました(HTTP ${res.status})。\n` +
+      "時間をおいて再度お試しください。※手元のデータは消えていません。");
+  }
+  try { return JSON.parse(text); }
+  catch (e) {
+    throw new Error(`${where}の応答を読み取れませんでした(${ct || "形式不明"})。\n` +
+      "URLが https://script.google.com/macros/s/…/exec の形か確認してください。\n" +
+      "※手元のデータは消えていません。");
+  }
+}
+
+/* 受信用URL(旧版バックエンド向けのGETフォールバック)。
+   既にクエリが付いたURLを貼られても壊れないよう ? / & を使い分ける */
+function syncGetUrl(url, token) {
+  return url + (url.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(token);
 }
 
 let syncBusy = false;
@@ -733,19 +808,42 @@ async function teamSync() {
     });
     persist();
     const tombs = loadLocal(KEY_TOMB, []) || [];
+    /* 送信は小数6桁(約0.1m)に丸める。保存先スプレッドシートの1セル上限(5万文字)対策と
+       通信量削減。1本で上限を超えるルートは、そのルートだけ送らない(同期全体を落とさない) */
+    const round6 = (c) => Array.isArray(c[0]) ? c.map(round6) : [Math.round(c[0] * 1e6) / 1e6, Math.round(c[1] * 1e6) / 1e6];
+    const feats = shapesLayer.toGeoJSON().features.map(f => {
+      const g = f.geometry;
+      if (g && g.coordinates) g.coordinates = round6(g.coordinates);
+      return f;
+    });
+    const sendFeats = feats.filter(f => JSON.stringify(f).length <= 45000);
+    const tooBig = feats.length - sendFeats.length;
+    if (tooBig) {
+      alert(`⚠️ 点数の多いルートが ${tooBig} 本あり、チーム同期の保存先(Googleスプレッドシート)の1セル上限を超えます。\nこのルートは同期されません(ほかはこのまま同期します)。\n該当ルートは「💾 GeoJSON書出」でファイルとして渡してください。`);
+    }
     /* 1) 送信(text/plainでプリフライト回避) */
     const postRes = await fetch(cfg.url, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ token: cfg.token, features: shapesLayer.toGeoJSON().features, deleted: tombs }),
+      body: JSON.stringify({ token: cfg.token, features: sendFeats, deleted: tombs }),
     });
-    const pr = await postRes.json();
-    if (pr.error) throw new Error(pr.error === "unauthorized" ? "トークンが一致しません" : pr.error);
+    const pr = await syncReadJson(postRes, "送信");
+    if (pr.error) throw new Error(pr.error === "unauthorized"
+      ? "トークンが一致しません"
+      : (String(pr.error).indexOf("setup:") === 0
+        ? "倉庫の設置が未完了です。代表者に次を依頼してください。\n" + String(pr.error).replace(/^setup:\s*/, "")
+        : pr.error));
     saveLocal(KEY_TOMB, []); /* 削除記録はサーバに反映済み */
-    /* 2) 受信して統合 */
-    const getRes = await fetch(cfg.url + "?token=" + encodeURIComponent(cfg.token));
-    const gj = await getRes.json();
-    if (gj.error) throw new Error(gj.error === "unauthorized" ? "トークンが一致しません" : gj.error);
+    /* 2) 受信して統合。新しいCode.gsは送信の応答に全状態を含むのでGETは不要
+          (合言葉がURLに載らない)。旧版のCode.gsのままのチームのためにGETへ退避する */
+    let gj = pr;
+    if (!Array.isArray(pr.features)) {
+      const getRes = await fetch(syncGetUrl(cfg.url, cfg.token));
+      gj = await syncReadJson(getRes, "受信");
+      if (gj.error) throw new Error(gj.error === "unauthorized" ? "トークンが一致しません" : gj.error);
+    } else if (Array.isArray(pr.deletedList)) {
+      gj = { type: "FeatureCollection", features: pr.features, deleted: pr.deletedList };
+    }
     const r = mergeGeoJson(gj);
     /* サーバ側で削除済みの図形をローカルからも削除(削除時刻がこちらの更新より新しい場合) */
     let removed = 0;
@@ -761,9 +859,19 @@ async function teamSync() {
       removed = toRemove.length;
     }
     persist();
-    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件` + (r.cleaned ? `\n🧹 重複していた図形 ${r.cleaned} 件を自動整理しました(何度同期しても増えません)` : ""));
+    /* 競合の採否は「更新時刻の新しい方」なので、端末の時計がずれていると
+       その人の変更だけが常に勝つ/反映されない、という形で記録が静かに失われる。
+       サーバ側の時刻と5分以上ずれていたら警告する(エラーにはならないため) */
+    const skew = pr.serverNow && Math.abs(Number(pr.serverNow) - Date.now()) > 5 * 60 * 1000;
+    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件`
+      + (r.cleaned ? `\n🧹 重複していた図形 ${r.cleaned} 件を自動整理しました(何度同期しても増えません)` : "")
+      + (pr.skippedBig ? `\n⚠️ 点数が多すぎるルート ${pr.skippedBig} 本は保存先の上限を超えるため同期していません(ファイルで渡してください)` : "")
+      + (skew ? "\n\n⚠️ この端末の時計が5分以上ずれています。チーム同期は「更新時刻の新しい方」で勝ち負けを決めるため、ずれたままだと〈あなたの変更が反映されない〉か〈他の方の変更を上書きする〉ことがあります。端末の日付と時刻を「自動」に設定してから、もう一度同期してください。" : ""));
+    if (!pr.ver) {
+      showAppNotice("ℹ️ <b>チーム同期の『倉庫』が古い版です。</b>代表者に <code>templates/team-sync</code> の Code.gs を貼り直して再デプロイしてもらうと、合言葉がURLに載らなくなります(動作は今のままでも支障ありません)。", "warn");
+    }
   } catch (err) {
-    alert("同期に失敗しました: " + err.message + "\n(URL・トークン・インターネット接続を確認してください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
+    alert("同期に失敗しました: " + err.message + "\n\n(URL・合言葉・インターネット接続をご確認ください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
   } finally {
     syncBusy = false;
     btn.textContent = "☁️ 同期";
@@ -797,11 +905,16 @@ document.getElementById("nameBtn").onclick = () => {
 
 document.getElementById("resetBtn").onclick = () => {
   /* 表示設定(状態の色・世帯数の選択と色分け)も端末に保存するようになったので、
-     ここで一緒に消す。端末を人に貸すときなどに「全部消した」が本当に全部になる */
-  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択と色分け)を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+     ここで一緒に消す。端末を人に貸すときなどに「全部消した」が本当に全部になる。
+     ガイドは「共用端末では全消去を」と案内しているので、👤名前(実名)と
+     ☁️同期の設定(URL・合言葉)も必ず一緒に消す。消し漏れがあると案内が虚偽になる。 */
+  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択と色分け)に加えて、\n👤 名前と ☁️ 同期の設定(URL・合言葉)も消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください。同期は再設定が必要になります)")) return;
   shapesLayer.clearLayers();
   localStorage.removeItem(KEY_SHAPES);
   localStorage.removeItem(KEY_TOMB);
+  /* 共用端末に実名と同期トークンが残らないようにする */
+  localStorage.removeItem(KEY_NAME);
+  localStorage.removeItem(KEY_SYNC);
   manageRows = [];
   manageLayer.clearLayers();
   localStorage.removeItem(KEY_MANAGE);
@@ -1127,6 +1240,16 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
    openReqModal() はポスターマップと共通のため assets/common.js にある。
    フォームに切り替える場合も common.js の REQ_FORM_URL を変えるだけ。 */
 document.getElementById("reqOpen").onclick = (ev) => { ev.preventDefault(); openReqModal(); };
+
+/* ☰ ツールの開閉。狭い画面では閉じた状態で始める(ヘッダが何段にも積み上がると
+   #map が潰れ、左の編集ツール・一覧・⛶ が画面の外へ落ちて操作できなくなる)。
+   開閉でヘッダの高さが変わるので、そのたびに地図のサイズを再計算させる。 */
+(function () {
+  const tw = document.getElementById("toolWrap");
+  if (!tw) return;
+  if (window.matchMedia("(max-width: 1024px)").matches) tw.removeAttribute("open");
+  tw.addEventListener("toggle", () => map.invalidateSize());
+})();
 
 /* 起動 */
 const saved = loadLocal(KEY_SHAPES, null);

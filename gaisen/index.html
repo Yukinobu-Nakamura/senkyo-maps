@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=35">
+<link rel="stylesheet" href="../assets/common.css?v=38">
 <style>
   /* 種別ピン(絵文字divIcon) */
   .gm-pin{
@@ -28,11 +28,27 @@
   .addbar.on{ display:block; }
   #addBtn.on{ background:#c62828; color:#fff; }
   .pcaution{ color:#c62828; font-size:12px; margin-top:4px; }
+  /* 期日前投票所・駅前の注意文(条文つき)を入れたことでポップアップが地図より高くなり、
+     320×568 では上端(名称・住所・種別の選択)が地図の外へ出て読めなくなっていた。
+     中身をスクロールさせて、必ず地図の中に収める(実測: 490px → 地図高に収まる)。 */
+  .leaflet-popup-content{ max-height:min(42vh, 300px); overflow-y:auto; overscroll-behavior:contain; }
+  /* ☰ ツール: 狭い画面でボタン帯が何段にも積み上がり、地図と左の⛶・現在地・検索が
+     画面の外へ落ちて操作できなくなるのを防ぐ。閉じているときは見出しと同じ行に収まる。
+     ※3マップで同じ指定(将来 assets/common.css へ集約してよい) */
+  header.appbar details.toolWrap > summary{ list-style:none; display:inline-block; cursor:pointer;
+    font-size:12px; font-weight:bold; background:rgba(255,255,255,.18); color:#fff;
+    border-radius:8px; padding:6px 10px; }
+  header.appbar details.toolWrap > summary::-webkit-details-marker{ display:none; }
+  header.appbar details.toolWrap > summary:hover{ background:rgba(255,255,255,.32); }
+  header.appbar details.toolWrap[open]{ flex:1 1 100%; }
+  header.appbar details.toolWrap[open] > summary{ margin-bottom:6px; }
 </style>
 </head>
 <body>
 <header class="appbar">
   <h1>📢 街宣マップ</h1>
+  <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer" style="align-self:center;" title="政治活動・選挙運動のルール解説(別タブで開きます)">📖 ルールを確認</a>
+  <details class="toolWrap" id="toolWrap" open><summary>☰ ツール</summary>
   <div class="toolbar">
     <button id="addBtn" title="地図をタップして地点を追加">📍 地点を追加</button>
     <button id="loadSuginami" title="使い方の見本として、同梱の杉並区データ(小中学校・幼稚園・保育園・病院ほか)を読み込む">🏫 例として杉並区データを見る</button>
@@ -41,19 +57,27 @@
     <button id="resetBtn">状態リセット</button>
     <a href="../" style="align-self:center;">← トップ</a>
   </div>
+  </details>
 </header>
-<div class="samplebar" id="sampleBar">📍 まだ地点がありません。<b>「📂 CSV読込」で自分の地域の施設データ</b>(施設名・住所・緯度経度・種別の列)を取り込むか、<b>「🏫 例として杉並区データを見る」</b>で使い方の見本を表示できます。街宣好適地点は「📍 地点を追加」で足せます。</div>
+<noscript><div class="samplebar" style="background:#fef2f2; border-bottom:2px solid #dc2626; color:#7f1d1d; font-weight:700;">⚠️ このページは JavaScript が無効だと地図を表示できません。ブラウザの設定で JavaScript を有効にしてください。ルールの解説(読みもの)は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/">📖 選挙と政治活動の歩き方</a> でご覧いただけます。</div></noscript>
+<div class="samplebar" id="sampleBar">📍 まだ地点がありません。上部の<b>「☰ ツール」</b>を開いて、<b>「📂 CSV読込」で自分の地域の施設データ</b>(施設名・住所・緯度経度・種別の列)を取り込むか、<b>「🏫 例として杉並区データを見る」</b>で使い方の見本を表示できます。街宣好適地点は同じく「📍 地点を追加」で足せます。<br><span style="font-size:11px;color:#6b7280">見本データの出典: 杉並区ほかの公表資料をもとに作成(加工あり)。座標は国土地理院 住所検索APIによる推定を含みます。網羅性・最新性は保証しません。</span></div>
 <div class="addbar" id="addBar">📍 追加モード：地図上のタップした場所に地点を追加します。もう一度ボタンを押すと解除します。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=35"></script>
+<script src="../assets/common.js?v=38"></script>
 <script>
 "use strict";
 
 /* ===== 種別定義 =====
    care:true = 音声配慮地点(拡声機の音量・時間に配慮すべき場所)。赤ハローで強調。
-   公選法140条の2: 学校・病院等の周辺では静穏の保持に努める。 */
+   ⚠️ 法令上の静穏保持の努力義務(公選法140条の2第2項)が課されるのは
+      「選挙運動のための連呼行為をする者」で、対象施設は
+      学校(学校教育法1条の学校＋幼保連携型認定こども園)・病院・診療所その他の療養施設。
+      認可保育所・予備校・学習塾・一般の福祉施設は同項の対象ではなく、
+      平時の街宣にも同項は適用されない(罰則もない)。
+      本マップがこれらも同じ care:true で扱っているのは、近隣トラブル・騒音の苦情・
+      自治体の条例への配慮という運用上の理由。条文の射程と混同しないこと。 */
 const CATS = [
   // 🔇 音声配慮地点(静穏に配慮 — 目立たせる)
   { id:"youchien", label:"幼稚園",         emoji:"🧒", color:"#e53935", care:true },
@@ -63,14 +87,15 @@ const CATS = [
   { id:"medical",  label:"医療・福祉施設", emoji:"⚕️", color:"#00897b", care:true },
   { id:"yobiko",   label:"予備校・学習塾", emoji:"📚", color:"#3949ab", care:true },
   // 📢 街宣好適地点(人の滞留 — 公共空間が主軸)
-  { id:"station",  label:"駅前",           emoji:"🚉", color:"#1e88e5", care:false },
+  { id:"station",  label:"駅前",           emoji:"🚉", color:"#1e88e5", care:false,
+    caution:"駅構内・改札前・鉄道事業者が管理する駅前広場やデッキは「停車場その他鉄道地内」に当たることがあり、選挙運動のための演説・連呼はできません(公選法166条2号。違反は2年以下の拘禁刑または50万円以下の罰金)。立つ位置が公道上かどうかを事前に確認してください。" },
   { id:"shoten",   label:"商店街",         emoji:"🛍️", color:"#00acc1", care:false },
   { id:"park",     label:"公園",           emoji:"🌳", color:"#43a047", care:false },
   { id:"store",    label:"大型店前",       emoji:"🏬", color:"#7cb342", care:false },
   { id:"spot",     label:"その他の滞留地点", emoji:"📍", color:"#546e7a", care:false },
   // 🗳️ 投票所(選挙時の人の流れの目印)
   { id:"kijitsumae", label:"期日前投票所",   emoji:"🗳️", color:"#6d4c41", care:false,
-    caution:"投票所の入口を含む建物・敷地内やその近接では選挙運動が制限されます(公選法)。近づく際は距離・音量に配慮してください。" },
+    caution:"①期日前投票所が庁舎・学校・区民センターなど「国または地方公共団体が所有し又は管理する建物」に置かれている場合、その建物の中では選挙運動のための演説・連呼はできません(公選法166条1号。個人演説会等の開催は除く)。商業施設など民間の建物に置かれている場合は同号の対象外ですが、建物・敷地は施設管理者のものなので、立入り・街宣には管理者の了解が必要です。②期日前投票の期間中も、法律で許された方法であれば選挙運動はできます。③投票に向かう方の妨げにならない距離と音量に。" },
   // 参考(私有地・要配慮)
   { id:"mansion",  label:"マンション(参考)", emoji:"🏢", color:"#9e9e9e", care:false,
     caution:"敷地内は私有地です。管理者の許可なく敷地内での街宣・立入はできません。前面の公道からの配慮に留めてください。" },
@@ -107,13 +132,13 @@ L.control.scale({ imperial:false }).addTo(map);
 
 addGuideControl(map, "📢 街宣マップの使い方",
   `<ol>
-    <li><b>音声配慮地点を表示</b> — 🧒幼稚園・👶保育園・🏫学校・🏥病院・⚕️医療福祉・📚予備校/塾は<b style="color:#c62828">赤いふちで強調</b>。街宣車の音量・時間に配慮する目印です(公選法140条の2)。</li>
-    <li><b>街宣好適地点を足す</b> — 🚉駅前・🛍️商店街・🌳公園・🏬大型店前など<b>人が滞留する公共空間</b>を「📍地点を追加」で登録。</li>
+    <li><b>音声配慮地点を表示</b> — 🧒幼稚園・👶保育園・🏫学校・🏥病院・⚕️医療福祉・📚予備校/塾は<b style="color:#c62828">赤いふちで強調</b>。街宣車の音量・時間に配慮する目印です。<br><small>※法令上の静穏保持の努力義務(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_140_2" target="_blank" rel="noopener noreferrer">公選法140条の2第2項</a>。街頭演説は164条の6第2項で準用)が定めるのは、<b>選挙運動のための連呼行為をする者</b>が、<b>学校(学校教育法1条の学校＝幼稚園・小中高・特別支援学校・大学等＋幼保連携型認定こども園)・病院・診療所その他の療養施設</b>の周辺で静穏の保持に<b>努める</b>という内容です(罰則はありません)。<b>認可保育所・予備校・学習塾・一般の福祉施設は同項の対象ではなく</b>、また<b>平時の街宣には同項は適用されません</b>。本マップはこれらも<b>近隣トラブル・騒音の苦情・自治体の条例への配慮</b>の観点から同じ扱いで表示しています。</small></li>
+    <li><b>街宣好適地点を足す</b> — 🚉駅前・🛍️商店街・🌳公園・🏬大型店前など<b>人が滞留する公共空間</b>を、上部の<b>「☰ ツール」</b>を開いて<b>「📍地点を追加」</b>で登録。<br><b style="color:#c62828">⚠️ ただし駅は注意</b> — 「<b>停車場その他鉄道地内</b>」(駅構内・改札前・鉄道事業者が管理する駅前広場やデッキ)では、選挙運動のための<b>演説・連呼が禁止</b>されています(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_166" target="_blank" rel="noopener noreferrer">公選法166条2号</a>。違反は2年以下の拘禁刑または50万円以下の罰金)。<b>立つ位置が公道上かどうか</b>を必ず確認してください。国・地方公共団体が所有・管理する建物の中(同1号。個人演説会等を開く場合を除く)、病院・診療所その他の療養施設(同3号)も同じく禁止です。</li>
     <li><b>地点をタップ</b> — 種別・名称・メモを編集/削除できます。</li>
-    <li><b>共有・バックアップ</b> — 「💾CSV書出」で保存し、メンバーはそのCSVを「📂読込」すると同じ地点を再現できます。</li>
-    <li><b>区の情報から一括で入れる</b> — 施設名・住所・緯度経度・種別の列を持つCSVを「📂読込」で取り込めます。</li>
+    <li><b>共有・バックアップ</b> — 上部の<b>「☰ ツール」</b>の中の「💾CSV書出」で保存し、メンバーはそのCSVを同じく「📂CSV読込」すると同じ地点を再現できます。</li>
+    <li><b>区の情報から一括で入れる</b> — 施設名・住所・緯度経度・種別の列を持つCSVを「☰ ツール」の「📂CSV読込」で取り込めます。</li>
   </ol>
-  <div class="gNote">🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。左上の<b>🔍で全国の地名検索</b>ができます。データはこの端末(ブラウザ)内にのみ保存されます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります。「📍地点を追加」モード中は切り替わりません)。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。</div>`,
+  <div class="gNote">⚠️ <b>二つの選挙が重なるときの300m規制</b> — 一方の選挙の選挙運動期間が他方の選挙の<b>投票日</b>にかかる場合、<b>その投票日当日、投票所を閉じる時刻まで、投票所の入口から300メートル以内</b>では、選挙運動のための演説会(演説を含む)・街頭演説・選挙運動用自動車の上での連呼ができません(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_165_2" target="_blank" rel="noopener noreferrer">公選法165条の2</a>。違反は2年以下の拘禁刑または50万円以下の罰金)。統一地方選など選挙が近接する年は、<b>相手の選挙の投票日の投票所の位置</b>を先に確認してください。<b>期日前投票所に同条が及ぶかは条文から明らかでないため、所轄の選挙管理委員会へ照会を。</b><br>🏢マンションは<b>私有地</b>です。敷地内での街宣・立入は管理者の許可が必要で、前面の公道からの配慮に留めてください。投票率が高い等の理由で特定の集合住宅を狙い撃ちする運用は避け、<b>公共空間の滞留地点を主軸</b>にしてください。左上の<b>🔍で全国の地名検索</b>ができます。データはこの端末(ブラウザ)内にのみ保存されます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります。「📍地点を追加」モード中は切り替わりません)。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。</div>`,
   "gaisenMap");
 
 /* 凡例(✕でたためる。項目数が多く地図を覆うため。中身の作り方は共通の addBoxCollapse を参照) */
@@ -304,9 +329,13 @@ onFileSelected(document.getElementById("csvIn"), (text) => {
 /* 例示: 同梱の杉並区データを読み込む(使い方の見本) */
 const suginamiBtn = document.getElementById("loadSuginami");
 if(suginamiBtn) suginamiBtn.onclick = async () => {
+  /* 出典の表示義務(著作権法48条1項・政府標準利用規約)。見本データは第三者の公表資料由来なので、
+     読み込む時点で出どころ・加工した旨・網羅性の限界を必ず示す。文言を削らないこと */
+  const src = "出典: 杉並区ほかの公表資料をもとに作成(加工あり)。座標は国土地理院 住所検索APIによる推定を含みます。"
+    + "\n※網羅性・最新性は保証しません。期日前投票所は選挙ごとに変わるため、過去の選挙時点のものが含まれます(必ず選管の最新の公表資料でご確認ください)。";
   const msg = points.length
-    ? "現在の地点に、例として杉並区の音声配慮施設データを『追加』します。よろしいですか?"
-    : "例として杉並区の音声配慮施設データ(小中学校・幼稚園・保育園・病院ほか)を読み込みます。\n※自分の地域で使うときは「📂 CSV読込」でご自身の施設データを取り込んでください。";
+    ? "現在の地点に、例として杉並区の音声配慮施設データを『追加』します。よろしいですか?\n\n" + src
+    : "例として杉並区の音声配慮施設データ(小中学校・幼稚園・保育園・病院ほか)を読み込みます。\n※自分の地域で使うときは「📂 CSV読込」でご自身の施設データを取り込んでください。\n\n" + src;
   if(!confirm(msg)) return;
   try{
     const res = await fetch("../data/suginami_gaisen.csv");
@@ -345,6 +374,16 @@ document.getElementById("resetBtn").onclick = () => {
     map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.long])), { padding:[30,30] });
   }
   renderPoints();
+})();
+
+/* ☰ ツールの開閉。狭い画面では閉じた状態で始める(ヘッダが何段にも積み上がると
+   #map が潰れ、左の⛶・現在地・地名検索が画面の外へ落ちて操作できなくなる)。
+   開閉でヘッダの高さが変わるので、そのたびに地図のサイズを再計算させる。 */
+(function () {
+  const tw = document.getElementById("toolWrap");
+  if (!tw) return;
+  if (window.matchMedia("(max-width: 1024px)").matches) tw.removeAttribute("open");
+  tw.addEventListener("toggle", () => map.invalidateSize());
 })();
 
 /* 同じマップを別タブでも開いているときの上書き事故を警告する */

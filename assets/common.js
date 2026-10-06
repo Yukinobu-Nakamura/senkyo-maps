@@ -11,9 +11,13 @@ function createBaseLayers() {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   });
+  /* 全国最新写真(シームレス)は空中写真と人工衛星画像の合成レイヤで、地理院タイル一覧の
+     備考欄が第三者クレジット(GRUS画像=© Axelspace 等)の表示を求めている。
+     「© 国土地理院」だけでは権利者表示が欠ける。文言を増やすときは推測で書かず、
+     必ず一覧 https://maps.gsi.go.jp/development/ichiran.html の備考欄を写すこと。 */
   const gsiPhoto = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", {
     maxZoom: 18,
-    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">地理院タイル(全国最新写真シームレス)</a> / 一部にGRUS画像(&copy; Axelspace)を使用',
   });
   return { "地理院地図(淡色)": gsiPale, "OpenStreetMap": osm, "航空写真(地理院)": gsiPhoto };
 }
@@ -43,15 +47,20 @@ function addLocateControl(map) {
    ガイド(❓ボタン)の中に自動で差し込む。文面はここ1か所を直せば全マップに反映される。
    ・読み手が「必要な1問だけ読む」使い方なので、質問はアコーディオン(details)にして
      開いた直後は見出しだけ見える状態にする(NN/g: 段階的開示は2段まで・見出しで中身を予告する)
-   ・「⬇️ アプリを保存」が無いページでは .faqDl を、「☁️ 同期」が無いページでは .teamSync を自動で外す */
+   ・「⬇️ アプリを保存」が無いページでは .faqDl を、「☁️ 同期」が無いページでは .teamSync を自動で外す
+   ・.teamSync は「ポスティングマップだけにある機能」の目印として使う(☁️同期の有無で判定)。
+     👤名前・GPX取込・図形タップの地名取得・🏠世帯数CSVの位置推定もポスティング専用なので、
+     それらに触れる文もこのクラスに入れる(ポスター・街宣で「無いボタン」の案内が出ないように)
+   ・件数(「○問」)はここに書かない。ページごとに .faqDl / .teamSync が外れて実数が変わるため、
+     buildGuideMenu 側で実数から算出している(固定値を書くと必ずずれる) */
 const FAQ_HTML = `
-<p class="faqLead">このアプリは<b>データを預かる場所を持たない地図</b>です。描いた内容は<b>あなたの端末の中だけ</b>に保存され、インターネット上には送られません。だから<b>他の人にも作成者にも見えません</b>。人に渡したいときだけ「💾 書出」でファイルにして渡します。</p>
+<p class="faqLead">このアプリは<b>作成者側にデータを預かる場所を持たない地図</b>です。描いた内容は<b>あなたの端末の中</b>に保存され、<b>作成者には送られません</b>(作成者はサーバーを持っていません)。人に渡したいときだけ「💾 書出」でファイルにして渡します。<br><span class="faqNote">※ただし、<b>地図を表示するとき</b>・<b>図形を描いた/タップして地名を自動表示するとき</b>・<b>🔍地名検索や🏠世帯数CSVの位置を自動推定するとき</b>は、国土地理院のサーバーへ座標や地名の文字を問い合わせます。また<b>「☁️ 同期」を設定した場合だけは、図形・担当者名・メモ・登録者名がチーム自身のGoogleスプレッドシートへ送信されます</b>。どの操作がどこへ通信するかは、下の「どこに通信しますか?」をご覧ください(そのページに無い機能の通信は起きません)。</span></p>
 <div class="faqTools"><button type="button" class="faqAll">すべて開く</button></div>
 
 <details class="faqItem"><summary>ダウンロードせず、URLのまま使って大丈夫?</summary><div class="faqA"><b>大丈夫です。むしろそれが基本の使い方です。</b>URLを開くと、そのつど<b>まっさらなアプリ</b>が読み込まれ、あなたが描いた内容はその端末の中から復元されます。スマホなら共有ボタン →「ホーム画面に追加」で、アプリのように1タップで開けます。</div></details>
 
 <details class="faqItem"><summary>描いた区域やルートは、他の人に見えますか?</summary><div class="faqA">見えません。同じURLを他の人が開いても、その人の画面は<b>白紙</b>です。<br>
-<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから「全消去(状態リセット)」しておくと安心です。</span></div></details>
+<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから<b>画面上部の消去/リセットのボタン</b>を押してください(図形・管理表・表示設定が消えます)。<span class="teamSync">このボタンでは<b>👤名前(実名)と ☁️同期の設定(URLと合言葉)も一緒に消えます</b>。消さずに端末を渡すと、次に使う人が「☁️ 同期」を押すだけでチーム全員の区域・ルート・担当者名・メモを見られます(同期を使い続ける場合は、あとでURLと合言葉をもう一度入れ直してください)。</span></span></div></details>
 
 <details class="faqItem"><summary>データはどこに保存されていますか?</summary><div class="faqA">端末の<b>ブラウザの中</b>です。写真のように「ファイル」として残るわけではありません。取り出したいときは「💾 書出」を押すとファイルになります。</div></details>
 
@@ -62,7 +71,8 @@ const FAQ_HTML = `
 
 <details class="faqItem"><summary>電波のないところでも使えますか?</summary><div class="faqA">使えません。地図そのものを毎回インターネットから取り寄せているため、保存したファイル版でも通信が必要です。</div></details>
 
-<details class="faqItem"><summary>GPX(歩いた記録)を取り込むと、どこに入りますか?</summary><div class="faqA">その端末の中に入ります(ネットには送られません)。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。</div></details>
+<details class="faqItem teamSync"><summary>GPX(歩いた記録)を取り込むと、どこに入りますか?</summary><div class="faqA">その端末の中に入ります。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。<br>
+<span class="faqNote">※取り込んだルートをタップすると地名が自動表示されます。このとき<b>そのルートの中心の緯度・経度</b>だけを国土地理院へ問い合わせます(歩いた全地点を送るわけではありません)。また<b>「☁️ 同期」を設定している場合は、取り込んだルートもチームの共有先へ送信されます</b>。</span></div></details>
 
 <details class="faqItem"><summary>保存したデータが消えることはありますか?</summary><div class="faqA">あります。次の4つに注意してください。
 <ol class="faqList">
@@ -94,8 +104,24 @@ const FAQ_HTML = `
 </ol>
 <span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div></details>
 
-<details class="faqItem"><summary>自分のデータが作成者や他のチームに送られることはありますか?</summary><div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
-<span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div></details>
+<details class="faqItem teamSync"><summary>選挙運動用ビラ(証紙ビラ)は投函できますか?</summary><div class="faqA"><b>できません。</b>選挙運動用ビラ(証紙ビラ)を郵便受けに<b>投函・郵送することは禁止</b>されています。配れるのは<b>①新聞折込 ②選挙事務所の中 ③個人演説会の会場の中 ④街頭演説の場所での手渡し</b>の4つだけです(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">公選法142条6項・7項</a>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>)。このマップは<b>政治活動用ビラ・政党機関紙誌</b>の配布管理に使ってください。<br>
+<span class="faqNote">※政党の機関紙誌も、<b>選挙期間中は条件つき</b>です(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a>。条件を外れた団体の頒布は100万円以下の罰金)。<b>実施前に所轄の選挙管理委員会へ照会してください。</b>「チラシお断り」のポスト・立入禁止の建物には入らないでください。ルールの全体は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer">📖 選挙と政治活動の歩き方</a> へ。</span></div></details>
+
+<details class="faqItem"><summary>自分のデータが作成者や他のチームに送られることはありますか?</summary><div class="faqA"><b>作成者には送られません。</b>作成者はデータを預かるサーバーを持っていません。他のチームにも送られません。<br>
+<span class="faqNote">※ただし「端末の外に何も出ない」わけではありません。<b>地図の画像の取り寄せ</b>・<b>🔍地名検索</b><span class="teamSync">・<b>図形を描いた/タップしたときの地名の自動取得</b>・<b>🏠世帯数CSVの位置の自動推定</b></span>では、国土地理院のサーバーへ座標や文字を問い合わせます。<span class="teamSync">また<b>「☁️ 同期」を設定した場合だけ</b>、チーム自身が用意した保存先(チームのGoogleスプレッドシート)に図形・担当者名・メモ・登録者名が送られます(設定しなければ通信しません)。</span>内訳は次の項目をご覧ください。</span></div></details>
+
+<details class="faqItem"><summary>どこに通信しますか?(送信先の一覧)</summary><div class="faqA">このアプリが通信するのは次だけです。<span class="teamSync"><b>担当・メモ・登録者名が端末の外に出るのは、最後の「☁️ 同期」を自分で設定したときだけ</b>です。</span>
+<ol class="faqList">
+<li><b>地図の画像</b> — 国土地理院／OpenStreetMap。見ている範囲の画像を取り寄せます</li>
+<li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
+<li><b>世帯数などの公開データ</b> — このサイト自身</li>
+<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>を送ります</li>
+<li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
+<li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
+<li class="teamSync"><b>☁️ 同期(設定したときだけ)</b> — <b>チーム自身が用意したGoogleスプレッドシート</b>。区域・ルートの座標と<b>担当・メモ・登録者名</b>を送ります。設定しなければ通信しません</li>
+<li class="teamSync"><b>未収録自治体の追加リクエスト(自分でボタンを押したときだけ)</b> — GitHub。<b>作成者のリポジトリの「公開Issue」</b>として投稿されるので、<b>書いた内容は誰でも読めます</b>。送られるのは入力した<b>都道府県・自治体名</b>などで、地図に描いた内容は送りません</li>
+</ol>
+<span class="faqNote">※第三者の個人情報(氏名・住所等)をメモ欄に書く場合は、上の送信先に出ることを前提にご判断ください。</span></div></details>
 `;
 
 /* ===== 👥 チームでの回し方(1枚) =====
@@ -173,11 +199,16 @@ function buildGuideMenu(panel) {
     panes.push(d);
   };
   addPane("gTeam", "👥 チームでの回し方", "配る→編集→返す→統合の手順と注意3つ", TEAM_HTML);
-  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(15問)", FAQ_HTML);
+  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと", FAQ_HTML);
 
   /* そのページに無い機能の項目は出さない */
   if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
   if (!document.getElementById("syncBtn")) panel.querySelectorAll(".teamSync").forEach((el) => el.remove());
+
+  /* 件数はページごとに変わる(上で .faqDl / .teamSync を外すため)。必ず実数から出す。
+     固定文字列で書くと、問を増減したとき・街宣マップ(⬇️保存が無い)で必ずずれる */
+  const faqPane = panel.querySelector("#gFaq");
+  if (faqPane) faqPane.dataset.desc = "保存・共有・iPhoneのこと(" + faqPane.querySelectorAll(".faqItem").length + "問)";
 
   /* 目次 */
   const menu = document.createElement("div");
@@ -446,6 +477,17 @@ function showAppNotice(html, level, actions) {
      mini   : 畳んだときにタブへ縦書きで出す短いラベル(例 "🏠 世帯数")
      key    : 開閉状態を覚えるキー(null なら覚えない=毎回開いた状態から)
      render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
+/* innerHTML に入れる前の共通エスケープ(& < > " ' をすべて実体参照に)。
+   属性値・テキストのどちらに入れても安全な唯一の関数にする。
+   世帯数パネルの絞り込み欄(.stQ)の入力は renderPanel() でそのまま innerHTML に
+   入っていたため、`<img src=x onerror=…>` を貼り付けさせる誘導で任意のスクリプトが
+   動き、☁️同期のトークン(localStorage)を外部へ送れる状態だった(2026-10-06 是正)。 */
+function escHtmlAttr(v) {
+  return (v == null ? "" : String(v))
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 /* 凡例の1行を作る。色チップとラベルを flex で横並びに固定し、
    箱が狭いときに「チップだけ残ってラベルが次の行へ落ちる」折り返しを防ぐ。
    (インライン要素＋<br> で組むと、行の残り幅が足りない時にチップとラベルの間で改行される) */
@@ -533,10 +575,15 @@ function addUiHideControl(map, opts) {
     if (hidden === v) return;
     hidden = v;
     container.classList.toggle("uiHidden", v);
-    /* 地図の外にある上部のボタン帯・説明バーも一緒に隠す(中村さん指示 2026-09-18)。
+    /* 地図の外にある上部のボタン帯・説明バー・免責バーも一緒に隠す
+       (中村さん指示 2026-09-18、コミット 7e555eb)。
        ここを隠すと地図の高さが変わるので invalidateSize で作り直す。
-       免責バー(.noticebar)は法務レビュー済みの表示のため、ここでは隠さない
-       (元から✕で閉じられる)。 */
+       どの要素を隠すかは assets/common.css の `body.uiHidden …` 側で決めている。
+       免責バーは「消える」のではなく隠れるだけで、ツールを戻すと必ず一緒に戻る。
+       ※この挙動を変える(免責バーだけ残す)かどうかは中村さん判断。CSSの該当セレクタから
+         `.noticebar` を外すだけで切り替わる。
+       ※出典クレジット(地図タイル・e-Stat)は attribution 側に出しているので、
+         ここで隠れても表示は残る(common.css の attribution の !important)。 */
     document.body.classList.toggle("uiHidden", v);
     map.invalidateSize({ animate: false });
     chip.style.display = v ? "block" : "none";
@@ -631,24 +678,64 @@ function guardStandaloneDownload() {
   });
 }
 document.addEventListener("DOMContentLoaded", guardStandaloneDownload);
+/* ファイル選択の共通処理。
+   ★handler は必ず try/catch で包み、finally で inputEl.value を空に戻す。
+     これを怠ると、壊れたGeoJSON(Leaflet が未知の geometry.type で throw する)を
+     選んだときに (1) 成否が画面に出ない (2) value が残るので同じファイルを選び直しても
+     change が発火せず無反応 — という「選び直せない」状態になる(2026-10-06 是正)。 */
 function onFileSelected(inputEl, handler) {
   inputEl.addEventListener("change", () => {
     const f = inputEl.files[0];
     if (!f) return;
+    const fail = (e) => {
+      if (e) console.error(e);
+      alert("このファイルは取り込めませんでした(中身の形式が想定と違います)。\n" + ((e && e.message) ? e.message : ""));
+    };
     const reader = new FileReader();
+    reader.onerror = () => {
+      inputEl.value = "";
+      alert("ファイルを読み取れませんでした。別のファイルでお試しください。");
+    };
     reader.onload = () => {
-      handler(reader.result, f.name);
-      inputEl.value = ""; // 同じファイルの再選択を許可
+      const text = reader.result;
+      /* 選管や自治体が公表するCSVは Shift_JIS(CP932)が多い。UTF-8として読むと
+         置換文字(U+FFFD)が並ぶので、その場合だけ読み直す */
+      if (typeof text === "string" && text.indexOf("�") >= 0) {
+        const r2 = new FileReader();
+        r2.onload = () => {
+          try { handler(r2.result, f.name); } catch (e) { fail(e); } finally { inputEl.value = ""; }
+        };
+        r2.onerror = () => { inputEl.value = ""; alert("ファイルを読み取れませんでした。別のファイルでお試しください。"); };
+        r2.readAsText(f, "shift_jis");
+        return;
+      }
+      try { handler(text, f.name); }
+      catch (e) { fail(e); }
+      finally { inputEl.value = ""; }   /* 同じファイルの再選択を許可(失敗時も必ず戻す) */
     };
     reader.readAsText(f, "utf-8");
   });
 }
 
-/* ---- CSV (RFC4180の範囲で簡易対応) ---- */
+/* ---- CSV (RFC4180の範囲で簡易対応) ----
+   Excel・Googleスプレッドシートは「=」「+」「-」「@」やタブ・復帰で始まるセルを
+   数式として評価する。メモや氏名に =HYPERLINK("http://…"&A1) と書き込まれたCSVを
+   受け取った人が開くと、その人の端末で実行される(CSVインジェクション)。
+   書き出す側で先頭に ' を付けて無効化し、読み戻す側で ' を剥がす
+   (片方だけだと往復のたびに ' が増えてデータが汚れる)。 */
+const CSV_FORMULA_HEAD = /^[=+\-@\t\r]/;
+function csvSafe(v) {
+  const s = String(v == null ? "" : v);
+  return CSV_FORMULA_HEAD.test(s) ? "'" + s : s;
+}
+function csvUnsafeStrip(s) {
+  return (s.charAt(0) === "'" && CSV_FORMULA_HEAD.test(s.slice(1))) ? s.slice(1) : s;
+}
 function parseCsv(text) {
   const rows = [];
   let row = [], field = "", inQ = false;
   const src = text.replace(/^﻿/, "");
+  const push = () => { row.push(csvUnsafeStrip(field)); field = ""; };
   for (let i = 0; i < src.length; i++) {
     const c = src[i];
     if (inQ) {
@@ -656,21 +743,21 @@ function parseCsv(text) {
         if (src[i + 1] === '"') { field += '"'; i++; } else { inQ = false; }
       } else field += c;
     } else if (c === '"') inQ = true;
-    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === ",") { push(); }
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && src[i + 1] === "\n") i++;
-      row.push(field); field = "";
+      push();
       if (row.some((v) => v !== "")) rows.push(row);
       row = [];
     } else field += c;
   }
-  row.push(field);
+  push();
   if (row.some((v) => v !== "")) rows.push(row);
   return rows;
 }
 function toCsv(rows) {
   const esc = (v) => {
-    const s = String(v == null ? "" : v);
+    const s = csvSafe(v);
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
   return rows.map((r) => r.map(esc).join(",")).join("\r\n");
@@ -763,7 +850,17 @@ function gpxToGeoJSON(text) {
 }
 
 /* ---- 免責バー(全マップ共通・毎回表示・✕で閉じる) ----
-   常に表示し、ユーザー自身の操作で閉じる方式(「見ていない」を防ぐため保存しない)。 */
+   常に表示し、ユーザー自身の操作で閉じる方式(「見ていない」を防ぐため保存しない)。
+   ★<details open> で畳む形にしている(中村さん判断 2026-10-06)。
+     320pxでは全文の半分以上が枠外に落ちるため、summary に要点を常時表示し、
+     全文はその場で開閉できるようにする。open 属性は外さないこと
+     (閉じた状態を既定にすると「掲示している」という評価が弱まる)。
+     summary に入れる5点は固定要件: ①個人が無償・as is ②一般的な情報で法律上の助言ではない
+     ③故意または重大な過失を除く責任制限 ④非商用ライセンス ⑤内容の基準日。
+     ③は消費者契約法8条3項(重過失を除く旨の明示)の要請なので要約側からも外さない。
+   ★日付はサイト全体で1つに揃える(2026-10-06)。ここを直したら
+     index.html / arukikata/index.html の日付表示と GATE_VER も同時に直す
+     (build/precheck.py の G1 が集合で検査する)。 */
 (function () {
   function addNoticeBar() {
     const header = document.querySelector("header.appbar");
@@ -771,8 +868,11 @@ function gpxToGeoJSON(text) {
     const bar = document.createElement("div");
     bar.className = "noticebar";
     bar.innerHTML =
-      '<span>⚠️ <b>ご利用にあたって:</b>本ツールは有志が無償で提供するものです。現状のまま提供し、不具合の修補や動作・内容の保証は行いません。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。​‌‌​​​‌​‌‌​‌' +
-      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で<b>利用・複製・改変・再配布</b>できます(再配布・改変配布の際は、<b>ライセンス全文またはそのURLと下記の Required Notice の添付が必要</b>)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a>)に従います / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></span>' +
+      '<details class="noticeDetails" open>' +
+      '<summary>⚠️ <b>ご利用にあたって</b>(タップで全文の開閉) — <b>作成者(中村幸信)</b>が個人として無償・<b>現状のまま(as is)</b>提供／<b>一般的な情報のご案内で法律上の助言ではありません</b>／<b>故意または重大な過失による場合を除き責任を負いません</b>／<b>非商用ライセンス(PolyForm Noncommercial License 1.0.0)</b>／内容は<b>最終更新日(2026年10月6日)時点</b></summary>' +
+      '<div class="noticeBody">本ツールは<b>作成者(中村幸信)が個人として無償で提供する</b>ものです。現状のまま(as is)提供し、不具合の修補や動作・内容の保証は行いません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>本ツールを用いた政治活動・選挙運動が関係法令(公職選挙法等)に適合するかの確認は、利用者ご自身の責任で行ってください</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。<b>法令上許される範囲で</b>、ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。​‌‌​​​‌​‌‌​‌<b>本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。</b>' +
+      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で<b>利用・複製・改変・再配布</b>できます(再配布・改変配布の際は、<b>ライセンス全文またはそのURLと下記の Required Notice の添付が必要</b>)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a>)に従います / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>' +
+      '</details>' +
       '<button class="noticeClose" title="閉じる" aria-label="免責表示を閉じる">✕</button>';
     header.insertAdjacentElement("afterend", bar);
     bar.querySelector(".noticeClose").onclick = () => bar.remove();
@@ -900,7 +1000,13 @@ const SETAI_BINS = [
   { min: 0,    color: "#eff3ff", label: "〜999世帯" },
 ];
 function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
-const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域集計・小地域境界データを加工して作成";
+/* e-Stat の出典表示。政府標準利用規約(第2.0版)は出典記載と「加工した旨」の明記を求めるので、
+   この文字列から「出典」「加工して作成」を落とさないこと。
+   凡例の中だけに置くと、地図を1タップして道具を隠した瞬間に出典だけが消え、
+   加工済みの国勢調査データだけが出典なしで表示される画面ができてしまう。
+   そのため Leaflet の attribution にも出す(attribution は uiHidden でも表示され続ける
+   = assets/common.css の `.leaflet-container.uiHidden .leaflet-control-attribution{display:block !important}`)。 */
+const SETAI_CREDIT = '出典: <a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener noreferrer">政府統計の総合窓口(e-Stat) 統計GIS</a> 国勢調査(2020年)小地域集計・小地域境界データを加工して作成';
 
 /* ===== 表示指標の切替(2026-09 属性追加) =====
    GeoJSON properties(make_setai_geojson.py --stats が付与):
@@ -1103,7 +1209,8 @@ function addSetaiLayers(map, opts) {
   }
   /* 名称が空の実在区域が全国に48件ある(境界・統計とも名称なし。人口は持つ)。
      数字だけのラベルにならないよう、町丁字コードでフォールバック表示する */
-  function setaiName(p) { return p.name || `(名称なし: ${p.key.slice(5)})`; }
+  /* 戻り値は必ず innerHTML(ラベル・ポップアップ)に入るのでここでエスケープしておく */
+  function setaiName(p) { return escHtmlAttr(p.name || `(名称なし: ${p.key.slice(5)})`); }
   function labelHtml(p) {
     const v = metricVal(p);
     const mu = metricUnit();
@@ -1330,12 +1437,12 @@ function addSetaiLayers(map, opts) {
            <button type="button" data-all="${ci}">全選択</button>
            <button type="button" data-none="${ci}">全クリア</button>
          </div>
-         ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
+         ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${escHtmlAttr(w.code)}"${desired.has(w.code) ? " checked" : ""}>${escHtmlAttr(w.name)}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
        </div>`;
     return `<div class="stCity">
       <div class="stCityRow">
-        <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b>${query ? `<span class="stPref">${c.pref}</span>` : ""}</label>
-        ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length > 1 ? c.wards.length + "区" : c.wards[0].name}</span></button>` : ""}
+        <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${escHtmlAttr(c.city)}</b>${query ? `<span class="stPref">${escHtmlAttr(c.pref)}</span>` : ""}</label>
+        ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length > 1 ? c.wards.length + "区" : escHtmlAttr(c.wards[0].name)}</span></button>` : ""}
       </div>${sub}</div>`;
   }
 
@@ -1349,17 +1456,18 @@ function addSetaiLayers(map, opts) {
         const c = cities[ci];
         return (c.city + c.pref + c.wards.map(w => w.name).join("")).indexOf(query) >= 0;
       });
+      const qv = escHtmlAttr(query);   /* 入力そのままを innerHTML に入れない(DOM XSS対策) */
       rows = hit.length
-        ? `<div class="stNote">「${query}」に一致: ${hit.length}件</div>` + hit.map(cityRow).join("")
-        : `<div class="stNote">「${query}」に一致する自治体はありません。未収録なら下のリンクからリクエストできます</div>`;
+        ? `<div class="stNote">「${qv}」に一致: ${hit.length}件</div>` + hit.map(cityRow).join("")
+        : `<div class="stNote">「${qv}」に一致する自治体はありません。未収録なら下のリンクからリクエストできます</div>`;
     } else {
       rows = prefOrder.map(pf => {
         const cis = byPref[pf];
         const open = openPrefs.has(pf);
         const nSel = cis.filter(cityHasSelection).length;
         return `<div class="stPrefBlock">
-          <button type="button" class="stPrefRow" data-pref="${pf}">
-            <span class="stPrefArrow">${open ? "▾" : "▸"}</span><b>${pf}</b>
+          <button type="button" class="stPrefRow" data-pref="${escHtmlAttr(pf)}">
+            <span class="stPrefArrow">${open ? "▾" : "▸"}</span><b>${escHtmlAttr(pf)}</b>
             <span class="stCnt">${cis.length}</span>
             ${nSel ? `<span class="stSel">${nSel}件選択中</span>` : ""}
           </button>
@@ -1368,7 +1476,7 @@ function addSetaiLayers(map, opts) {
       }).join("");
     }
     const extra = opts.extra
-      ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${opts.extra.label}</label></div>`
+      ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${escHtmlAttr(opts.extra.label)}</label></div>`
       : "";
     const head = indexState === "loading" ? `<div class="stLoadBar">収録自治体の一覧を読み込み中…</div>`
       : indexState === "error" ? `<div class="stLoadBar">一覧を読み込めませんでした。インターネット接続を確認して開き直してください。</div>`
@@ -1544,6 +1652,13 @@ function addSetaiLayers(map, opts) {
   }
   function refreshLegend() {
     const active = desired.size > 0 || (opts.extra && map.hasLayer(opts.extra.layer));
+    /* 出典は凡例だけに置かない。凡例は地図を1タップすると隠れるが、塗りと数値ラベルは
+       残るため「出典なしで加工済み国勢調査データだけが出ている画面」ができてしまう。
+       attribution は uiHidden でも表示され続けるので、そこにも同じ出典を出す。 */
+    if (map.attributionControl) {
+      if (active && !map.__setaiAttr) { map.attributionControl.addAttribution(SETAI_CREDIT); map.__setaiAttr = true; }
+      else if (!active && map.__setaiAttr) { map.attributionControl.removeAttribution(SETAI_CREDIT); map.__setaiAttr = false; }
+    }
     if (active && !legendCtl) {
       legendCtl = L.control({ position: "bottomright" });
       legendCtl.onAdd = () => {

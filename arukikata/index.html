@@ -6,18 +6,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>選挙と政治活動の歩き方</title>
 <style>
+  /* --s◯ = 枠線・アイコン用 / --s◯t = 文字用(淡色地に対して 6.37〜8.88:1)
+     文字に淡い色を使うとコントラストが 2.86:1 まで落ちるため、用途で色を分ける(WCAG 1.4.3) */
   :root{
     --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff;
-    --s0:#6366f1; --s0bg:#eef2ff;
-    --s1:#059669; --s1bg:#d1fae5;
-    --s2:#d97706; --s2bg:#fef3c7;
-    --s3:#dc2626; --s3bg:#fee2e2;
-    --s4:#7c3aed; --s4bg:#ede9fe;
-    --s5:#0284c7; --s5bg:#e0f2fe;
-    --s6:#0d9488; --s6bg:#ccfbf1;
-    --s7:#db2777; --s7bg:#fce7f3;
-    --s8:#a16207; --s8bg:#fef9c3;
-    --ok:#059669; --ng:#dc2626;
+    --s0:#6366f1; --s0bg:#eef2ff; --s0t:#3730a3;
+    --s1:#059669; --s1bg:#d1fae5; --s1t:#065f46;
+    --s2:#d97706; --s2bg:#fef3c7; --s2t:#92400e;
+    --s3:#dc2626; --s3bg:#fee2e2; --s3t:#991b1b;
+    --s4:#7c3aed; --s4bg:#ede9fe; --s4t:#5b21b6;
+    --s5:#0284c7; --s5bg:#e0f2fe; --s5t:#075985;
+    --s6:#0d9488; --s6bg:#ccfbf1; --s6t:#115e59;
+    --s7:#db2777; --s7bg:#fce7f3; --s7t:#9d174d;
+    --s8:#a16207; --s8bg:#fef9c3; --s8t:#854d0e;
+    --ok:#059669; --ng:#dc2626; --okt:#047857; --ngt:#b91c1c;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{font-family:"Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif; background:var(--bg); color:var(--ink); line-height:1.75; padding-bottom:60px;}
@@ -38,24 +40,34 @@
            box-shadow:0 12px 40px rgba(0,0,0,.4); margin:auto;}
   .gateBox h2{font-size:clamp(17px,3.4vw,21px); margin-bottom:4px;}
   .gateLead{font-size:13.5px; color:var(--muted); margin-bottom:14px;}
-  .gateItem{display:flex; gap:11px; align-items:flex-start; border:1.5px solid #e5e7eb; border-radius:12px;
-            padding:13px 14px; margin-bottom:11px; cursor:pointer; background:#fcfcfd;}
+  /* ⚠️ 本文(600字超)を <label> の中に入れてはいけない。
+     label の activation behavior で「本文を読もうとした指」が同意を入れたり外したりする。
+     チェックは .gateChkRow(見出しだけ)に限り、全文は label の外の <details> に置く。 */
+  .gateItem{display:block; border:1.5px solid #e5e7eb; border-radius:12px;
+            padding:13px 14px; margin-bottom:11px; background:#fcfcfd; cursor:default;}
   .gateItem:hover{border-color:var(--s4);}
   .gateItem.on{border-color:var(--s1); background:#f0fdf4;}
-  .gateItem input{flex:none; width:21px; height:21px; margin-top:2px; cursor:pointer; accent-color:var(--s1);}
-  .gateTxt{font-size:12.8px; line-height:1.85;}
-  .gateH{display:block; font-size:14px; margin-bottom:4px; color:var(--ink);}
-  .gateLic{display:block; font-size:11.5px; color:var(--muted); margin-top:4px;}
-  .gateSkip{display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted);
-            margin:6px 2px 14px; cursor:pointer;}
-  .gateSkip input{width:17px; height:17px; cursor:pointer;}
+  .gateChkRow{display:flex; gap:11px; align-items:center; cursor:pointer; min-height:44px; padding:4px 0;}
+  .gateChkRow input{flex:none; width:24px; height:24px; cursor:pointer; accent-color:var(--s1);}
+  .gateSum{margin:6px 0 0; padding-left:1.2em; font-size:13px; line-height:1.85;}
+  .gateSum li{margin-bottom:5px;}
+  .gateFull{margin:8px 0 0; font-size:12.5px;}
+  .gateFull summary{cursor:pointer; color:#4b5563; min-height:24px;}
+  .gateFull .gateTxt{margin-top:6px; padding:10px 12px; background:#f8fafc; border-radius:10px;}
+  .gateTxt{font-size:12.5px; line-height:1.9;}
+  .gateTxt b{font-weight:600;}
+  .gateH{display:block; font-size:14px; margin-bottom:0; color:var(--ink);}
+  .gateLic{display:block; font-size:12.5px; color:#4b5563; margin-top:4px;}
+  .gateSkip{display:flex; align-items:center; gap:8px; font-size:12.5px; color:#4b5563;
+            margin:6px 2px 14px; cursor:pointer; min-height:44px;}
+  .gateSkip input{flex:none; width:24px; height:24px; cursor:pointer; accent-color:var(--s1);}
   .gateBtns{display:flex; flex-wrap:wrap; gap:12px; align-items:center;}
   .gateBtn{font-family:inherit; font-size:15px; font-weight:bold; border:none; border-radius:11px;
            padding:13px 26px; cursor:pointer; background:var(--s1); color:#fff;}
   .gateBtn:disabled{background:#d1d5db; color:#6b7280; cursor:not-allowed;}
   .gateBack{font-size:13px; color:var(--muted);}
   .gateHint{font-size:12px; color:var(--s3); margin-top:9px;}
-  .gateNote{font-size:11.5px; color:var(--muted); margin-top:11px; border-top:1px solid #eef0f4; padding-top:8px;}
+  .gateNote{font-size:12.5px; color:#4b5563; margin-top:11px; border-top:1px solid #eef0f4; padding-top:8px;}
   @media (max-width:600px){ .gateBox{padding:16px 15px 14px;} .gateBtn{width:100%;} .gateBtns{gap:8px;} }
 
   /* ===== 歩き方マップ ===== */
@@ -66,21 +78,21 @@
   .stop:hover .icon{transform:scale(1.1);}
   .stop.active .icon{background:var(--c); }
   .stop .label{margin-top:8px; font-size:13px; font-weight:bold; text-align:center; color:var(--ink);}
-  .stop .phase{font-size:10.5px; color:var(--muted); text-align:center;}
+  .stop .phase{font-size:11.5px; color:#4b5563; text-align:center;}
   .stop::before{content:""; position:absolute; top:32px; left:-50%; width:100%; height:6px; background:#d3d7e3; z-index:1;}
   .stop:first-child::before{display:none;}
-  .stop.active .label{color:var(--c);}
+  .stop.active .label{color:var(--ct);}
   .tapnote{text-align:center; font-size:12px; color:var(--muted); margin-bottom:14px;}
   .ctaWrap{text-align:center; margin-bottom:20px;}
-  .ctaBtn{font-family:inherit; font-size:14.5px; font-weight:bold; cursor:pointer; color:#fff; background:var(--s6); border:none; border-radius:99px; padding:11px 26px; box-shadow:0 2px 8px rgba(13,148,136,.35); transition:transform .12s;}
+  .ctaBtn{font-family:inherit; font-size:14.5px; font-weight:bold; cursor:pointer; color:#fff; background:#0f766e; border:none; border-radius:99px; padding:11px 26px; box-shadow:0 2px 8px rgba(15,118,110,.35); transition:transform .12s;}
   .ctaBtn:hover{transform:scale(1.04);}
-  .ctaBtn.active{outline:3px solid #99f6e4;}
+  .ctaBtn.active{box-shadow:0 0 0 3px #fff, 0 0 0 6px #0f766e, 0 2px 8px rgba(15,118,110,.35);}
 
   /* ===== 詳細パネル ===== */
   .panel{display:none; background:var(--card); border-radius:16px; box-shadow:0 1px 6px rgba(0,0,0,.09); padding:22px; border-top:8px solid var(--c); margin-bottom:30px;}
   .panel.active{display:block;}
   .panel h2{font-size:20px; margin-bottom:2px;}
-  .panel .period{display:inline-block; font-size:12px; font-weight:bold; background:var(--cbg); color:var(--c); border-radius:99px; padding:2px 12px; margin-bottom:12px;}
+  .panel .period{display:inline-block; font-size:12px; font-weight:bold; background:var(--cbg); color:var(--ct); border-radius:99px; padding:2px 12px; margin-bottom:12px;}
   .panel h3{font-size:15.5px; margin:18px 0 8px; padding-left:10px; border-left:4px solid var(--c);}
   .panel p{font-size:13.5px; margin-bottom:8px;}
   .panel ul,.panel ol{font-size:13.5px; padding-left:24px; margin-bottom:8px;}
@@ -90,14 +102,14 @@
   .okbox,.ngbox{border-radius:12px; padding:12px 14px; font-size:13px;}
   .okbox{background:#ecfdf5; border:1.5px solid var(--ok);}
   .ngbox{background:#fef2f2; border:1.5px solid var(--ng);}
-  .okbox h4{color:var(--ok); font-size:13.5px; margin-bottom:6px;}
-  .ngbox h4{color:var(--ng); font-size:13.5px; margin-bottom:6px;}
+  .okbox h4{color:var(--okt); font-size:13.5px; margin-bottom:6px;}
+  .ngbox h4{color:var(--ngt); font-size:13.5px; margin-bottom:6px;}
   .okbox ul,.ngbox ul{padding-left:20px; margin:0;}
   .vol{background:#fdf2f8; border:1.5px dashed #be185d; border-radius:12px; padding:10px 14px; font-size:13px; margin-top:14px;}
   .vol b{color:#be185d;}
   .vol.volBig{font-size:15.5px; border-width:2.5px; padding:14px 18px; line-height:1.85;}
   .req3{background:#fef2f2; border:2px solid var(--ng); border-radius:12px; padding:12px 16px; font-size:13.5px; margin:10px 0 14px;}
-  .req3>b{color:var(--ng); font-size:14.5px;}
+  .req3>b{color:var(--ngt); font-size:14.5px;}
   .req3 ol{margin:6px 0 0; padding-left:24px;}
   .req3 li{margin-bottom:3px;}
   .tools{background:#f8fafc; border:1.5px solid #cbd5e1; border-radius:12px; padding:10px 14px; font-size:13px; margin-top:14px;}
@@ -105,27 +117,27 @@
   .toolBox{margin-top:16px; background:#f5f3ff; border:1.5px solid #8b5cf6; border-radius:12px; padding:12px 14px;}
   .toolBox b.tbTitle{display:block; font-size:13.5px; margin-bottom:8px;}
   .toolBtns{display:flex; gap:10px; flex-wrap:wrap;}
-  .toolBtn{display:inline-block; text-decoration:none; font-size:13px; font-weight:bold; color:#fff; background:#8b5cf6; border-radius:99px; padding:9px 18px; box-shadow:0 2px 6px rgba(139,92,246,.35); transition:transform .12s;}
+  .toolBtn{display:inline-block; text-decoration:none; font-size:13px; font-weight:bold; color:#fff; background:#6d28d9; border-radius:99px; padding:9px 18px; box-shadow:0 2px 6px rgba(109,40,217,.35); transition:transform .12s;}
   .toolBtn:hover{transform:scale(1.04);}
-  .toolBox .tbNote{font-size:11.5px; color:var(--muted); margin-top:8px;}
+  .toolBox .tbNote{font-size:12.5px; color:#4b5563; margin-top:8px;}
   .more{margin-top:16px; font-size:12.5px; background:var(--cbg); border-radius:10px; padding:8px 12px;}
-  .more a{color:var(--c); font-weight:bold;}
+  .more a{color:#1a56db; font-weight:bold; text-decoration:underline; text-underline-offset:2px;}
   table{border-collapse:collapse; width:100%; font-size:12.5px; margin:8px 0;}
   th,td{border:1px solid #e5e7eb; padding:6px 10px; text-align:left; vertical-align:top;}
   th{background:#f3f4f6; white-space:nowrap;}
-  .p0{--c:var(--s0); --cbg:var(--s0bg);} .p1{--c:var(--s1); --cbg:var(--s1bg);}
-  .p2{--c:var(--s2); --cbg:var(--s2bg);} .p3{--c:var(--s3); --cbg:var(--s3bg);}
-  .p4{--c:var(--s4); --cbg:var(--s4bg);} .p5{--c:var(--s5); --cbg:var(--s5bg);}
-  .p6{--c:var(--s6); --cbg:var(--s6bg);}
-  .p7{--c:var(--s7); --cbg:var(--s7bg);}
-  .p8{--c:var(--s8); --cbg:var(--s8bg);}
-  footer{max-width:1000px; margin:0 auto; padding:0 18px; color:var(--muted); font-size:11.5px;}
+  .p0{--c:var(--s0); --cbg:var(--s0bg); --ct:var(--s0t);} .p1{--c:var(--s1); --cbg:var(--s1bg); --ct:var(--s1t);}
+  .p2{--c:var(--s2); --cbg:var(--s2bg); --ct:var(--s2t);} .p3{--c:var(--s3); --cbg:var(--s3bg); --ct:var(--s3t);}
+  .p4{--c:var(--s4); --cbg:var(--s4bg); --ct:var(--s4t);} .p5{--c:var(--s5); --cbg:var(--s5bg); --ct:var(--s5t);}
+  .p6{--c:var(--s6); --cbg:var(--s6bg); --ct:var(--s6t);}
+  .p7{--c:var(--s7); --cbg:var(--s7bg); --ct:var(--s7t);}
+  .p8{--c:var(--s8); --cbg:var(--s8bg); --ct:var(--s8t);}
+  footer{max-width:1000px; margin:0 auto; padding:0 18px; color:#4b5563; font-size:12.5px;}
 
   /* ===== 🗓️ 活動スケジュール ===== */
   .settings{display:flex; flex-wrap:wrap; gap:14px 26px; align-items:flex-end; margin:8px 0;}
   .settings label{font-size:13px; font-weight:bold; display:block; margin-bottom:3px;}
   .settings input[type=date]{font-size:15px; padding:6px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
-  .countdown{font-size:14px; background:var(--cbg); color:var(--c); font-weight:bold; border-radius:99px; padding:6px 16px;}
+  .countdown{font-size:14px; background:var(--cbg); color:var(--ct); font-weight:bold; border-radius:99px; padding:6px 16px;}
   .todayLabel{font-size:13px; color:var(--muted);}
   .help{font-size:12px; color:var(--muted); margin-bottom:8px;}
   .catblock{margin-bottom:12px;}
@@ -135,10 +147,11 @@
   .tag:hover{transform:scale(1.06);}
   .tag.assigned{background:var(--t); color:#fff;}
   .tag.assigned::before{content:"✓ ";}
-  .cat-poster{--t:#d97706; --tbg:#fef3c7;} .cat-pr{--t:#0284c7; --tbg:#e0f2fe;}
-  .cat-vol{--t:#059669; --tbg:#d1fae5;} .cat-office{--t:#6366f1; --tbg:#eef2ff;}
-  .cat-fund{--t:#be185d; --tbg:#fdf2f8;} .cat-policy{--t:#7c3aed; --tbg:#ede9fe;}
-  .cat-misc{--t:#475569; --tbg:#f1f5f9;}
+  /* --t は文字にも枠にも使うので、淡色地で 4.5:1 を満たす濃い値にする */
+  .cat-poster{--t:#92400e; --tbg:#fef3c7;} .cat-pr{--t:#075985; --tbg:#e0f2fe;}
+  .cat-vol{--t:#065f46; --tbg:#d1fae5;} .cat-office{--t:#3730a3; --tbg:#eef2ff;}
+  .cat-fund{--t:#9d174d; --tbg:#fdf2f8;} .cat-policy{--t:#5b21b6; --tbg:#ede9fe;}
+  .cat-misc{--t:#334155; --tbg:#f1f5f9;}
   .newitem{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; padding-top:12px; border-top:1.5px dashed #d3d7e3; align-items:center;}
   .newitem input[type=text]{font-size:13.5px; padding:6px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit; flex:1; min-width:180px;}
   .newitem select{font-size:13.5px; padding:6px 8px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
@@ -155,7 +168,7 @@
   .schedtable tr.now td.when::after{content:" 📍今ココ"; color:var(--ng); font-size:11px;}
   .schedtable tr.kokuji td{background:#fef2f2;}
   .schedtable tr.vote td{background:#ede9fe;}
-  .chip{display:inline-block; font-size:11.5px; font-weight:bold; border-radius:99px; padding:2px 10px; margin:2px 4px 2px 0; background:var(--tbg); color:var(--t); border:1px solid var(--t); cursor:pointer;}
+  .chip{display:inline-flex; align-items:center; font-size:12px; font-weight:bold; border-radius:99px; padding:5px 12px; min-height:26px; margin:2px 4px 2px 0; background:var(--tbg); color:var(--t); border:1px solid var(--t); cursor:pointer;}
   .legend{font-size:11.5px; color:var(--muted); margin-top:8px;}
   .exportbar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px;}
   .exporthint{font-size:12px; color:#188038; font-weight:bold;}
@@ -168,23 +181,25 @@
   .modal label{font-size:13px; font-weight:bold; display:block; margin-bottom:3px;}
   .modal select,.modal input[type=text],.modal input[type=date],.modal input[type=time]{width:100%; font-size:14px; padding:7px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
   .modal .btns{display:flex; gap:8px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;}
-  .memberPanel{position:fixed; right:12px; top:200px; width:164px; background:#fff; border:2px solid var(--s6); border-radius:14px; padding:10px 12px; z-index:40; box-shadow:0 2px 10px rgba(0,0,0,.12);}
-  .memberPanel .mpTitle{font-size:13.5px; font-weight:bold; color:var(--s6); margin-bottom:8px;}
+  .memberPanel{position:fixed; right:12px; top:200px; width:164px; max-width:calc((100vw - 1000px)/2 - 24px); background:#fff; border:2px solid var(--s6); border-radius:14px; padding:10px 12px; z-index:40; box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  .memberPanel .mpTitle{font-size:13.5px; font-weight:bold; color:var(--s6t); margin-bottom:8px;}
   .mplist{display:flex; flex-direction:column; gap:6px; margin-bottom:8px;}
   .pmember{display:flex; align-items:center; justify-content:space-between; gap:4px; background:#ccfbf1; color:#0f766e; border:1.5px solid #0d9488; border-radius:99px; padding:3px 10px; font-size:13px; font-weight:bold; cursor:grab;}
   .pmember:active{cursor:grabbing;}
   .memberAddRow{display:flex; gap:4px; margin-bottom:6px;}
   .memberAddRow input{width:100%; min-width:0; font-size:13px; padding:4px 8px; border:1.5px solid #cbd5e1; border-radius:8px; font-family:inherit;}
-  .mphelp{font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.5;}
-  @media(max-width:1279px){ .memberPanel{position:static; width:auto; margin:10px 0;} .mplist{flex-direction:row; flex-wrap:wrap;} }
+  .mphelp{font-size:12px; color:#4b5563; margin-top:8px; line-height:1.5;}
+  /* 固定配置のパネルが .wrap(1000px) の右端に重なるのは画面幅1352px未満のとき。
+     1316〜1351pxは余白だけだが、縦スクロールバーの有無で判定がずれるため余白側に寄せて1359pxで畳む */
+  @media(max-width:1359px){ .memberPanel{position:static; width:auto; max-width:none; margin:10px 0;} .mplist{flex-direction:row; flex-wrap:wrap;} }
   .schedtable td.no{white-space:nowrap; font-weight:bold; color:var(--muted); text-align:right;}
   .schedtable tr.dropTarget td{background:#ccfbf1 !important;}
   .mchip{display:inline-flex; align-items:center; gap:3px; font-size:11.5px; font-weight:bold; border-radius:99px; padding:2px 8px; margin:2px 4px 2px 0; background:#ccfbf1; color:#0f766e; border:1px solid #0d9488;}
   .mchip .mdate{font-weight:normal; opacity:.85;}
-  .mdel{border:none; background:none; color:inherit; font-weight:bold; cursor:pointer; font-size:12px; padding:0 2px; font-family:inherit; line-height:1;}
+  .mdel{border:none; background:none; color:inherit; font-weight:bold; cursor:pointer; font-size:14px; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; font-family:inherit; line-height:1;}
   .drophint{font-size:11px; color:var(--muted);}
   .modelref{margin-top:16px;}
-  .modelref summary{cursor:pointer; font-size:13px; font-weight:bold; color:var(--muted); margin-bottom:6px;}
+  .modelref summary{cursor:pointer; font-size:13px; font-weight:bold; color:#4b5563; margin-bottom:6px; min-height:24px; display:flex; align-items:center;}
   .mmembers{display:flex; flex-wrap:wrap; gap:4px; margin:6px 0;}
   .maddrow{display:flex; gap:6px;}
   .maddrow select{flex:1;}
@@ -195,15 +210,15 @@
   .kzBtn{flex:1 1 150px; min-width:140px; cursor:pointer; border:2px solid #e5e7eb; background:#fff; border-radius:12px; padding:9px 8px; font-size:13px; font-weight:bold; color:var(--ink); line-height:1.35; text-align:center; transition:.15s;}
   .kzBtn small{display:block; font-weight:normal; font-size:11px; color:var(--muted); margin-top:2px;}
   .kzBtn:hover{border-color:var(--c);}
-  .kzBtn.active{border-color:var(--c); background:var(--cbg); color:var(--c);}
+  .kzBtn.active{border-color:var(--c); background:var(--cbg); color:var(--ct);}
   .kzCard{border:2px solid var(--c); border-radius:14px; padding:14px 16px; background:#fff; margin-top:6px;}
   .kzCard h4{font-size:15px; margin-bottom:10px; color:var(--c);}
   .kzTable{width:100%; border-collapse:collapse; font-size:13px; margin-bottom:8px;}
   .kzTable th{text-align:left; width:34%; vertical-align:top; padding:7px 9px; background:var(--cbg); border:1px solid #eee; font-size:12.5px;}
   .kzTable td{padding:7px 9px; border:1px solid #eee; vertical-align:top;}
   .kzB{display:inline-block; font-weight:bold; border-radius:6px; padding:1px 7px; font-size:12px; margin-right:6px; white-space:nowrap;}
-  .kzB.ok{background:#ecfdf5; color:var(--ok); border:1px solid var(--ok);}
-  .kzB.ng{background:#fef2f2; color:var(--ng); border:1px solid var(--ng);}
+  .kzB.ok{background:#ecfdf5; color:var(--okt); border:1px solid var(--okt);}
+  .kzB.ng{background:#fef2f2; color:var(--ngt); border:1px solid var(--ngt);}
   .kzB.tri{background:#fffbeb; color:#b45309; border:1px solid #d97706;}
   .kzB.warn{background:#fffbeb; color:#b45309; border:1px solid #d97706;}
 
@@ -219,7 +234,7 @@
      追記が増えて本文と注記が地続きに見えていたため、左罫で一段下げる(階層の回復) */
   li > small, td > small, .vol > small{
     display:block; margin-top:5px; padding:5px 0 5px 9px;
-    border-left:3px solid #e5e7eb; color:#4b5563; font-size:11.8px; line-height:1.72; }
+    border-left:3px solid #e5e7eb; color:#4b5563; font-size:12.5px; line-height:1.72; }
   li > small b, td > small b{ color:#374151; }
   .kzNote br + ・, .kzNote{ line-height:1.8; }
 
@@ -230,23 +245,30 @@
 
   /* ===== 🤝 支援者ガイド(かんたん/詳細トグル) ===== */
   .helpIntro{background:var(--s6bg); border:1.5px solid var(--s6); border-radius:12px; padding:12px 16px; font-size:13.5px; margin:6px 0 4px; line-height:1.7;}
-  .helpIntro b{color:#0f766e;}
+  .helpIntro b{color:var(--s6t);}
   .helpBar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:16px 0 10px;}
-  .helpBar .htLabel{font-size:13px; font-weight:bold; color:var(--muted);}
-  .helpToggle{display:inline-flex; border:2px solid var(--s6); border-radius:99px; overflow:hidden;}
-  .helpToggle button{font-family:inherit; font-size:14px; font-weight:bold; border:none; cursor:pointer; padding:8px 22px; background:#fff; color:#0f766e; transition:.12s;}
-  .helpToggle button.on{background:var(--s6); color:#fff;}
-  .helpCards{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:6px 0;}
-  @media(max-width:860px){.helpCards{grid-template-columns:1fr;}}
-  .helpCard{border:2px solid var(--hc); border-radius:16px; overflow:hidden; background:#fff; display:flex; flex-direction:column;}
+  .helpBar .htLabel{font-size:13px; font-weight:bold; color:#4b5563;}
+  .helpToggle{display:inline-flex; border:2px solid var(--s7t); border-radius:99px; overflow:hidden; max-width:100%; flex-wrap:wrap;}
+  .helpToggle button{font-family:inherit; font-size:14px; font-weight:bold; border:none; cursor:pointer; padding:8px 22px; background:#fff; color:var(--s7t); transition:.12s;}
+  .helpToggle button.on{background:var(--s7t); color:#fff;}
+  /* ===== 持ち場カードは「1列のアコーディオン」 =====
+     3列グリッドだとカードを5枚に増やしたとき2段目が2,351pxまで伸び、
+     右端に 297x2,351px の空セルができる(grid の stretch と .hcBody{flex:1} による行高の等化)。
+     details/summary の縦積みにして、枚数が増えても初期表示が1〜2画面に収まるようにする。 */
+  .helpCards{display:block; margin:6px 0;}
+  .helpCard{display:block; border:2px solid var(--hc); border-radius:16px; overflow:hidden; background:#fff; margin-bottom:12px;}
+  .helpCard > summary.hcHead{background:var(--hcbg); padding:12px 14px; cursor:pointer; list-style:none;}
+  .helpCard > summary.hcHead::-webkit-details-marker{display:none;}
+  .helpCard > summary.hcHead::after{content:"▼ ひらく"; float:right; color:var(--hct,var(--hc)); font-size:12.5px; font-weight:bold; min-height:24px; display:inline-flex; align-items:center;}
+  .helpCard[open] > summary.hcHead::after{content:"▲ とじる";}
   .helpCard .hcHead{background:var(--hcbg); padding:12px 14px;}
   .helpCard .hcIcon{font-size:26px; line-height:1;}
-  .helpCard .hcName{font-size:16.5px; font-weight:bold; color:var(--hc); margin-top:4px;}
-  .helpCard .hcWhen{font-size:11.5px; font-weight:bold; display:inline-block; margin-top:6px; background:#fff; color:var(--hc); border:1px solid var(--hc); border-radius:99px; padding:1px 10px;}
-  .helpCard .hcBody{padding:12px 14px; font-size:13px; flex:1;}
-  .helpCard .hcOne{font-size:12.5px; color:var(--muted); margin-bottom:10px; line-height:1.6;}
-  .hcSub{font-size:13px; font-weight:bold; margin:10px 0 5px;}
-  .hcSub.ok{color:var(--ok);} .hcSub.ng{color:var(--ng);}
+  .helpCard .hcName, .helpCard h3.hcName{font-size:16.5px; font-weight:bold; color:var(--hct,var(--hc)); margin:4px 0 0; padding:0; border-left:none;}
+  .helpCard .hcWhen{font-size:12px; font-weight:bold; display:inline-block; margin-top:6px; background:#fff; color:var(--hct,var(--hc)); border:1px solid var(--hc); border-radius:99px; padding:2px 10px;}
+  .helpCard .hcBody{padding:12px 14px; font-size:13px;}
+  .helpCard .hcOne{font-size:12.5px; color:#4b5563; margin-bottom:10px; line-height:1.6;}
+  .hcSub, .helpCard h4.hcSub{font-size:13px; font-weight:bold; margin:10px 0 5px;}
+  .hcSub.ok{color:var(--okt);} .hcSub.ng{color:var(--ngt);}
   .hcList{margin:0; padding:0; list-style:none;}
   .hcList li{display:flex; gap:6px; align-items:flex-start; margin-bottom:5px; line-height:1.55;}
   .hcOK li::before{content:"⭕"; flex:0 0 auto;}
@@ -263,13 +285,26 @@
 
   /* ===== 🚀 出馬を考える人向け: かんたん/くわしくトグル(全タブ共通) ===== */
   .candBar{display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:12px 0 10px;}
-  .candBar .htLabel{font-size:13px; font-weight:bold; color:var(--muted);}
-  .candToggle{display:inline-flex; border:2px solid var(--c); border-radius:99px; overflow:hidden;}
-  .candToggle button{font-family:inherit; font-size:14px; font-weight:bold; border:none; cursor:pointer; padding:8px 22px; background:#fff; color:var(--c); transition:.12s;}
-  .candToggle button.on{background:var(--c); color:#fff;}
+  .candBar .htLabel{font-size:13px; font-weight:bold; color:#4b5563;}
+  .candToggle{display:inline-flex; border:2px solid var(--ct); border-radius:99px; overflow:hidden; max-width:100%; flex-wrap:wrap;}
+  .candToggle button{font-family:inherit; font-size:14px; font-weight:bold; border:none; cursor:pointer; padding:8px 22px; background:#fff; color:var(--ct); transition:.12s;}
+  .candToggle button.on{background:var(--ct); color:#fff;}
   .panel.showDetail .simpleOnly{display:none;}
   .helpFoot{background:#fef2f2; border:2px solid var(--ng); border-radius:12px; padding:12px 16px; font-size:13.5px; margin-top:14px; line-height:1.7;}
   .helpFoot b{color:var(--ng);}
+  /* 注意枠は意味で3色に固定する(A-14)。
+     alert(赤)   = やると罰則がある
+     caution(琥珀)= 読まないと損をする(お金・手戻り)
+     info(青)    = 中立の確認事項
+     ※ .helpFoot を流用すると .helpFoot b{color:var(--ng)} で太字が全部赤になり、
+        中立の案内まで警告色で出てしまう。新しい枠は必ず .hBox を使う */
+  .hBox{border-radius:12px; padding:12px 16px; font-size:13.5px; margin-top:14px; line-height:1.7; border:2px solid;}
+  .hBox.alert{background:#fef2f2; border-color:#b91c1c;}
+  .hBox.alert b{color:#991b1b;}
+  .hBox.caution{background:#fffbeb; border-color:#92400e;}
+  .hBox.caution b{color:#854d0e;}
+  .hBox.info{background:#eff6ff; border-color:#1d4ed8;}
+  .hBox.info b{color:#1e3a8a;}
 
   /* ===== 📱 携帯向け改善(PC[>700px]のビューは不変) ===== */
   /* 比較表: 携帯だけカード化。PCは通常の表のまま */
@@ -283,8 +318,8 @@
     .cmpTable td.pol,.cmpTable td.ele{padding:8px 0;}
     .cmpTable td.pol{border-bottom:1px dashed #e5e7eb;}
     .cmpTable td[data-c]::before{content:attr(data-c); display:block; font-size:12.5px; font-weight:bold; margin-bottom:2px;}
-    .cmpTable td.pol[data-c]::before{color:#059669;}
-    .cmpTable td.ele[data-c]::before{color:#dc2626;}
+    .cmpTable td.pol[data-c]::before{color:#047857;}
+    .cmpTable td.ele[data-c]::before{color:#b91c1c;}
   }
   /* 箇条(①②③)などを携帯では改行して縦積み。PCは従来どおりinline */
   @media(max-width:700px){
@@ -299,22 +334,32 @@
     .stop::before{display:none;}
     .stop .icon{width:46px; height:46px; font-size:22px; border-width:3px;}
     .stop .label{font-size:11.5px; margin-top:5px; line-height:1.3;}
-    .stop .phase{font-size:9.5px; line-height:1.25;}
+    .stop .phase{font-size:11px; line-height:1.3;}
     .stop.active{background:var(--cbg);}
   }
   @media(max-width:360px){
     .journey{grid-template-columns:repeat(2,1fr);}
   }
-  /* ===== 常時表示の長い注意書きは、狭い画面では高さを抑えて中でスクロール =====
-     文面は1文字も削らない。主役(本文・道のり)に面積を残すための措置 */
+  /* ===== 常時表示の長い注意書き(免責)は <details open> で畳む =====
+     要点5点は summary に常時出す(①個人が無償・as is ②法律上の助言ではない
+     ③故意・重過失を除く責任制限 ④非商用ライセンス ⑤基準日)。本文は1文字も削らない。
+     ⚠️ max-height は details 本体ではなく .dnBody 側に掛ける
+        (details に掛けると、開いた中でさらに8割が隠れたままになる) */
+  .disclaimerNote > summary{cursor:pointer; list-style:none;}
+  .disclaimerNote > summary::-webkit-details-marker{display:none;}
   @media(max-width:600px){
-    .disclaimerNote{max-height:32vh; overflow-y:auto;
-      -webkit-overflow-scrolling:touch; box-shadow:inset 0 -10px 10px -10px rgba(0,0,0,.18);}
+    .disclaimerNote > .dnBody{max-height:32vh; overflow-y:auto;
+      -webkit-overflow-scrolling:touch; box-shadow:inset 0 -10px 10px -10px rgba(0,0,0,.18); margin-top:6px;}
+    .disclaimerNote > summary{position:sticky; top:0; background:#fffbeb; z-index:1; padding:2px 0;}
+    .disclaimerNote > .dnBody::after{content:"▲ ここまでが全文です"; display:block;
+      font-size:11px; color:#92400e; text-align:center; padding-top:6px;}
   }
-  /* かんたん版/くわしく の切替が狭い画面で語中改行するのを防ぐ */
-  .candToggle button, .htBtn{white-space:nowrap;}
-  @media(max-width:360px){
-    .candToggle button, .htBtn{font-size:12px; padding:7px 10px;}
+  /* かんたん版/くわしく の切替が狭い画面で語中改行・切り落ちするのを防ぐ
+     ※ .htBtn(0-1-0) は .helpToggle button(0-1-1) に詳細度で負けるため、
+        必ず「.helpToggle button」と同じ書き方で上書きすること(メディアクエリは詳細度に影響しない) */
+  .candToggle button, .helpToggle button{white-space:nowrap;}
+  @media(max-width:400px){
+    .candToggle button, .helpToggle button{font-size:12px; padding:7px 10px;}
   }
   /* ===== ⏱️ タイムライン: PCは横SVG / 携帯は大きな文字の縦レイアウト(スクロール不要) ===== */
   .tlMobile{display:none;}
@@ -331,36 +376,128 @@
   .tlRow.pol{color:#047857;} .tlRow.ele{color:#b91c1c;}
   .tlRow b{font-size:15.5px;}
   .tlMark{text-align:center; font-size:14.5px; font-weight:bold; color:var(--ng); padding:8px 0;}
-  .tlMark small{display:block; font-size:12px; color:var(--muted); font-weight:normal;}
+  .tlMark small{display:block; font-size:12px; color:#4b5563; font-weight:normal;}
+
+  /* ===== 表: 狭い画面で見出しを折り返し、長い英数字トークンも折る =====
+     新しい表を足すときの前提条件。これが無いと th{white-space:nowrap} で
+     320px の横スクロールが再発する(WCAG 1.4.10 Reflow) */
+  @media(max-width:700px){
+    .panel table th{ white-space:normal; }
+    .panel table th, .panel table td{ overflow-wrap:anywhere; }
+  }
+  /* ===== 入力欄は携帯だけ16px =====
+     iOS Safari は16px未満の入力欄にフォーカスするとページを自動ズームし、戻らない。
+     ※ viewport に maximum-scale=1 を足す回避策は利用者のピンチズームを奪うので採らない。
+       PC(>700px)の見た目は変えない */
+  /* ⚠️ 元の指定が .settings input[type=date] のように属性セレクタ付き(0-2-1)なので、
+        .settings input(0-1-1)で上書きしようとすると詳細度で負けて一度も効かない。
+        必ず同じ書き方(同じ詳細度)で、かつ後ろに置いて上書きする */
+  @media (max-width:700px){
+    .settings input[type=date],
+    .newitem input[type=text], .newitem select,
+    .modal select, .modal input[type=text], .modal input[type=date], .modal input[type=time],
+    .memberAddRow input{ font-size:16px; }
+  }
+
+  /* ===== 本文内のリンクは1系統の見た目にそろえる =====
+     色だけで示さず下線と ↗ を付ける(WCAG 1.4.1)。.lawlink は「条文/公的資料」の意味づけだけに使う */
+  .panel a:not(.toolBtn), .note a, footer a, .gateTxt a, .gateSum a{
+    color:#1a56db; text-decoration:underline; text-underline-offset:2px; text-decoration-thickness:1px;
+    padding:3px 2px; border-radius:3px; overflow-wrap:break-word; }
+  .panel a:not(.toolBtn):visited, .note a:visited, footer a:visited{ color:#5b21b6; }
+  .panel a[target="_blank"]:not(.toolBtn)::after,
+  .note a[target="_blank"]::after, footer a[target="_blank"]::after{
+    content:"↗"; font-size:.78em; margin-left:1px; color:#6b7280; }
+  a.lawlink::after{ content:none; }   /* ↗ は上の [target=_blank] 側で一元化 */
+
+  /* ===== 印刷 / PDF化 =====
+     タブ切替で隠れている9パネルと「くわしく」の中身を全部紙に出し、
+     条文リンクのURLを本文の後ろに残す(このページの肝)。
+     ⚠️ 免責を <details> にしたので、details を強制展開する指定を必ず残すこと
+        (閉じたまま印刷すると紙から免責とライセンス表示が消える) */
+  @media print{
+    body{background:#fff; padding-bottom:0;}
+    .journey, .tapnote, .ctaWrap, .candBar, .helpBar, .settings,
+    .newitem, .memberPanel, .exportbar, .exporthint, .overlay{display:none !important;}
+    /* ⚠️ .gate は印刷でも消さない。同意後は JS が DOM ごと削除するので紙には出ない。
+       消すと、同意前に印刷したときに body.gateOn .wrap{display:none} と二重で効いて
+       「1文字も載っていない白紙」が出る(実測で確認) */
+    .panel{display:block !important; page-break-before:always; box-shadow:none; border-top-width:4px;}
+    .panel:first-of-type{page-break-before:auto;}
+    .detailOnly{display:block !important;}
+    li.detailOnly{display:list-item !important;}
+    tr.detailOnly{display:table-row !important;}
+    table.detailOnly{display:table !important;}
+    .simpleOnly{display:none !important;}
+    details{display:block !important;}
+    details > *{display:block !important;}
+    details > summary{display:block !important; list-style:none;}
+    .helpCard > summary.hcHead::after{content:none !important;}   /* 紙では中身が全部出るので「▼ ひらく」は出さない */
+    .disclaimerNote, .disclaimerNote > .dnBody{max-height:none !important; overflow:visible !important; box-shadow:none !important;}
+    .tablewrap{overflow:visible !important;}
+    .schedtable{min-width:0 !important; font-size:10px;}
+    a.lawlink::after{content:" (" attr(href) ")" !important; font-size:9px; color:#444; word-break:break-all;}
+    .panel a[target="_blank"]:not(.toolBtn)::after{content:" (" attr(href) ")" !important; font-size:9px; color:#444; word-break:break-all;}
+    .panel h2, .panel h3{page-break-after:avoid;}
+    .okng{grid-template-columns:1fr 1fr;}
+    footer{display:block !important;}
+  }
 </style>
 </head>
 <body class="gateOn">
 <!-- ===== 同意ゲート(ご利用前の確認) =====
      ①自己責任 ②非商用 の両方にチェックを入れないと本文へ進めない。
-     文面を変えたら下の GATE_VER を上げること(記憶済みの人にも再同意を求められる)。 -->
+     文面を変えたら下の GATE_VER を上げること(記憶済みの人にも再同意を求められる)。
+     日付は「ゲート①の基準日 / GATE_VER / 📅注記 / 常時表示の免責 / 💴k4カードの見出し /
+     フッタの参照時点 / フッタの最終更新日」の7箇所にある。
+     文面を直したら必ず GATE_VER も同じ「適用日」に上げる(同じ日付のままだと再同意が求められない)。
+     7箇所が揃っているかは build/precheck.py の G1 が検査する。 -->
 <div id="gate" class="gate" role="dialog" aria-modal="true" aria-labelledby="gateTtl">
   <div class="gateBox">
     <h2 id="gateTtl">🗺️ 選挙と政治活動の歩き方 — ご利用の前に</h2>
     <p class="gateLead">次の2点をお読みいただき、<b>両方にチェック</b>を入れてください。チェックすると下のボタンが押せるようになります。</p>
 
-    <label class="gateItem" id="gateItem1">
-      <input type="checkbox" id="gateChk1">
-      <span class="gateTxt"><b class="gateH">① 自己責任でのご利用に同意します</b>本サイトおよび各マップツールは、<b>作成者(中村幸信)が個人として無償で公開している</b>ものです。<b>現状のまま(as is)提供</b>するものであり、作成者は、動作・内容の保証、不具合の修補、更新、個別のサポートのいずれも約束しません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>個別のご相談・法律判断のお問い合わせにはお答えできません</b>。掲載内容は<b>最終更新日(2026年10月5日)時点</b>の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、<b>正確性・完全性・最新性を保証するものではありません</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。各ツールにアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理(第三者の個人情報を入力される場合の取扱いを含みます)は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用は<b>ご自身の責任</b>でお願いします。<b>法令上許される範囲で</b>、ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。なお、提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。</span>
-    </label>
+    <div class="gateItem" id="gateItem1">
+      <label class="gateChkRow">
+        <input type="checkbox" id="gateChk1" aria-describedby="gateTxt1">
+        <b class="gateH">① 自己責任でのご利用に同意します</b>
+      </label>
+      <ul class="gateSum">
+        <li>個人が無償で公開しているもので、動作・内容の保証やサポートはありません(現状のまま提供)。</li>
+        <li>一般的な情報のご案内で、法律上の助言ではありません。個別のご相談にはお答えできません。</li>
+        <li>2026年10月6日時点の情報です。最終判断は必ず選挙管理委員会・弁護士等にご確認ください。</li>
+        <li>アクセス制限はありません。URL・配布ファイル・入力データの共有範囲はご利用チームの責任で管理してください。</li>
+        <li>法令上許される範囲で、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。</li>
+      </ul>
+      <details class="gateFull"><summary>① の全文を読む</summary>
+        <div class="gateTxt" id="gateTxt1">本サイトおよび各マップツールは、<b>作成者(中村幸信)が個人として無償で公開している</b>ものです。<b>現状のまま(as is)提供</b>するものであり、作成者は、動作・内容の保証、不具合の修補、更新、個別のサポートのいずれも約束しません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>個別のご相談・法律判断のお問い合わせにはお答えできません</b>。掲載内容は<b>最終更新日(2026年10月6日)時点</b>の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、<b>正確性・完全性・最新性を保証するものではありません</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。各ツールにアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理(第三者の個人情報を入力される場合の取扱いを含みます)は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用は<b>ご自身の責任</b>でお願いします。<b>法令上許される範囲で</b>、ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。なお、提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。</div>
+      </details>
+    </div>
 
-    <label class="gateItem" id="gateItem2">
-      <input type="checkbox" id="gateChk2">
-      <span class="gateTxt"><b class="gateH">② 非商用でのご利用に同意します</b>本サイトおよび各マップツールは、<b>PolyForm Noncommercial License 1.0.0</b> に基づき、<b>非商用</b>の目的であれば、候補者ご本人や政治活動のボランティアを含め、<b>誰でも無償で利用・複製・改変・再配布</b>できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>(著作権法などで認められた引用等の利用を制限するものではありません)。<b>再配布・改変して配布されるときは、ライセンス全文またはそのURLと、下記の Required Notice をそのまま添付してください。</b>違反を確認した場合は、ライセンスの定めに従い書面で通知のうえ、<b>通知を受けてから32日以内に是正されないときは利用許諾はすべて終了します</b>。それでも是正されない場合は<b>法的措置を含め厳正に対処します</b>。正式な利用条件は LICENSE(英文)に従います。この日本語の説明は理解を助けるための要約です。<span class="gateLic">ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></span>
-    </label>
+    <div class="gateItem" id="gateItem2">
+      <label class="gateChkRow">
+        <input type="checkbox" id="gateChk2" aria-describedby="gateTxt2">
+        <b class="gateH">② 非商用でのご利用に同意します</b>
+      </label>
+      <ul class="gateSum">
+        <li>非商用であれば、候補者ご本人や政治活動のボランティアを含め、誰でも無償で利用・複製・改変・再配布できます(PolyForm Noncommercial License 1.0.0)。</li>
+        <li>営利目的での利用・販売・複製・再配布は許可していません。</li>
+        <li>再配布・改変して配布するときは、ライセンス全文またはそのURLと、下記の Required Notice をそのまま添付してください。</li>
+        <li>違反を確認した場合は書面で通知し、通知を受けてから32日以内に是正されないときは利用許諾はすべて終了します。</li>
+      </ul>
+      <details class="gateFull"><summary>② の全文を読む</summary>
+        <div class="gateTxt" id="gateTxt2">本サイトおよび各マップツールは、<b>PolyForm Noncommercial License 1.0.0</b> に基づき、<b>非商用</b>の目的であれば、候補者ご本人や政治活動のボランティアを含め、<b>誰でも無償で利用・複製・改変・再配布</b>できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>(著作権法などで認められた引用等の利用を制限するものではありません)。<b>再配布・改変して配布されるときは、ライセンス全文またはそのURLと、下記の Required Notice をそのまま添付してください。</b>違反を確認した場合は、ライセンスの定めに従い書面で通知のうえ、<b>通知を受けてから32日以内に是正されないときは利用許諾はすべて終了します</b>。それでも是正されない場合は<b>法的措置を含め厳正に対処します</b>。正式な利用条件は LICENSE(英文)に従います。この日本語の説明は理解を助けるための要約です。<span class="gateLic">ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>
+      </details>
+    </div>
 
-    <label class="gateSkip"><input type="checkbox" id="gateSkip">次回からこの確認を表示しない(お使いの端末のブラウザに記憶します)</label>
+    <label class="gateSkip"><input type="checkbox" id="gateSkip"><span>次回からこの確認を表示しない<small style="display:block;font-size:12px;">(お使いの端末のブラウザに記憶します。内容を更新したときは再度表示されます)</small></span></label>
 
     <div class="gateBtns">
       <button type="button" id="gateOk" class="gateBtn" disabled>同意して歩き方を開く</button>
       <a class="gateBack" href="../">同意しない(トップページへ戻る)</a>
     </div>
     <p class="gateHint" id="gateHint">※ ①と②の両方にチェックを入れると押せます。</p>
-    <p class="gateNote">同じ内容は、ページを開いたあとも上部の「ご利用にあたって」に常時掲載しています。</p>
+    <p class="gateNote">同じ内容は、ページを開いたあとも上部の「⚠️ ご利用にあたって」から全文をご覧になれます。</p>
   </div>
 </div>
 <script>
@@ -368,7 +505,7 @@
   "use strict";
   /* 同意の記憶。文面を変えたら GATE_VER を上げる = 全員にもう一度同意を求める */
   var GATE_KEY = "senkyoMaps.arukikata.agreed";
-  var GATE_VER = "2026-10-05";
+  var GATE_VER = "2026-10-06";
   var gate = document.getElementById("gate");
   function enter() {
     document.body.classList.remove("gateOn");
@@ -400,42 +537,56 @@
 })();
 </script>
 <noscript>
-  <div style="background:#fef2f2; border:2px solid #dc2626; color:#7f1d1d; border-radius:10px; padding:14px 16px; margin:12px auto; max-width:1000px; font-size:14px; line-height:1.7;">
-    ⚠️ <b>このページは JavaScript で動きます。</b>上部のアイコンで表示を切り替えるには、<b>ファイルを保存してから Chrome / Edge / Safari などのブラウザで開いて</b>ください。<br>
-    メールやチャットの「プレビュー」表示のまま開くと、切り替えが動かず最初のページしか表示されません。
+  <!-- JavaScript が無効のときの表示。
+       ⚠️ .gate は position:fixed; z-index:9999 の暗幕なので、これを消さないと
+          この警告は暗幕の下に敷かれて読めない(JS無効のChromiumで実測済み)。
+       本文は同意を得る前には出さない方針なので body.gateOn の .wrap{display:none} はそのまま残す。 -->
+  <style>
+    .gate{display:none !important;}                 /* 暗幕を出さない(これが無いと警告に到達できない) */
+    body.gateOn{overflow:auto !important;}          /* 警告が長いときに読めるようスクロールは許す */
+    .noJsBar{position:relative; z-index:10000;}
+  </style>
+  <div class="noJsBar" style="background:#fef2f2; border:2px solid #dc2626; color:#7f1d1d; border-radius:10px; padding:14px 16px; margin:12px auto; max-width:1000px; font-size:14px; line-height:1.7;">
+    ⚠️ <b>JavaScriptが無効のため同意ボタンが使えません。有効にして再読み込みしてください。</b><br>
+    このページは、ご利用の前に<b>①自己責任でのご利用 ②非商用でのご利用</b>の2点に同意いただく仕組みになっており、その同意ボタンは JavaScript で動いています。お使いのブラウザの設定で <b>JavaScript を有効にしてから、このページを開き直して</b>ください。<br>
+    ページ切り替え・「かんたん版／くわしく」の切り替え・🗓️活動スケジュールも JavaScript で動きます。<br>
+    <b>JavaScript を有効にできない場合</b>は、お手数ですが別のブラウザ(Chrome / Edge / Safari など)でお試しください。メールやチャットの「プレビュー」表示のまま開いているときは、いったんブラウザで開き直すと動く場合があります。
   </div>
 </noscript>
 <div class="wrap">
   <header>
     <h1>🗺️ 選挙と政治活動の歩き方</h1>
     <p class="lead">これから政治活動を始める人・候補者を支える人・関心のある有権者のための、スタートからゴールまでの道案内。</p>
-    <div class="note"><b>📅 本ページの内容は2026年10月5日時点の法令に基づきます。</b>文中の<span style="color:#1a56db; text-decoration:underline;">青いリンク</span>は、クリックすると<b>e-Gov法令検索のその条文</b>や選挙管理委員会・総務省・国税庁の該当ページに直接飛びます。<br>本ページは一般的な情報提供であり、特定候補への投票を勧めるものではありません。ルールの詳細・最新情報は必ず<b>選挙管理委員会・総務省</b>でご確認ください。記載の条文・数値は目安です。</div>
-    <div class="note disclaimerNote">⚠️ <b>ご利用にあたって</b><br><b>① 自己責任でのご利用について:</b>本サイトおよび各マップツールは、<b>作成者(中村幸信)が個人として無償で公開している</b>ものです。<b>現状のまま(as is)提供</b>するものであり、作成者は、動作・内容の保証、不具合の修補、更新、個別のサポートのいずれも約束しません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>個別のご相談・法律判断のお問い合わせにはお答えできません</b>。掲載内容は<b>最終更新日(2026年10月5日)時点</b>の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、<b>正確性・完全性・最新性を保証するものではありません</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。各ツールにアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理(第三者の個人情報を入力される場合の取扱いを含みます)は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用は<b>ご自身の責任</b>でお願いします。<b>法令上許される範囲で</b>、ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。なお、提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。<br><b>🟢 ② 非商用でのご利用について:</b>本サイトおよび各マップツールは、<b>PolyForm Noncommercial License 1.0.0</b> に基づき、<b>非商用</b>の目的であれば、候補者ご本人や政治活動のボランティアを含め、<b>誰でも無償で利用・複製・改変・再配布</b>できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>(著作権法などで認められた引用等の利用を制限するものではありません)。<b>再配布・改変して配布されるときは、ライセンス全文またはそのURLと、下記の Required Notice をそのまま添付してください。</b>違反を確認した場合は、ライセンスの定めに従い書面で通知のうえ、<b>通知を受けてから32日以内に是正されないときは利用許諾はすべて終了します</b>。それでも是正されない場合は<b>法的措置を含め厳正に対処します</b>。正式な利用条件は LICENSE(英文)に従います。この日本語の説明は理解を助けるための要約です。<span class="gateLic">ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>
+    <div class="note"><b>📅 本ページの内容は2026年10月6日時点の法令に基づきます。</b>文中の<b>下線と ↗ がついたリンク</b>は、クリックすると<b>e-Gov法令検索のその条文</b>や選挙管理委員会・総務省・国税庁の該当ページに飛びます(<b>条文番号にリンクが付いていない引用は、条文ページへの直リンクを用意できていないものです</b>)。<br>本ページは一般的な情報提供であり、特定候補への投票を勧めるものではありません。ルールの詳細・最新情報は必ず<b>選挙管理委員会・総務省</b>でご確認ください。記載の条文・数値は目安です。</div>
+    <details class="note disclaimerNote" open>
+      <summary>⚠️ <b>ご利用にあたって</b>(タップで全文の開閉) — 作成者が個人として無償・<b>現状のまま(as is)</b>提供／<b>一般的な情報のご案内で法律上の助言ではありません</b>／<b>故意または重大な過失による場合を除き責任を負いません</b>／<b>非商用ライセンス(PolyForm Noncommercial License 1.0.0)</b>／内容は<b>2026年10月6日時点</b></summary>
+      <div class="dnBody"><b>① 自己責任でのご利用について:</b>本サイトおよび各マップツールは、<b>作成者(中村幸信)が個人として無償で公開している</b>ものです。<b>現状のまま(as is)提供</b>するものであり、作成者は、動作・内容の保証、不具合の修補、更新、個別のサポートのいずれも約束しません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>個別のご相談・法律判断のお問い合わせにはお答えできません</b>。掲載内容は<b>最終更新日(2026年10月6日)時点</b>の情報に基づくもので、法改正や運用の変更により現行の制度と異なる場合があり、<b>正確性・完全性・最新性を保証するものではありません</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。各ツールにアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理(第三者の個人情報を入力される場合の取扱いを含みます)は、ご利用チームの責任で行ってください。本サイトおよび各ツールのご利用は<b>ご自身の責任</b>でお願いします。<b>法令上許される範囲で</b>、ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。なお、提供するのは公開ツール・情報そのもののみで、個別の導入支援・データ作成は行いません。<br><b>🟢 ② 非商用でのご利用について:</b>本サイトおよび各マップツールは、<b>PolyForm Noncommercial License 1.0.0</b> に基づき、<b>非商用</b>の目的であれば、候補者ご本人や政治活動のボランティアを含め、<b>誰でも無償で利用・複製・改変・再配布</b>できます。<b>営利目的での利用・販売・複製・再配布は許可していません</b>(著作権法などで認められた引用等の利用を制限するものではありません)。<b>再配布・改変して配布されるときは、ライセンス全文またはそのURLと、下記の Required Notice をそのまま添付してください。</b>違反を確認した場合は、ライセンスの定めに従い書面で通知のうえ、<b>通知を受けてから32日以内に是正されないときは利用許諾はすべて終了します</b>。それでも是正されない場合は<b>法的措置を含め厳正に対処します</b>。正式な利用条件は LICENSE(英文)に従います。この日本語の説明は理解を助けるための要約です。<span class="gateLic">ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>
+    </details>
   </header>
 
-  <div class="mapTitle">🚶 道のり(タップ/クリックで詳細へ)</div>
-  <div class="journey" role="tablist">
-    <button class="stop p0 active" data-p="s0" role="tab"><span class="icon">🧭</span><span class="label">まず知る</span><span class="phase">大前提のルール</span></button>
-    <button class="stop p1" data-p="s1" role="tab"><span class="icon">🌱</span><span class="label">政治活動スタート</span><span class="phase">平時</span></button>
-    <button class="stop p8" data-p="s8" role="tab"><span class="icon">💴</span><span class="label">寄附とお金</span><span class="phase">平時〜選挙後</span></button>
-    <button class="stop p7" data-p="s7" role="tab"><span class="icon">🏠</span><span class="label">ホームページ</span><span class="phase">平時(早めに)</span></button>
-    <button class="stop p2" data-p="s2" role="tab"><span class="icon">📦</span><span class="label">選挙の準備</span><span class="phase">告示前</span></button>
-    <button class="stop p3" data-p="s3" role="tab"><span class="icon">📣</span><span class="label">選挙運動</span><span class="phase">告示日〜前日</span></button>
-    <button class="stop p4" data-p="s4" role="tab"><span class="icon">🗳️</span><span class="label">投票日</span><span class="phase">当日</span></button>
-    <button class="stop p5" data-p="s5" role="tab"><span class="icon">📊</span><span class="label">選挙のあと</span><span class="phase">投票日後</span></button>
+  <h2 class="mapTitle">🚶 道のり(タップ/クリックで詳細へ)</h2>
+  <div class="journey" role="tablist" aria-label="選挙と政治活動の道のり(全8ステップ)">
+    <button class="stop p0 active" data-p="s0" role="tab" id="tab-s0" aria-controls="s0" aria-selected="true"><span class="icon">🧭</span><span class="label">まず知る</span><span class="phase">大前提のルール</span></button>
+    <button class="stop p1" data-p="s1" role="tab" id="tab-s1" aria-controls="s1" aria-selected="false"><span class="icon">🌱</span><span class="label">政治活動スタート</span><span class="phase">平時</span></button>
+    <button class="stop p8" data-p="s8" role="tab" id="tab-s8" aria-controls="s8" aria-selected="false"><span class="icon">💴</span><span class="label">寄附とお金</span><span class="phase">平時〜選挙後</span></button>
+    <button class="stop p7" data-p="s7" role="tab" id="tab-s7" aria-controls="s7" aria-selected="false"><span class="icon">🏠</span><span class="label">ホームページ</span><span class="phase">平時(早めに)</span></button>
+    <button class="stop p2" data-p="s2" role="tab" id="tab-s2" aria-controls="s2" aria-selected="false"><span class="icon">📦</span><span class="label">選挙の準備</span><span class="phase">告示前</span></button>
+    <button class="stop p3" data-p="s3" role="tab" id="tab-s3" aria-controls="s3" aria-selected="false"><span class="icon">📣</span><span class="label">選挙運動</span><span class="phase">告示日〜前日</span></button>
+    <button class="stop p4" data-p="s4" role="tab" id="tab-s4" aria-controls="s4" aria-selected="false"><span class="icon">🗳️</span><span class="label">投票日</span><span class="phase">当日</span></button>
+    <button class="stop p5" data-p="s5" role="tab" id="tab-s5" aria-controls="s5" aria-selected="false"><span class="icon">📊</span><span class="label">選挙のあと</span><span class="phase">投票日後</span></button>
   </div>
   <div class="tapnote">▲ 気になるところをクリックすると、下に詳しい説明が出ます</div>
   <div class="ctaWrap">
-    <button class="ctaBtn" id="openHelp" style="background:var(--s7); box-shadow:0 2px 8px rgba(219,39,119,.35);">🤝 手伝いたい人へ — 支援者ガイド(ポスティング・辻立ち・街頭演説)</button>
+    <button class="ctaBtn" id="openHelp" style="background:var(--s7); box-shadow:0 2px 8px rgba(219,39,119,.35);">🤝 手伝いたい人へ — 支援者ガイド(ポスティング・辻立ち・街頭演説・ポスター貼り・電話かけ)</button>
     <button class="ctaBtn" id="openSched">🗓️ スケジュールを作る — 準備の計画表(Excel・スプレッド出力対応)</button>
   </div>
 
   <!-- ===== S0 まず知る ===== -->
-  <section class="panel p0 active" id="s0">
+  <section id="s0" class="panel p0 active" role="tabpanel" aria-labelledby="tab-s0">
     <h2>🧭 まず知る — 「政治活動」と「選挙運動」は別物</h2>
     <span class="period">すべての土台になる大前提</span>
-    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button></div></div>
-    <p class="help" style="font-size:12px; color:var(--muted); margin:0 0 8px;">※「かんたん版」は要点だけ。「📖 くわしく」を押すと条文・詳しい表・細かい注意が開きます(切り替えは各タブ共通)。</p>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
+    <p class="help" style="font-size:12px; color:#4b5563; margin:0 0 8px;">※「かんたん版」は要点だけ。「📖 くわしく」を押すと条文・詳しい表・細かい注意が開きます(切り替えは<b>各タブ＋🤝支援者ガイドで共通</b>)。</p>
     <p>ここを混同すると、悪気がなくても法律違反(事前運動など)になります。最初に3分だけ押さえましょう。</p>
     <div class="req3">
       <b>📣 「選挙運動」とされる3要件</b> — 次の3つがそろう行為は選挙運動とされます。直接の言葉でなくても、<b>これらを想起させる行動</b>も選挙運動とみなされます。<br><small>※<b>公職選挙法に「選挙運動」の定義規定はありません。</b>下の3要件は、判例・選挙管理委員会の実務で用いられている整理(「特定の選挙について、特定の候補者の当選を目的として、投票を得または得させるために直接・間接に必要かつ有利な行為」)をかみくだいたもので、条文そのものではありません。実際の当てはめは行為の時期・場所・方法を総合して判断されます</small>
@@ -506,11 +657,14 @@
         <div class="tlRow ele">📣 選挙運動：<b>できない</b></div>
       </div>
     </div>
-    <h3>時期を問わず、ずっと禁止の3つ</h3>
+    <h3>時期を問わず、ずっと禁止の5つ</h3>
     <ul>
-      <li>🚫 <b>寄附の禁止</b> — 政治家・候補者(になろうとする人)が選挙区内の人にお金や物を贈ること(お祭りへの差し入れ、香典・お中元なども原則NG。公選法199条の2)。※逆に<b>受け取る</b>寄附のルールと支援者の税控除は「💴 寄附とお金」タブへ</li>
+      <li>🚫 <b>寄附の禁止</b> — 政治家・候補者(になろうとする人)が選挙区内の人にお金や物を贈ること(お祭りへの差し入れ、香典・お中元なども原則NG。公選法199条の2)。<b>※禁止されているのは候補者側だけではありません</b> — <b>支援者が候補者の名義で香典・祝儀・寸志を出すこと、候補者に「寸志を」「寄付を」と勧めること・求めることも禁止</b>です(同条2項〜4項。詳しくは「🤝 支援者ガイド」)。※逆に<b>受け取る</b>寄附のルールと支援者の税控除は「💴 寄附とお金」タブへ
+      <small class="detailOnly">※<b>香典・祝儀には罰則の除外があります</b>。①<b>本人が結婚披露宴に自ら出席し、その場でする祝儀</b> ②<b>本人が葬式(告別式を含む)に自ら出席し、その場でする香典</b>、または<b>葬式の日までに自ら弔問し、その場でする香典</b>は、<b>当該選挙に関しないもので、かつ通常一般の社交の程度を超えないもの</b>であれば罰則の対象外です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_249_2" target="_blank" rel="noopener noreferrer">公選法249条の2第3項1号・2号</a>)。<b>代理人に持たせる／後日郵送する／金額が社交の程度を超える</b>のはいずれも除外に当たらず、通常一般の社交の程度を超えるものは「当該選挙に関する」寄附とみなされます(同2項)。<b>花輪・供花・弔電・お中元・お歳暮・祭りの差し入れには除外がありません。</b>なお禁止規定(199条の2第1項)自体には該当するので、「適法になる」のではなく「罰則が外れる」構造です。</small></li>
       <li>🚫 <b>事前運動の禁止</b> — 告示前の投票依頼(公選法129条)</li>
-      <li>🚫 <b>「投票依頼」の戸別訪問の禁止</b> — <b>投票を得させる目的・得させない目的</b>のいずれであっても、家や会社を戸別に訪ね歩くことは時期を問わず禁止(公選法138条1項)。一方、<b>投票依頼を伴わない</b>あいさつ回りや後援会加入の勧誘訪問は、政治活動として可能です(支持者集めの正攻法)。ただし<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_138" target="_blank" rel="noopener noreferrer">138条2項</a>は、戸別に<b>演説会の告知</b>をする行為や<b>特定の候補者名・政党名を言いあるく</b>行為を、それ自体で戸別訪問の禁止行為に当たるものと<b>みなしています</b>。看板に「あいさつ」と書いてあっても<b>話の実質で判断</b>されるので線引きに注意(選管も「公示・告示前は事前運動となるおそれ」と案内しています)</li>
+      <li>🚫 <b>戸別訪問の禁止</b> — <b>投票を得る目的・得させる目的・得させない目的</b>のいずれであっても、家や会社を戸別に訪ね歩くことは時期を問わず禁止(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_138" target="_blank" rel="noopener noreferrer">公選法138条1項</a>。違反は1年以下の拘禁刑または30万円以下の罰金＝239条1項3号)。一方、<b>投票依頼を伴わない</b>あいさつ回りや後援会加入の勧誘訪問は、政治活動として可能です(支持者集めの正攻法)。ただし138条2項は、<b>「選挙運動のため」</b>に戸別に<b>演説会の告知</b>をする行為や<b>特定の候補者名・政党名を言いあるく</b>行為を、戸別訪問の禁止行為に当たるものと<b>みなしています</b>(＝選挙運動のためでない政治活動としての告知は2項の対象外ですが、<b>「選挙運動のため」かどうかは行為の実質で判断</b>されます)。看板に「あいさつ」と書いてあっても<b>話の実質で判断</b>されるので線引きに注意(選管も「公示・告示前は事前運動となるおそれ」と案内しています)</li>
+      <li>🚫 <b>あいさつ状の禁止</b> — 選挙区内の人に、年賀状・寒中見舞・暑中見舞などの時季のあいさつ状(電報を含む)を出すことは時期を問わず禁止。<b>例外は「答礼のための自筆のもの」だけ</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_147_2" target="_blank" rel="noopener noreferrer">公選法147条の2</a>)</li>
+      <li>🚫 <b>あいさつを目的とする有料広告の禁止</b> — 年賀・寒中見舞・暑中見舞・慶弔・激励・感謝などのあいさつを主な目的とする広告を、<b>有料で</b>新聞・雑誌・ビラ・パンフレット・<b>ネット上の文書図画(SNSの有料投稿・バナー等)</b>・放送に出すことは禁止(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_152" target="_blank" rel="noopener noreferrer">公選法152条</a>。違反は<b>50万円以下の罰金</b>＝235条の6第1項)。<b>後援団体も対象</b>です</li>
     </ul>
     <div class="vol volBig">🤝 <b>支える人・有権者のみなさんへ:</b> 応援する側の行為も「選挙運動」に当たれば同じ期間ルールが適用されます。<b>「迷ったら選管に確認 + みんなへの情報共有」</b>が鉄則です。</div>
     <div class="toolBox">
@@ -525,57 +679,91 @@
   </section>
 
   <!-- ===== S1 政治活動スタート ===== -->
-  <section class="panel p1" id="s1">
+  <section id="s1" class="panel p1" role="tabpanel" aria-labelledby="tab-s1">
     <h2>🌱 政治活動のスタートを切る</h2>
     <span class="period">平時(告示日より前ならいつでも)</span>
-    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button></div></div>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
     <h3>手順(この順番で)</h3>
     <ol>
       <li><b>目的と立場を決める</b> — 何のために・どの選挙を見据えるか。この段階で投票依頼をすると事前運動になるので注意</li>
-      <li><b>政治団体(後援会)を立ち上げる</b> — 支援の受け皿。<b>政治団体とは</b>、政治上の主義・施策の推進や候補者の推薦・支持を本来の目的とする団体のこと(政治資金規正法)。<b>設立の届出</b>を、組織の日から7日以内に<b>主たる事務所の所在地の都道府県の選挙管理委員会</b>(2以上の都道府県にわたって活動する団体・政党等は、都道府県選管を経て<b>総務大臣</b>)へ提出し(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_6" target="_blank" rel="noopener noreferrer">規正法6条1項</a>)、<b>会計責任者</b>を決め、毎年の<b>収支報告</b>を行う義務が生じます。<b>市区町村の選挙管理委員会は届出先ではありません。</b>届出前の寄附受領・支出は禁止(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_8" target="_blank" rel="noopener noreferrer">8条</a>)</li>
+      <li><b>政治団体(後援会)を立ち上げる</b> — 支援の受け皿。<b>政治団体とは</b>、政治上の主義・施策の推進や候補者の推薦・支持を本来の目的とする団体のこと(政治資金規正法)。<b>設立の届出</b>を、組織の日から7日以内に<b>主たる事務所の所在地の都道府県の選挙管理委員会</b>(2以上の都道府県にわたって活動する団体・政党等は、都道府県選管を経て<b>総務大臣</b>)へ提出し(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_6" target="_blank" rel="noopener noreferrer">規正法6条1項</a>)、<b>会計責任者</b>を決め、毎年の<b>収支報告</b>を行う義務が生じます。<b>市区町村の選挙管理委員会は届出先ではありません。</b>届出前の寄附受領・支出は禁止(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_8" target="_blank" rel="noopener noreferrer">8条</a>)。<br><b>設立届のあとに続く義務は3つ</b>です。①<b>会計帳簿を備えて記載する</b>(すべての収入・支出・金銭等の運用。帳簿の種類・様式・記載要領は総務省令で定まります＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_9" target="_blank" rel="noopener noreferrer">規正法9条</a>) ②<b>領収書等を徴収して保存する</b> ③<b>毎年の収支報告書を提出する</b>(規正法12条)。<b>「年に1回まとめて作る」ではなく、日々つける帳簿が前提</b>です。<b>守らないと罰則と公民権停止があります</b>(「📊 選挙のあと」タブ参照)</li>
       <li>📇 <b>名簿を扱うときの最低限</b> — 後援会名簿・はがきの宛名データは、①<b>何に使うか</b>(会報送付・集会案内など)を決めて集める
       ②紙とデータの<b>保管場所・持ち出しルール</b>を決める ③<b>担当者以外が見られない</b>状態にする ④<b>不要になったら廃棄</b>する
       ⑤<b>漏えい時の連絡先</b>を決めておく。
       <small>政治団体が政治活動のために扱う個人情報は個人情報保護法の第4章が適用除外ですが
-      (<a class="lawlink" href="https://laws.e-gov.go.jp/law/415AC0000000057" target="_blank" rel="noopener noreferrer">同法57条1項4号</a>)、
+      (<a class="lawlink" href="https://laws.e-gov.go.jp/law/415AC0000000057#Mp-Ch_4-Se_6-At_57" target="_blank" rel="noopener noreferrer">同法57条1項4号</a>)、
       <b>安全管理措置・苦情処理を自ら講じて公表する努力義務は残ります</b>(同条3項)。
       <b>届出前の段階や、個人が自宅で預かる場合は適用除外にならないことがある</b>ため、扱いは慎重に。</small></li>
       <li><b>平時の活動を積み上げる</b> — あいさつ回り、ミニ集会での政策発信、SNS・ブログ、後援会の拡大</li>
       <li><b>お金のルールを押さえる</b> — 政治家<b>個人</b>への金銭の寄附は原則禁止。献金は<b>政治団体宛</b>が原則。すべて収支報告書に記載し領収書を保存(受け皿ごとの違いと支援者の税控除は「💴 寄附とお金」タブに詳説)</li>
     </ol>
     <div class="okng">
-      <div class="okbox"><h4>⭕ 平時にできること</h4><ul><li>政策を語る演説・集会・SNS発信</li><li>後援会の会員集め</li><li><b>あいさつ回り・後援会加入の勧誘訪問</b>(投票依頼なし。支持者集めの有力手段)</li><li>政策リーフレットの配布</li></ul></div>
-      <div class="ngbox"><h4>❌ 平時でもダメなこと</h4><ul><li>投票依頼(事前運動)</li><li>選挙区内への寄附・差し入れ</li><li><b>投票依頼を伴う</b>戸別訪問</li></ul></div>
+      <div class="okbox"><h4>⭕ 平時にできること</h4><ul>
+        <li>政策を語る演説・集会・SNS発信(いずれも<b>平時かぎり</b>／投票依頼を入れると事前運動)</li>
+        <li>後援会の会員集め<br><small>※<b>公務員・教員の方が「地位を利用して」後援会をつくる・入会を勧めるのは禁止</b>です(公選法136条の2第2項3号)</small></li>
+        <li><b>あいさつ回り・後援会加入の勧誘訪問</b>(投票依頼なし。支持者集めの正攻法)<br><small>⚠️ ただし<b>「選挙運動のため」に戸別に演説会を告知する</b>／<b>候補者名・政党名を言いあるく</b>のは、投票依頼がなくても戸別訪問の禁止行為に<b>みなされます</b>(公選法138条2項)。看板に「あいさつ」と書いてあっても<b>話の実質で判断</b>されます(詳細は「🧭 まず知る」タブ)</small></li>
+        <li>政策リーフレットの配布(<b>平時かぎり</b>。選挙期間中の扱いは下の📮ポスティング欄へ)</li>
+      </ul></div>
+      <div class="ngbox"><h4>❌ 平時でもダメなこと</h4><ul><li>投票依頼(事前運動)</li><li>選挙区内への寄附・差し入れ</li><li>戸別訪問(投票を得る／得させる／得させない目的のいずれの訪問も。「選挙運動のため」の戸別の演説会告知・候補者名の言い歩きも含む)</li></ul></div>
     </div>
     <div class="tools">🧰 <b>そろえる道具(政治活動用):</b> 事務所/名刺/政治活動用リーフレット/SNS・ホームページ/ポスター(政治活動用ポスターは掲示ルールに細かい制限あり※要選管確認)</div>
     <div class="ngbox" style="margin-top:14px;"><h4>🚩 掲示物の落とし穴 — 氏名入り「のぼり」はほぼ使えません</h4><ul>
-      <li>のぼり・横断幕は法律上「<b>立札・看板の類</b>」。立候補予定者の<b>氏名入り(ひらがな・顔写真・氏名入り後援会名も同じ)は原則掲示禁止</b>(公選法143条16項)。使えるのは①事務所に掲げる選管証票付き看板(<b>事務所ごとに2つまで</b>・政令で定める総数の範囲内〔143条16項1号〕、<b>縦150×横40cm以内・選管の表示が必要</b>〔同17項〕)、②<b>演説会などの会場内・開催中</b>〔同16項3号〕、③<b>確認団体が第14章の3に基づき使用するもの</b>〔同16項4号〕</li>
+      <li>のぼり・横断幕は法律上「<b>立札・看板の類</b>」。立候補予定者の<b>氏名入り(ひらがな・顔写真・氏名入り後援会名も同じ)は原則掲示禁止</b>です(公選法143条16項。<b>違反は罰則あり</b>)。使える場所は<b>①事務所の選管証票付き看板 ②演説会の会場内 ③選挙運動用自動車に取り付けたもの ④確認団体が使うもの</b>の4つだけで、<b>街頭では平時も選挙期間中も使えません</b>。場所ごとの条件と条文は「📖 くわしく」へ</li>
+      <li class="detailOnly"><b>のぼり・旗・立札・看板の類が使える場所(ここが正本です)</b><br>
+        ■<b>平時(政治活動用・143条16項の例外)</b>: ①政治活動用の事務所に掲げる<b>選管証票付きの立札・看板</b>(事務所ごとに通じて2つまで・かつ<b>政令で定める総数の範囲内</b>〔<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_143" target="_blank" rel="noopener noreferrer">143条16項1号</a>〕、<b>縦150×横40cm以内・選管の定める表示が必要</b>〔同17項〕) ②<b>政治活動のための演説会・講演会・研修会等の会場内・開催中</b>〔同16項3号〕 ③<b>確認団体が第14章の3に基づき使用するもの</b>〔同16項4号〕<br>
+        ■<b>選挙期間中(選挙運動用・143条1項)</b>: ①<b>選挙事務所を表示するもの</b>〔1項1号〕 ②<b>選挙運動用自動車・船舶に取り付けたもの</b>〔1項2号〕 ③<b>演説会場(個人演説会・政党演説会・政党等演説会)の会場内・開催中</b>〔1項4号〕 ④<b>確認団体が第14章の3に基づき使用するもの</b>〔16項4号〕<br>
+        ■ いずれの場合も<b>街頭演説の場所は「演説会の会場」に当たらない</b>と解されており、街頭でののぼりは平時・選挙期間中とも使えません。<br>
+        ■ <b>紙のポスター</b>は別の号(16項2号)で扱われ、のぼりとはルールが違います(下の項目参照)。<br>
+        ■ <b>衆院小選挙区・参院選挙区・知事の選挙に限り</b>、個人演説会の会場前に掲示する義務のある選管表示付きの立札・看板(縦273×横73cm以内・当該選挙ごとに通じて5以内)は、<b>会場外のいずれの場所でも選挙運動のために使用できます</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_2" target="_blank" rel="noopener noreferrer">164条の2第2項・3項・5項</a>。掲示箇所は145条1項・2項の制限あり)。<br>
+        ■ <b>⚠️ ①の事務所看板は「平時」の話です。</b>都道府県議選・指定都市議選・知事選・市長選(特別区長選を含む)の期間中は、確認団体でなければ<b>立札・看板の類の掲示そのものが禁止</b>されます(201条の8第1項・201条の9第1項。下の「告示日が来ると、後援会の政治活動はいったん止まります」参照)。<b>氏名入りなら、どの選挙でも選挙期間中は201条の13第1項2号に触れます。</b></li>
       <li><b>駅頭・街頭演説ではNG</b> — 街頭演説は「演説会の会場」に当たらないと解されており、日時・場所を刷り込んだ告知風デザインにしても例外になりません。「<b>本人</b>」と書いたのぼりが普及したのは、氏名入りが違法だから</li>
-      <li class="detailOnly">よく見る「2連ポスター」(弁士2名の演説会告知)は<b>紙のポスターとして運用ルールが確立した手法</b>(裏打ちなしポスターを認める明文の受け皿規定[公選法143条16項2号]があり、政党等の演説会告知ポスターとしての選管の運用基準も固まっている)。同じデザインの<b>「のぼり」(2連のぼり)は、明確に違法とまではされていません</b> — 国会の質問主意書への<a href="https://www.shugiin.go.jp/internet/itdb_shitsumon.nsf/html/shitsumon/b198131.htm" target="_blank" rel="noopener noreferrer">政府答弁書(平成31年4月19日・内閣衆質198第131号)</a>は、掲示された物の内容とともに掲示の時期・場所・方法等を<b>総合的に勘案して実質的に判断</b>するとの立場です。ただし<b>ポスターのような明文の受け皿規定がなく、選管ごとに判断が分かれうるグレー領域</b>(撤去規定[201条の14]ものぼりには存在せず、選管の見解が割れた実例あり)。<b>ポスターほど明確に認められた手法ではない</b>、と押さえておくのが安全です</li>
+      <li class="detailOnly">よく見る「2連ポスター」(弁士2名の演説会告知)は<b>紙のポスターとして運用ルールが確立した手法</b>(裏打ちなしポスターを認める明文の受け皿規定[公選法143条16項2号]があり、政党等の演説会告知ポスターとしての選管の運用基準も固まっている)。一方、同じデザインの<b>「のぼり」(2連のぼり)には、ポスターのような明文の受け皿規定がありません</b>(16項2号が受け皿にしているのは<b>ポスター</b>だけです)。したがって弁士＝候補者等の氏名が入ったのぼりは、<b>平時であっても143条16項違反(掲示禁止)に当たるのが原則</b>です。また<b>選管は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_147" target="_blank" rel="noopener noreferrer">147条</a>1号により撤去させることができ</b>、選挙運動期間中は<b>146条1項(禁止を免れる行為)に当たるとして147条5号の撤去処分</b>もありえます。国会の質問主意書への<a href="https://www.shugiin.go.jp/internet/itdb_shitsumon.nsf/html/shitsumon/b198131.htm" target="_blank" rel="noopener noreferrer">政府答弁書(平成31年4月19日・内閣衆質198第131号)</a>は、146条1項・147条5号の当てはめを「掲示された物の内容と共にその掲示の時期、場所、方法等を総合的に勘案して判断」「選管が具体の事実に即して判断」とするもので、<b>合法と述べたものではありません</b>。なお「のぼりには撤去を求める根拠法令がない」という見解は、同質問主意書に<b>批判の対象として引用された一選管(兵庫県伊丹市)の回答</b>であり、政府の立場ではありません。<b>氏名入りのぼりは使わない</b>のが安全です</li>
       <li class="detailOnly">氏名入りの政治活動用<b>ポスター</b>は、公選法の定める<b>「一定期間」(任期満了による選挙なら任期満了日の6か月前から選挙期日まで。解散・辞職等による選挙では起算日が異なる)</b>は選挙区内で掲示禁止(<b>143条16項2号</b>。「一定期間」の定義は同19項)。この期間は政党・団体の演説会告知(2連)ポスターに切り替えるのが実務</li>
-      <li>違反は警告・是正指導のほか検挙の対象となり得ます。<b>氏名入りののぼり</b>については、確認できた選管はいずれも「掲示できない」と案内しています(東京都北区・京都市・町田市・千葉市。<b>政党名やスローガンのみなら可</b>とする選管もあります)。ただし個別の当てはめは<b>掲示の時期・場所・方法等を総合的に勘案した実質判断</b>で、選管により回答が分かれることがあります。<b>通報や「公選法違反」のレッテル貼りは新人ほど狙われます</b>。迷ったら選管に照会し、回答を記録に残す</li>
+      <li>違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>(143条16項違反は同条1項違反とみなされ<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_243" target="_blank" rel="noopener noreferrer">243条1項4号</a>)。あわせて<b>選管は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_147" target="_blank" rel="noopener noreferrer">147条</a>1号・2号により撤去させることができ</b>、従わない場合も同じ刑量(243条1項5号の2)。<b>氏名入りののぼり</b>については、確認できた選管はいずれも「掲示できない」と案内しています(東京都北区・京都市・町田市・千葉市。<b>政党名やスローガンのみなら可</b>とする選管もありますが、掲示の時期・場所・方法を総合判断するため<b>選管で回答が分かれます</b>)。<b>掲示物は誰の目にも入るため、指摘や照会を受けやすい領域です</b>(とくに知名度が上がる前の時期)。迷ったら選管に照会し、回答を記録に残す</li>
     </ul></div>
+
+    <h3>⚠️ 告示日が来ると、後援会の政治活動はいったん止まります</h3>
+    <div class="ngbox"><h4>❌ 選挙期間中(告示日〜選挙当日)、確認団体の届出をしていない政治団体ができないこと</h4><ul>
+      <li><b>政談演説会・街頭政談演説の開催</b></li>
+      <li><b>ポスターの掲示</b></li>
+      <li><b>立札・看板の類の掲示</b>(＝<b>後援会事務所の選管証票付き看板も対象</b>)</li>
+      <li><b>ビラの頒布</b></li>
+      <li><b>宣伝告知のための自動車・拡声機の使用</b></li>
+    </ul>
+      <p><b>これを続けられるようにするのが「確認団体」の届出</b>です — 確認団体制度は「ビラが配れる制度」ではなく、<b>選挙期間中も政治活動を続けるための許可</b>だと理解してください。<b>違反は100万円以下の罰金</b>。<b>一般市の市議選・特別区議選・町村の選挙には、この全面禁止はかかりません</b>(確認団体制度もありません)。対象となる選挙と条文は「📖 くわしく」へ。</p>
+      <p class="detailOnly">対象は<b>都道府県議選・指定都市議選</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_8" target="_blank" rel="noopener noreferrer">201条の8第1項</a>)と<b>知事選・市長選(特別区長選を含む)</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_9" target="_blank" rel="noopener noreferrer">201条の9第1項</a>)、参院選(201条の6)、衆院総選挙(201条の5)。違反は<b>100万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_252_3" target="_blank" rel="noopener noreferrer">252条の3第1項</a>)。<b>一般市の市議選・特別区議選・町村の選挙には201条の8・201条の9の定めがなく</b>、この全面禁止はかかりません(確認団体制度もありません)。<br><b>⚠️ 禁止の期間と、確認団体の例外の期間はずれています。</b>柱書の禁止は「選挙の期日の告示の日から<b>選挙の当日まで</b>」ですが、確認団体の例外(ただし書)は「告示の日から<b>選挙の期日の前日まで</b>」です。つまり<b>投票日当日は、確認団体であっても上の5つができません</b>(「🗳️ 投票日」タブ参照)。</p>
+    </div>
+    <div class="ngbox"><h4>❌ すべての選挙で、どの政治団体もできないこと(確認団体でも同じ)</h4><ul>
+      <li><b>連呼行為</b>(確認団体の政談演説会の会場・街頭政談演説の場所、および政策の普及宣伝・演説の告知用自動車の上で午前8時〜午後8時にする場合を除く)</li>
+      <li><b>掲示・頒布する文書図画に、その選挙区の特定の候補者の氏名(氏名が類推される事項を含む)を記載すること</b> — <b>氏名入りの政治活動用看板・のぼり・ポスターは、選挙の種類を問わず選挙期間中は問題になります。告示日に外す／覆う作業を段取りしてください</b>(新聞紙・雑誌・インターネットで頒布されるものは除く)</li>
+      <li><b>国・地方公共団体が所有・管理する建物の中での文書図画の頒布</b>(公営住宅・職員宿舎を除く。郵便等・新聞折込みを除く。確認団体の政談演説会の会場は可)</li>
+    </ul>
+      <p>根拠は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_13" target="_blank" rel="noopener noreferrer">201条の13第1項</a>(「各選挙につき」＝すべての選挙に及びます)。<b>違反は100万円以下の罰金</b>。</p>
+      <p class="detailOnly">※<b>すでに掲示してあるポスター・看板を投票日当日まで掲げ続けることが「掲示」「記載」に当たるか</b>は、条文からは確定できませんでした。<b>所轄選管へ照会し、回答を記録に残してください。</b></p>
+    </div>
 
     <h3>📮 ポスティング(ビラ・機関誌の各戸投函)の歩き方</h3>
     <p>政策リーフレットや機関誌を郵便受けに投函するポスティングは、平時の政治活動の王道。ただし<b>「配るビラの種類」でルールが真逆</b>になり、投函先によっては<b>刑事罰リスク</b>もあります。現場マニュアルの常識も、法的な話とマナーの話が混ざっているので、下で切り分けました。</p>
     <div class="req3 simpleOnly" style="border-color:var(--s2);">
-      <b style="color:var(--s2);">⚠️ 最重要 — 配るビラの「種類」で可否が真逆:</b> <b>選挙運動用の証紙ビラの投函は🚫禁止</b>(配れるのは街頭演説での手渡しなど4つの方法だけ・罰則あり)。<b>平時の政策ビラ・政党機関誌の投函は⭕OK</b>(投票依頼を書くと事前運動でNG)。種類別の一覧表と根拠条文は「📖 くわしく」へ。
+      <b style="color:var(--s2);">⚠️ 最重要 — 配るビラの「種類」で可否が真逆:</b> <b>選挙運動用の証紙ビラの投函は🚫禁止</b>(配れるのは街頭演説での手渡しなど4つの方法だけ・罰則あり)。<b>平時の政策ビラ・政党機関誌の投函は⭕OK</b>(投票依頼を書くと事前運動でNG)。<br>
+      <b>⚠️ ただし政党機関誌は、選挙期間中だけ別扱いで厳しい条件がつきます。選挙期間中に新しく始める無差別のポスティングは、罰則の対象になりえます。</b>告示日が来たらポスティングは一旦止めて陣営に確認してください。<b>実施前に必ず所轄選管へ照会を。</b><br>
+      <b>⚠️ 確認団体のビラは対象の選挙のときだけ投函できますが、候補者の氏名・顔写真・通称を入れたものは使えません(違反は罰則あり)。配れるのは「政党名＋政策」だけのビラ</b>だと考えてください。種類別の一覧表・条件・根拠条文は「📖 くわしく」へ。
     </div>
     <div class="req3 detailOnly" style="border-color:var(--s2);">
       <b style="color:var(--s2);">⚠️ 最重要 — 配るビラの「種類」でポスティングの可否が真逆になる</b>
       <table style="margin-top:8px;">
         <tr><th>ビラの種類</th><th>ポスティング</th><th>根拠(目安)</th></tr>
         <tr><td><b>選挙運動用ビラ(証紙ビラ)</b></td><td><span class="kzB ng">❌ 禁止</span></td><td>公選法142条6項・施行令109条の6(頒布方法が限定)</td></tr>
-        <tr><td>確認団体のビラ(選挙期間中)</td><td><span class="kzB ok">⭕ 可</span><br><small>※対象選挙のみ</small></td><td>確認団体制度(公選法201条の6・201条の8・201条の9)。<b>対象は参院選・都道府県議選・指定都市議選・知事選・市長選(特別区長選含む)のみ</b>。一般市の市議選・特別区議選・町村の選挙には確認団体制度自体がない。<b>頒布できるのは選管(参院選は総務大臣)に届け出たビラで、種類数に上限</b>があります(知事・市長選は2種類以内＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_9" target="_blank" rel="noopener noreferrer">201条の9第1項6号</a>、参院選は3種類以内＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_6" target="_blank" rel="noopener noreferrer">201条の6第1項6号</a>)。<b>公選法上の時間帯制限はありません</b>(ただし深夜早朝の投函は住居侵入・苦情・自治体条例の問題になりえます)</td></tr>
+        <tr><td>確認団体のビラ(選挙期間中)</td><td><span class="kzB ok">⭕ 可</span><br><small>※対象選挙のみ</small></td><td>確認団体制度(公選法201条の6・201条の8・201条の9)。<b>対象は参院選・都道府県議選・指定都市議選・知事選・市長選(特別区長選含む)のみ</b>。一般市の市議選・特別区議選・町村の選挙には確認団体制度自体がない。<b>頒布できるのは選管(参院選は総務大臣)に届け出たビラで、種類数に上限</b>があります(知事・市長選は2種類以内＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_9" target="_blank" rel="noopener noreferrer">201条の9第1項6号</a>、参院選は3種類以内＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_6" target="_blank" rel="noopener noreferrer">201条の6第1項6号</a>)。<b>公選法上の時間帯制限はありません</b>(ただし深夜早朝の投函は住居侵入・苦情・自治体条例の問題になりえます)<br><b>⚠️ 最重要: 確認団体のビラ・ポスターに、その選挙区の特定の候補者の氏名や、氏名が類推される事項(顔写真・通称・キャッチフレーズ等)は記載できません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_6" target="_blank" rel="noopener noreferrer">201条の6第2項ただし書</a>。201条の8第2項・201条の9第2項で準用。あわせて<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_13" target="_blank" rel="noopener noreferrer">201条の13第1項2号</a>が同じ内容を全ての選挙について禁止)。違反は<b>100万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_252_3" target="_blank" rel="noopener noreferrer">252条の3第1項</a>)。<b>配れるのは「政党名＋政策」だけのビラ</b>だと考えてください。<small class="detailOnly">※特別区長選が含まれるのは、201条の9が「市長の選挙」を対象とし、<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_17-At_266" target="_blank" rel="noopener noreferrer">公選法266条1項</a>が「この法律中市に関する規定は、特別区に適用する」と定めているためです。一方201条の8は「<b>指定都市の</b>議会の議員」と限定しているので、<b>特別区議選は対象外</b>です。</small></td></tr>
         <tr><td>平時の政治活動用ビラ・政策リーフ</td><td><span class="kzB ok">⭕ 可</span></td><td>平時の政治活動(投票依頼を書くと事前運動でNG)</td></tr>
-        <tr><td>政党の機関紙誌</td><td><span class="kzB warn">⚠️ 条件つき</span><br><small>※平時は自由</small></td><td><b>平時の投函は自由</b>。ただし<b>選挙期間中</b>(公示・告示日〜選挙当日)は、<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">公選法201条の15</a>が<b>厳しい制限</b>をかけています — ①対象は衆院・参院・都道府県議・知事・指定都市議・市長の選挙 ②<b>党本部が直接発行</b>したもの ③<b>総務大臣または選管に届け出た機関紙・機関誌 各1種類</b>のみ ④<b>号外・臨時号・増刊号は対象外</b> ⑤方法も<b>「通常の方法」=公示・告示日前6か月間に平常行われていた方法</b>に限る(発行6か月未満なら政談演説会の会場でのみ)。<b>選挙期間中だけ新たに始める無償の無差別ポスティングは、この「通常の方法」に当たらないおそれが大きい</b>。政府答弁書も「頒布の主体、手段、対象、部数、回数、対価等により個別具体に判断」とし、「定期購読者以外への頒布は政談演説会の会場を除き有償でする場合に限る」旨を述べています(<a class="lawlink" href="https://www.sangiin.go.jp/japanese/joho1/kousei/syuisyo/213/touh/t213126.htm" target="_blank" rel="noopener noreferrer">参議院 答弁書・令和6年5月17日</a>)。<b>実施前に必ず所轄選管へ照会を。</b>条件を外れると<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">142条</a>違反として<b>2年以下の拘禁刑または50万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_243" target="_blank" rel="noopener noreferrer">243条1項3号</a>)の対象になりえます</td></tr>
+        <tr><td>政党の機関紙誌</td><td><span class="kzB warn">⚠️ 条件つき</span><br><small>※平時は自由</small></td><td><b>平時の投函は自由</b>。ただし<b>選挙期間中</b>(公示・告示日〜選挙当日)は、<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">公選法201条の15</a>が<b>厳しい制限</b>をかけています — ①対象は衆院・参院・都道府県議・知事・指定都市議・市長の選挙 ②<b>党本部が直接発行</b>したもの ③<b>総務大臣または選管に届け出た機関紙・機関誌 各1種類</b>のみ ④<b>号外・臨時号・増刊号は対象外</b> ⑤方法も<b>「通常の方法」=公示・告示日前6か月間に平常行われていた方法</b>に限る(発行6か月未満なら政談演説会の会場でのみ)。<b>選挙期間中だけ新たに始める無償の無差別ポスティングは、この「通常の方法」に当たらないおそれが大きい</b>。政府答弁書は、<b>「議員修正の経緯から個別具体に実態を踏まえて判断されるものと解されており」</b>、基準を政府が示すことは求められていないとの立場です(<a class="lawlink" href="https://www.sangiin.go.jp/japanese/joho1/kousei/syuisyo/213/touh/t213126.htm" target="_blank" rel="noopener noreferrer">参議院 答弁書・内閣参質213第126号／令和6年5月17日「六について」</a>)。なお「定期購読者以外への頒布は政談演説会の会場を除き有償でする場合に限る」という内容は<b>内閣提出法律案(政府原案)のもので、議員修正により「平常行われていた方法」に置き換えられたもの</b>です(同「七について」)。<b>現行法の要件ではなく、有償にすれば適法になるわけでもありません</b> — 判断基準はあくまで「公示・告示日前6か月間に平常行われていた方法かどうか」です。<b>実施前に必ず所轄選管へ照会を。</b><br><b>条件を外れた機関紙誌の頒布は、第14章の3の政治活動の規制違反となり、団体の役職員・構成員として違反行為をした者に100万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_252_3" target="_blank" rel="noopener noreferrer">252条の3第1項</a>が、201条の15第1項において準用する148条2項の違反を対象としています)。さらに、<b>候補者の氏名が入った文書図画を選挙運動期間中に頒布すれば146条1項(禁止を免れる行為)違反として2年以下の拘禁刑または50万円以下の罰金</b>(243条1項5号)、<b>証紙ビラ</b>の違法頒布は<b>142条違反で同じ刑</b>(243条1項3号)になります</td></tr>
       </table>
-      <div style="font-size:12.5px; margin-top:8px;">👉 <b>「証紙ビラはポスティング禁止」</b>は正しい。証紙ビラ(選挙運動用ビラ)を配れるのは①新聞折込 ②選挙事務所内 ③個人演説会の会場内 ④街頭演説の場所での<b>手渡し</b>だけ。郵便受けへの投函・郵送はいずれも不可で、違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>(公選法243条)。逆に<b>確認団体ビラ</b>は対象選挙(参院選・都道府県議選・指定都市議選・知事選・市長選)の期間中は<b>届け出た種類数の範囲内で</b>投函でき、<b>公選法上の</b>時間帯制限もありません(深夜早朝は近隣配慮を)。<b>※衆院総選挙には「確認団体」制度はなく</b>、代わりに<b>候補者届出政党・衆議院名簿届出政党等</b>が同種の政治活動を行える建て付けです(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_5" target="_blank" rel="noopener noreferrer">201条の5</a>)。「確認団体制度がない選挙」とは、政党の政治活動そのものを第14章の3で制限していないという意味で、「政党ビラを配れない」という意味ではありません。<b>一般市の市議選・特別区議選・町村の選挙には確認団体制度自体がない</b>点に注意。</div>
+      <div style="font-size:12.5px; margin-top:8px;">👉 <b>「証紙ビラはポスティング禁止」</b>は正しい。証紙ビラ(選挙運動用ビラ)を配れるのは①新聞折込 ②選挙事務所内 ③個人演説会の会場内 ④街頭演説の場所での<b>手渡し</b>だけ。郵便受けへの投函・郵送はいずれも不可で、違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>(公選法243条)。逆に<b>確認団体ビラ</b>は対象選挙(参院選・都道府県議選・指定都市議選・知事選・<b>市長選〔特別区長選含む〕</b>)の期間中は<b>届け出た種類数の範囲内で</b>投函でき、<b>公選法上の</b>時間帯制限もありません(深夜早朝は近隣配慮を)。<b>ただし確認団体ビラに候補者名・顔写真は入れられません</b>(201条の6第2項ただし書。上の表参照)。<b>※衆院総選挙には「確認団体」制度はなく</b>、代わりに<b>候補者届出政党・衆議院名簿届出政党等</b>が同種の政治活動を行える建て付けです(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_5" target="_blank" rel="noopener noreferrer">201条の5</a>)。「確認団体制度がない選挙」とは、政党の政治活動そのものを第14章の3で制限していないという意味で、「政党ビラを配れない」という意味ではありません。<b>一般市の市議選・特別区議選・町村の選挙には確認団体制度自体がない</b>点に注意。</div>
     </div>
     <div class="okng">
       <div class="ngbox"><h4>❌ 法的にNG(刑事罰・賠償リスク)</h4><ul>
         <li><b>「住人関係者以外立入禁止」等の建物・オートロック内に入る</b> — 住居侵入罪(刑法130条・3年以下の拘禁刑か10万円以下の罰金)/軽犯罪法1条32号。通報事例あり</li>
-        <li><b>「チラシお断り」のポストへ入れる</b> — 投函拒否の意思表示に反する行為で、<b>苦情・トラブルの最大の原因</b>。建物内への立入を伴う場合は住居侵入罪(<a class="lawlink" href="https://laws.e-gov.go.jp/law/140AC0000000045" target="_blank" rel="noopener noreferrer">刑法130条</a>)に問われるおそれもあります</li>
+        <li><b>「チラシお断り」のポストへ入れる</b> — 投函拒否の意思表示に反する行為で、<b>苦情・トラブルの最大の原因</b>。建物内への立入を伴う場合は住居侵入罪(<a class="lawlink" href="https://laws.e-gov.go.jp/law/140AC0000000045#Mp-Pa_2-Ch_12-At_130" target="_blank" rel="noopener noreferrer">刑法130条</a>)に問われるおそれもあります</li>
         <li><b>証紙ビラのポスティング</b>(上表)</li>
         <li><b>宛名(「〇〇様」)入りの投函</b> — 信書に当たると郵便法4条(信書送達の独占)との関係で違反のおそれがあるとされる。投函物に個人宛名を入れない</li>
         <li><b>仮置き自転車・荷物で駐車車両を傷つける</b> — 器物損壊・損害賠償(実際に事案発生)</li>
@@ -590,116 +778,145 @@
     </div>
     <div class="vol">🚶 <b>経験者談(安全・効率のルート取り):</b> 道を挟んで両側を<b>ジグザグ歩行すると横断回数が増えて危険・非効率</b>。可能なら<b>2名で片側ずつ</b>、1ブロックの1本道を往復投函するのが安全で効率的。<b>清潔感のある明るい服装</b>は好印象につながり、不審者と誤解されにくく、ドライバーからも視認されやすくなります(筆者の経験上)。</div>
     <div class="more detailOnly">📚 根拠: 公選法142条・201条の6/201条の8/201条の9・201条の15・243条/刑法130条/軽犯罪法1条32号/郵便法4条。実務ルールは政党・確認団体の配布マニュアルと所轄選管でも確認を。</div>
-    <div class="vol">🤝 <b>支える人:</b> 後援会への入会・会費、イベント運営の手伝いは平時から可能。ただし団体への寄附は上限・記載ルールあり。<b>ポスティングは平時の政治活動用ビラ・機関誌なら手伝えます</b>(証紙ビラは投函NG)。</div>
+    <div class="vol">🤝 <b>支える人:</b> 後援会への入会・会費(<b>会費は「寄附」ではないので税控除はありません</b>)、イベント運営の手伝いは平時から可能。ただし団体への寄附は上限・記載ルールあり。<b>ポスティングは平時の政治活動用ビラ・機関誌なら手伝えます</b>(証紙ビラは投函NG)。</div>
   </section>
 
   <!-- ===== S8 寄附とお金 ===== -->
-  <section class="panel p8" id="s8">
+  <section id="s8" class="panel p8" role="tabpanel" aria-labelledby="tab-s8">
     <h2>💴 寄附とお金 — 受け皿で変わるルールと税控除</h2>
     <span class="period">平時〜選挙後(受け皿づくりは早めに)</span>
-    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button></div></div>
-    <p>寄附は「<b>誰宛てに受けるか(受け皿)</b>」で、受けられるお金の種類も、支援者が受けられる税優遇も大きく変わります。受け皿の設計を間違えると、支援者に案内した税控除が使えない事態になります。</p>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
+    <p>寄附は「<b>誰宛てに受けるか(受け皿)</b>」で、受けられるお金の種類も、支援者が受けられる税優遇も、<b>受け取った側にかかる税金</b>も変わります。受け皿の設計を間違えると、支援者に案内した税控除が使えない事態になります。</p>
 
     <h3>大原則 — 政治家「個人」は金銭の寄附を受け取れない</h3>
     <ul>
-      <li>🚫 政治家個人への金銭等の寄附は<b>原則禁止</b>(政治資金規正法21条の2)。献金の受け皿は<b>政治団体(後援会など)か政党</b>が基本</li>
-      <li>⭕ 「<b>選挙運動に関する寄附</b>」は、<b>この禁止の対象外</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_2" target="_blank" rel="noopener noreferrer">21条の2</a>は「政治活動(<b>選挙運動を除く。</b>)に関して」と書いており、例外規定ではなく<b>そもそも適用範囲の外</b>)。選挙の立候補届出<b>前</b>(前年など)に受けたものも想定されています(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_186" target="_blank" rel="noopener noreferrer">公選法186条2項</a>)。ただし全額を<b>選挙運動費用収支報告書</b>に載せる必要があります(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_189" target="_blank" rel="noopener noreferrer">189条</a>)<br><small>※条文が禁止しているのは「<b>金銭等</b>」による寄附で、物品の提供・無償の役務は21条の2の射程外です(公選法上の寄附・供応の規制は別に及びます)。※「使い道は立候補準備に限られる」という説明をよく見かけますが、<b>その旨を定めた明文の条文は確認できませんでした</b>。費目の扱いは所轄選管にご確認ください</small></li>
-      <li><b>どの受け皿でも共通で禁止</b>: <b>本人名義以外の名義・匿名</b>による寄附(規正法22条の6第1項。<b>受け取る側も禁止</b>=同3項)。<b>例外は「匿名」の分だけ</b>で、街頭または一般に公開される演説会・集会の会場で<b>政党・政治資金団体</b>にする<b>1,000円以下</b>のものに限られます(同2項)。<b>他人名義の寄附に例外はありません</b>。違反した寄附の金銭・物品は<b>所有権が国庫に帰属</b>します(同4項)/<b>外国人・外国法人</b>からの寄附(22条の5)/国から補助金等を受けた会社などからの寄附(22条の3)/3事業年度以上赤字の会社からの寄附(22条の4)</li>
-      <li class="detailOnly"><b>受け皿によって変わる</b>: ①<b>政治団体以外の</b>企業・労働組合などの<b>団体</b>からの寄附は<b>政党・政治資金団体だけ</b>が受けられ、後援会・政治家個人は受けられません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>。<b>政治団体がする寄附はこの制限の対象外</b>＝同条2項)。②<b>個人からの上限額</b>も、政党・政治資金団体へは<b>合計で年2,000万円</b>まで、後援会・政治家個人など政党以外へは<b>合計で年1,000万円まで、かつ同一の相手には年150万円</b>までと差があります(規正法21条・21条の3・22条)。→ 下の「受け皿別の早わかり」で切り替えて確認できます</li>
+      <li>🚫 政治家個人への金銭等の寄附は<b>原則禁止</b>(政治資金規正法21条の2。<b>違反は罰則の対象</b>)。献金の受け皿は<b>政治団体(後援会など)か政党</b>が基本<br><small>※条文の語は「<b>公職の候補者</b>」です。本ページでは分かりやすさのため「<b>政治家個人</b>」と書きます</small></li>
+      <li>⭕ 「<b>選挙運動に関する寄附</b>」は、<b>この禁止の対象外</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_2" target="_blank" rel="noopener noreferrer">21条の2</a>は「政治活動(<b>選挙運動を除く。</b>)に関して」と書いており、例外規定ではなく<b>そもそも適用範囲の外</b>)。選挙の立候補届出<b>前</b>(前年など)に受けたものも想定されています(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_186" target="_blank" rel="noopener noreferrer">公選法186条2項</a>)。ただし全額を<b>選挙運動費用収支報告書</b>に載せる必要があります(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_189" target="_blank" rel="noopener noreferrer">189条</a>)</li>
+      <li>⚠️ <b>受け始める前に、出納責任者を決めて届け出てください</b> — 届出前は寄附を受けることも支出することもできません(<b>罰則の対象</b>)。<b>物品の提供・無償の役務も「タダだから無規制」ではありません</b>(時価で上限に算入・収支報告の対象)。条文と例外は<b>📖 くわしく</b>へ</li>
+      <li class="detailOnly"><small>※条文が禁止しているのは「<b>金銭等</b>」(＝金銭及び有価証券)による寄附で、<b>物品等による寄附は21条の2の射程外</b>です。<b>ただし「射程外」は「自由」ではありません</b> — 事務所や自動車の無償提供・労務等の無償提供は<b>時価に見積もって寄附に当たり、年間の上限(1,000万円／150万円)に算入され、収支報告書に記載</b>します(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_1-At_4" target="_blank" rel="noopener noreferrer">規正法4条3項</a>、<a class="lawlink" href="https://www.soumu.go.jp/main_content/000174716.pdf" target="_blank" rel="noopener noreferrer">総務省「政治資金規正法のあらまし」令和8年3月13ページ</a>)。<b>会社・団体からの事務所無償提供や車の無償貸出は、お金が動かなくても企業・団体献金の禁止(21条1項)違反になります。</b>公選法上の寄附・供応の規制も別に及びます。※「使い道は立候補準備に限られる」という説明をよく見かけますが、<b>その旨を定めた明文の条文は確認できませんでした</b>。費目の扱いは所轄選管にご確認ください</small></li>
+      <li class="detailOnly"><small>⚠️ <b>出納責任者は、その選任の届出がされた後でなければ、候補者のために寄附を受け、又は支出をすることができません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_184" target="_blank" rel="noopener noreferrer">公選法184条</a>)。また<b>出納責任者以外の人が受けた寄附は、受けた日から7日以内に明細書を出納責任者へ</b>(立候補届出前に受けた分は<b>届出後直ちに</b>)提出します(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_186" target="_blank" rel="noopener noreferrer">186条1項・2項</a>。186条の見出しは「明細書の提出」です)</small></li>
+      <li><b>どの受け皿でも共通で禁止</b>: <b>他人名義・匿名</b>の寄附/<b>外国人・外国法人等</b>からの寄附/<b>国から補助金等を受けた会社</b>・<b>3事業年度以上赤字の会社</b>からの寄附/<b>その自治体と請負・委託・指定管理などの契約がある事業者</b>からの、その選挙に関する寄附/<b>寄附のあっせんの強要</b>/<b>公務員が地位を利用した関与</b>。<b>いずれも罰則の対象</b>で、<b>受け取る側も禁止</b>されているものがあります。職場や団体でまとめて集めるときは<b>一人ひとりの自発的な意思を確認</b>してください。条文・例外・2027年からの改正は<b>📖 くわしく</b>へ</li>
+      <li class="detailOnly"><b>共通で禁止されるものの内訳(条文)</b>: <b>本人名義以外の名義・匿名</b>による寄附(規正法22条の6第1項。<b>受け取る側も禁止</b>=同3項)。<b>例外は「匿名」の分だけ</b>で、街頭または一般に公開される演説会・集会の会場で<b>政党・政治資金団体</b>にする<b>1,000円以下</b>のものに限られます(同2項)。<b>他人名義の寄附に例外はありません</b>。違反した寄附の金銭・物品は<b>所有権が国庫に帰属</b>します(同4項)/<b>外国人・外国法人等</b>からの寄附(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22_5" target="_blank" rel="noopener noreferrer">22条の5</a>。<b>受け取る側が禁止</b>。例外は、発行済株式の過半数を外国人等が保有する日本法人のうち<b>株式が5年以上継続して上場されているもの(特例上場日本法人)</b>で、その場合は寄附者がその旨を文書で通知します。<b>2027年1月1日からは、外国人等が「外国人等でない」「特例上場日本法人である」と偽って寄附することも禁止</b>)/国から補助金等を受けた会社などからの寄附(22条の3)/3事業年度以上赤字の会社からの寄附(22条の4)/<b>当該自治体と請負その他特別の利益を伴う契約の当事者</b>からの寄附(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_199" target="_blank" rel="noopener noreferrer">公選法199条</a>。<b>当該選挙に関する寄附</b>が禁止。地方選挙では<b>その自治体と工事請負・委託・指定管理などの契約がある事業者</b>が対象で、利子補給金の融資を受けている法人も同様)/<b>寄附のあっせんの強要</b>(威迫等で寄附者の意思を不当に拘束する方法でのあっせん、<b>本人の意思に反するチェック・オフ</b>によるあっせんは禁止＝規正法22条の7)/<b>公務員が地位を利用して寄附に関与すること</b>(同22条の9)</li>
+      <li class="detailOnly"><b>受け皿によって変わる</b>: ①<b>政治団体以外の</b>企業・労働組合などの<b>団体</b>からの寄附は<b>政党・政治資金団体だけ</b>が受けられ、後援会・政治家個人は受けられません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>。違反は<b>1年以下の拘禁刑または50万円以下の罰金</b>。<b>政治団体がする寄附はこの制限の対象外</b>＝<b>21条2項</b>)。②<b>個人からの上限額</b>も、政党・政治資金団体へは<b>合計で年2,000万円</b>まで、後援会・政治家個人など政党以外へは<b>合計で年1,000万円まで、かつ同一の相手には年150万円</b>までと差があります(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">規正法21条の3第1項1号・3項</a>、<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">22条2項</a>)。→ 次の「受け皿別の早わかり」で切り替えて確認できます<br><small>⚠️ <b>本部と支部は通算します</b> — 量的制限の計算では、政治団体の<b>本部・支部を通じて一体</b>の1団体として扱います。「党本部に2,000万円＋党支部に1,000万円」も「後援会本部に150万円＋支部に150万円」も<b>上限超過</b>です(規正法18条1項の本部・支部別扱いは第2章〔届出・収支の公開〕限りで、第5章の寄附の制限には及びません。<a class="lawlink" href="https://www.soumu.go.jp/main_content/000174716.pdf" target="_blank" rel="noopener noreferrer">総務省「政治資金規正法のあらまし」令和8年3月13ページ</a>)。<b>金銭以外の財産上の利益(物品・事務所や自動車の無償提供など)も時価に見積もって上限に算入されます。</b></small></li>
     </ul>
 
     <h3>受け皿別の早わかり — タブで切り替え</h3>
     <p style="font-size:13px;">同じ「寄附」でも、受け皿(受ける団体の種類)で <b>①団体献金の可否 ②個人からの上限 ③支援者の税控除</b> が変わります。代表例で切り替えてみてください。</p>
     <div class="kzWrap">
-      <div class="kzTabs" role="tablist">
-        <button class="kzBtn active" data-k="k1" type="button">🏛️ 政党・政党支部<small>自民党・国民民主党 等</small></button>
-        <button class="kzBtn" data-k="k2" type="button">💠 政治資金団体<small>政党が指定</small></button>
-        <button class="kzBtn" data-k="k3" type="button">🤝 後援会・資金管理団体<small>その他の政治団体</small></button>
-        <button class="kzBtn" data-k="k4" type="button">🌱 政党要件なしの政治団体<small>例:再生の道</small></button>
-        <button class="kzBtn" data-k="k5" type="button">🙋 政治家個人<small>選挙運動の寄附だけ</small></button>
+      <div class="kzTabs" role="group" aria-label="寄附の受け皿を選ぶ">
+        <button class="kzBtn active" data-k="k1" type="button" aria-pressed="true">🏛️ 政党・政党支部<small>自民党・国民民主党 等</small></button>
+        <button class="kzBtn" data-k="k2" type="button" aria-pressed="false">💠 政治資金団体<small>政党が指定</small></button>
+        <button class="kzBtn" data-k="k3" type="button" aria-pressed="false">🤝 後援会・資金管理団体<small>その他の政治団体</small></button>
+        <button class="kzBtn" data-k="k4" type="button" aria-pressed="false">🌱 政党要件なしの政治団体<small>例:再生の道</small></button>
+        <button class="kzBtn" data-k="k5" type="button" aria-pressed="false">🙋 政治家個人<small>選挙運動の寄附だけ</small></button>
       </div>
       <div class="kzCards">
         <div class="kzCard" id="k1">
           <h4>🏛️ 政党・政党支部(例:自民党・国民民主党とその支部)</h4>
           <table class="kzTable">
-            <tr><th>企業・団体からの献金</th><td><span class="kzB ok">⭕ 受けられる</span>政党・政治資金団体だけの特権(献金する企業側の資本金別・年間上限750万〜1億円)</td></tr>
-            <tr><th>個人からの上限</th><td>年<b>2,000万円</b>まで(政党・政治資金団体向けの総枠)</td></tr>
-            <tr><th>支援者の税控除</th><td><span class="kzB ok">⭐ 税額控除30%</span>か所得控除の<b>有利な方</b>・<b>通年</b><br><small>※30%には<b>3つの限度</b>があります(下の「支援者が受けられる税控除」の注記参照)</small></td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ok">⭕ 受けられる</span>政党・政治資金団体だけの特権<br><small>⚠️ <b>支部はすべてOKではありません</b> — 受けられるのは<b>政党本部</b>と、<b>1以上の市町村(特別区を含む)の区域、または選挙区の区域を単位として設けられた支部</b>だけ。<b>職域支部・区域の一部だけを単位とする支部は受けられません</b>(受け取ると<b>罰則の対象</b>)。<b>自分の支部がどちらに当たるかは所轄選管で必ず確認してください。</b>金額の上限と条文は<b>📖 くわしく</b>へ</small><small class="detailOnly">献金する企業側の年間上限は<b>資本金別に750万〜1億円</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">規正法21条の3第1項2〜4号・同2項</a>。3,000万円に加算して上限1億円)。区域単位を満たさない支部は「政党及び政治資金団体以外の政治団体」とみなされます(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条4項</a>)。<b>21条1項違反は1年以下の拘禁刑または50万円以下の罰金</b>。なお<b>税控除(30%)は支部の区域単位を問いません</b>(租特法上の「政党」は本部・支部とも対象)</small></td></tr>
+            <tr><th>個人からの上限</th><td>年<b>2,000万円</b>まで(政党・政治資金団体向けの総枠)<br><small>⚠️ <b>本部と支部は通算</b>です — 「党本部に2,000万円＋党支部に1,000万円」は<b>上限超過</b>になります。<b>物品・無償提供も時価で算入</b>されます</small></td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB ok">⭐ 税額控除30%</span>か所得控除の<b>有利な方</b>・<b>通年</b><br><small>※<b>30%は満額にならないことがあります</b> — ①対象寄附金は<b>その年の総所得金額等の40%</b>まで ②控除額＝<b>(対象寄附金の合計−2,000円)×30%</b>(100円未満切捨て) ③控除額は<b>その年分の所得税額の25%相当額</b>(100円未満切捨て)が上限。<b>所得税額が小さい方は30%満額になりません</b>。計算例・条文・適用期限は<b>📖 くわしく</b>へ</small></td></tr>
           </table>
           <div class="kzNote">いちばん優遇が大きい受け皿。政党支部宛てなら、市区町村議など<b>公職を問わず</b>支援者に税額控除を案内できます。ただし——<br>・<b>支部を作れるかどうかは政党の規約・承認次第</b>です(法律の話ではありません。届出には<b>親政党が発行する「支部証明書」が必要</b>)。<br>・⚠️ <b>候補者本人が、自分が代表者を務める選挙区支部へ入れた寄附は、控除の対象外</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租税特別措置法41条の18第1項柱書</a>。<b>2026年1月1日から適用</b>)。「自分の支部に自分で入れて控除」はできません。</div>
         </div>
         <div class="kzCard" id="k2">
           <h4>💠 政治資金団体(政党が1つだけ指定する資金援助団体)</h4>
           <table class="kzTable">
-            <tr><th>企業・団体からの献金</th><td><span class="kzB ok">⭕ 受けられる</span></td></tr>
-            <tr><th>個人からの上限</th><td>年<b>2,000万円</b>まで(政党と同じ総枠)</td></tr>
-            <tr><th>支援者の税控除</th><td><span class="kzB ok">⭐ 税額控除30%</span>か所得控除・<b>通年</b><br><small>※30%には<b>3つの限度</b>があります(下の注記参照)</small></td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ok">⭕ 受けられる</span>政党と同じ枠で計算されます(献金する企業側の資本金別・年間上限750万〜1億円＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">規正法21条の3第1項2〜4号・同2項</a>)<br><small>⚠️ <b>これは「政党が1つだけ指定して届け出た団体」の話</b>です — <b>自分の後援会や資金管理団体を政治資金団体にすることはできません</b>。自分の受け皿がどれに当たるかは、所轄選管で確認してください(後援会・資金管理団体は🤝の枠です)</small></td></tr>
+            <tr><th>個人からの上限</th><td>年<b>2,000万円</b>まで(政党と同じ総枠)<br><small>この2,000万円は<b>政党・政治資金団体へした寄附を合計した総枠</b>です(複数の政党・政治資金団体に分けても合算＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">規正法21条の3第1項1号</a>)</small></td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB ok">⭐ 税額控除30%</span>か所得控除・<b>通年</b><br><small>※<b>30%は満額にならないことがあります</b> — ①対象寄附金は<b>その年の総所得金額等の40%</b>まで ②控除額＝<b>(対象寄附金の合計−2,000円)×30%</b>(100円未満切捨て) ③控除額は<b>その年分の所得税額の25%相当額</b>(100円未満切捨て)が上限。<b>所得税額が小さい方は30%満額になりません</b>。計算例・条文・適用期限は<b>📖 くわしく</b>へ</small></td></tr>
           </table>
-          <div class="kzNote">実務上は政党とほぼ同じ扱い。全国で数は限られます。</div>
+          <div class="kzNote">実務上は政党とほぼ同じ扱いですが、<b>政党が1つだけ指定する団体</b>なので全国で数は限られます。「うちの後援会も政治資金団体にする」という選択肢はありません。</div>
         </div>
         <div class="kzCard" id="k3">
           <h4>🤝 後援会・資金管理団体など(その他の政治団体)</h4>
           <table class="kzTable">
-            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span><br><small>※受けられないのは<b>政治団体以外</b>の企業・労働組合などの団体から(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>)。<b>他の政治団体からの寄附は別枠</b>で、政党・政党支部・政治資金団体からの寄附に<b>量的制限はありません</b>。それ以外の政治団体からは同一団体あたり<b>年5,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">22条1項</a>)</small></td></tr>
-            <tr><th>個人からの上限</th><td>同じ団体へ年<b>150万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">規正法22条2項</a>)<br><small>さらに、政党・政治資金団体<b>以外</b>への寄附は1人あたり<b>合計で年1,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">21条の3第3項</a>)。<b>例外</b>: 資金管理団体の届出をした公職の候補者が<b>自分の資金管理団体</b>にする寄附と<b>遺贈</b>は、150万円の枠外(22条3項)</small></td></tr>
-            <tr><th>支援者の税控除</th><td><span class="kzB tri">△ 条件つき</span>原則なし。<b>国会議員・都道府県議・知事・政令市の議員/市長</b>を推薦・支持する団体なら<b>所得控除のみ</b>(現職=通年/新人=届出の年とその前年だけ)</td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span><br><small>※受けられないのは<b>政治団体以外</b>の企業・労働組合などの団体から(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>。違反は<b>1年以下の拘禁刑または50万円以下の罰金</b>)。<b>他の政治団体からの寄附は別枠</b>で、<b>政党(本部と、1以上の市町村(特別区を含む)の区域または選挙区の区域を単位として設けられた支部)・政治資金団体</b>からの寄附に<b>量的制限はありません</b>。<b>区域単位の要件を満たさない支部は「政党及び政治資金団体以外の政治団体」とみなされる</b>ので(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条4項</a>)、次の枠に入ります。それ以外の政治団体からは同一団体あたり<b>年5,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">22条1項</a>)</small></td></tr>
+            <tr><th>個人からの上限</th><td>同じ団体へ年<b>150万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">規正法22条2項</a>)。<b>本部と支部は通算</b>します<br><small>⚠️ <b>候補者等が、自己の後援団体(資金管理団体を除く)に寄附できない期間があります</b> — 任期満了日の前90日からなど。<b>自己資金を入れるなら早めに。</b>総枠・例外・起算日と条文は<b>📖 くわしく</b>へ</small><small class="detailOnly">さらに、政党・政治資金団体<b>以外</b>への寄附は1人あたり<b>合計で年1,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">21条の3第3項</a>)。<b>例外</b>: 資金管理団体の届出をした公職の候補者が<b>自分の資金管理団体</b>にする寄附と<b>遺贈</b>は、150万円の枠外(22条3項)。<b>ただし本人が入れた分に税控除はありません</b>(「❌ 見落としやすい限定」参照)。<br>⚠️ <b>本部・支部の通算</b>: 「後援会本部に150万円＋支部に150万円」も<b>上限超過</b>です(規正法18条1項の本部・支部別扱いは第2章〔届出・収支の公開〕限りで、第5章の寄附の制限には及びません)。<br>⚠️ <b>逆に、公選法で禁止される期間があります</b> — 候補者等は、<b>任期満了日の前90日に当たる日から選挙の期日まで</b>(解散・辞職等では起算日が異なる)の<b>一定期間</b>、<b>自己の後援団体(資金管理団体を除く)に寄附をすることができません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_199_5" target="_blank" rel="noopener noreferrer">公選法199条の5第3項・4項</a>)。<b>自己資金を入れるなら、資金管理団体を届け出ておくか、90日前までに済ませる</b>のが実務です。<b>後援団体の側も、同じ期間は総会・行事で選挙区内の人に金銭・記念品を渡せません</b>(同2項)。なお後援団体が選挙区内の人に寄附すること自体が原則禁止です(同1項。花輪・供花・香典・祝儀の類)</small></td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB tri">△ 条件つき</span>原則なし。<b>国会議員・都道府県議・知事・政令市の議員/市長</b>を推薦・支持する団体なら<b>所得控除のみ</b>(現職=通年/新人=<b>立候補の届出をした年とその前年だけ</b>。立候補しなければ対象外)</td></tr>
           </table>
-          <div class="kzNote">一般の<b>市区町村議・東京23区の区議/区長</b>の後援会は、税控除の対象外です。</div>
+          <div class="kzNote">一般の<b>市区町村議・東京23区の区議/区長</b>の後援会は、税控除の対象外です。<br>・<b>「資金管理団体だから控除」でもありません</b> — 控除を使うには、その団体の<b>本来の目的</b>が対象公職の人の推薦・支持であることに加えて、<b>選管の運用上「被推薦書」を添えて届け出てあること</b>が求められます。<b>支援者に控除を案内する前に、所轄選管で確認してください。</b></div>
         </div>
         <div class="kzCard" id="k4">
-          <h4>🌱 政党要件を満たさない政治団体(例:再生の道 — 2026年9月時点)</h4>
+          <h4>🌱 政党要件を満たさない政治団体(例:再生の道 — 2026年10月時点)</h4>
           <table class="kzTable">
             <tr><th>法的な位置づけ</th><td>「政党」ではなく<b>その他の政治団体</b>(=🤝と同じ枠)</td></tr>
-            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span><br><small>※受けられないのは<b>政治団体以外</b>の企業・労働組合などの団体から(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>)。<b>他の政治団体からの寄附は別枠</b>で、政党・政党支部・政治資金団体からの寄附に<b>量的制限はありません</b>。それ以外の政治団体からは同一団体あたり<b>年5,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">22条1項</a>)</small></td></tr>
-            <tr><th>個人からの上限</th><td>同じ相手へ年<b>150万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">規正法22条2項</a>)<br><small>政党・政治資金団体<b>以外</b>への寄附は1人あたり<b>合計で年1,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">21条の3第3項</a>)。本人が<b>自分の資金管理団体</b>へ入れる寄附と遺贈は150万円の枠外(22条3項)</small></td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span><br><small>※受けられないのは<b>政治団体以外</b>の企業・労働組合などの団体から(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>。違反は<b>1年以下の拘禁刑または50万円以下の罰金</b>)。<b>他の政治団体からの寄附は別枠</b>で、<b>政党(本部と、1以上の市町村(特別区を含む)の区域または選挙区の区域を単位として設けられた支部)・政治資金団体</b>からの寄附に<b>量的制限はありません</b>。<b>区域単位の要件を満たさない支部は「政党及び政治資金団体以外の政治団体」とみなされる</b>ので(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条4項</a>)、次の枠に入ります。それ以外の政治団体からは同一団体あたり<b>年5,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">22条1項</a>)</small></td></tr>
+            <tr><th>個人からの上限</th><td>同じ相手へ年<b>150万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">規正法22条2項</a>)。<b>本部と支部は通算</b>します<br><small>政党・政治資金団体<b>以外</b>への寄附は1人あたり<b>合計で年1,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">21条の3第3項</a>)</small><small class="detailOnly"><b>例外</b>: 資金管理団体の届出をした公職の候補者が<b>自分の資金管理団体</b>にする寄附と<b>遺贈</b>は150万円の枠外(22条3項)。ただし<b>本人が入れた分に税控除はありません</b>。<br>⚠️ <b>本部・支部の通算</b>: 「本部に150万円＋支部に150万円」は<b>上限超過</b>です(規正法18条1項の本部・支部別扱いは第2章〔届出・収支の公開〕限りで、第5章の寄附の制限には及びません)。<br>⚠️ <b>この団体が候補者本人の後援団体に当たる場合</b>は、公選法の期間制限もかかります — 候補者等は、<b>任期満了日の前90日に当たる日から選挙の期日まで</b>(解散・辞職等では起算日が異なる)の<b>一定期間</b>、<b>自己の後援団体(資金管理団体を除く)に寄附をすることができません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_199_5" target="_blank" rel="noopener noreferrer">公選法199条の5第3項・4項</a>)。政党本部にあたる団体への寄附はこの制限の対象ではありませんが、<b>当てはめは所轄選管で確認してください。</b></small></td></tr>
             <tr><th>支援者の税控除</th><td><span class="kzB ng">❌ 原則なし</span>(特定の対象公職候補の推薦・支持が本来の目的でない限り)</td></tr>
           </table>
-          <div class="kzNote"><b>これが「選挙のない年は控除はありません」という案内の正体</b>です。政党要件(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_1-At_3" target="_blank" rel="noopener noreferrer">政治資金規正法3条2項</a>。①所属する衆議院議員又は参議院議員が<b>5人以上</b>、または②直近の衆院総選挙、直近の参院通常選挙、その一つ前の参院通常選挙のいずれかで<b>得票総数が有効投票総数の2%以上</b>)を満たすと🏛️政党になり、税額控除まで提供できるようになります。<br><small>※ここに挙げた政党・団体名は<b>制度の違いを説明するための例示</b>で、本ページの作成・監修への関与を示すものではありません。政党要件の充足は国政選挙のたびに変わるので、最新の状況は<a class="lawlink" href="https://www.soumu.go.jp/senkyo/seiji_s/naruhodo04.html" target="_blank" rel="noopener noreferrer">総務省の政治団体名簿</a>でご確認ください</small></div>
+          <div class="kzNote"><b>これが「選挙のない年は控除はありません」という案内の正体</b>です。政党要件(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_1-At_3" target="_blank" rel="noopener noreferrer">政治資金規正法3条2項</a>。①所属する衆議院議員又は参議院議員が<b>5人以上</b>、または②直近の衆院総選挙、直近の参院通常選挙、その一つ前の参院通常選挙のいずれかで<b>得票総数が有効投票総数の2%以上</b>)を満たすと🏛️政党になり、税額控除まで提供できるようになります。<br><small>※ここに挙げた政党・団体名は<b>制度の違いを説明するための例示</b>で、本ページの作成・監修への関与を示すものではありません。政党要件の充足は国政選挙のたびに変わるので、最新の状況は<a class="lawlink" href="https://www.soumu.go.jp/main_content/000788845.pdf" target="_blank" rel="noopener noreferrer">総務省「政党・政治資金団体一覧」(PDF)</a>でご確認ください(団体ごとの届出は<a class="lawlink" href="https://www.soumu.go.jp/senkyo/seiji_s/seijishikin/" target="_blank" rel="noopener noreferrer">総務省「政治団体名簿・政党名簿・政治資金収支報告書」</a>から)</small></div>
         </div>
         <div class="kzCard" id="k5">
           <h4>🙋 政治家個人(選挙運動に関する寄附だけ)</h4>
           <table class="kzTable">
             <tr><th>そもそも受け取れる?</th><td>金銭等の寄附は<b>原則禁止</b>(規正法21条の2)。<b>選挙運動に関する寄附だけ</b>が例外</td></tr>
-            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span><br><small>※<b>会社・労働組合などの団体(政治団体を除く)</b>からは受けられません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>)。<b>政治団体からの寄附も、金銭等によるものは受けられません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_2" target="_blank" rel="noopener noreferrer">21条の2第1項</a>。<b>選挙運動に関するものだけが射程の外</b>)。現行では<b>政党がする寄附だけが適用除外</b>です(同条2項)。<b>22条1項の「年5,000万円」は政治団体が政治団体へする寄附の上限で、候補者個人が受ける寄附には適用されません。</b></small></td></tr>
-            <tr><th>個人からの上限</th><td>同じ相手へ年<b>150万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">規正法22条2項</a>)<br><small>政党・政治資金団体<b>以外</b>への寄附は1人あたり<b>合計で年1,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">21条の3第3項</a>)。<b>※この欄は「選挙運動に関する寄附」を受ける場面の話</b>です(それ以外の金銭等の寄附は上の行のとおり禁止)。</small></td></tr>
-            <tr><th>支援者の税控除</th><td><span class="kzB tri">△ 条件つき</span>対象公職なら<b>所得控除のみ</b>・選挙運動費用収支報告書に載った分だけ(実質、選挙のあった年)</td></tr>
+            <tr><th>企業・団体からの献金</th><td><span class="kzB ng">❌ 受けられない</span><br><small>※<b>会社・労働組合などの団体(政治団体を除く)</b>からは受けられません。<b>政治団体からの寄附も、金銭等(お金・有価証券)によるものは受けられません</b>(<b>選挙運動に関するものだけが射程の外</b>)。<b>唯一の例外だった「政党がする寄附」も2026年12月31日までで、2027年(令和9年)1月1日から禁止されます</b>。条文と出典は<b>📖 くわしく</b>へ</small><small class="detailOnly">根拠は<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21" target="_blank" rel="noopener noreferrer">規正法21条1項</a>と<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_2" target="_blank" rel="noopener noreferrer">21条の2第1項</a>(「政治活動(<b>選挙運動を除く。</b>)に関して」と書いており、例外規定ではなく適用範囲の外)。<b>2027年(令和9年)1月1日から、政党が公職の候補者個人にする金銭等の寄附は禁止</b>されます(令和6年法律第64号。<a class="lawlink" href="https://www.soumu.go.jp/main_content/000174716.pdf" target="_blank" rel="noopener noreferrer">総務省「政治資金規正法のあらまし」令和8年3月</a>は「政党がする寄附は、令和8年12月31日まで認められています」と明記)。<b>現行の21条の2に第2項はありません。</b><b>22条1項の「年5,000万円」は政治団体が政治団体へする寄附の上限で、政治家個人が受ける寄附には適用されません。</b></small></td></tr>
+            <tr><th>個人からの上限</th><td>同じ相手へ年<b>150万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_22" target="_blank" rel="noopener noreferrer">規正法22条2項</a>)<br><small>政党・政治資金団体<b>以外</b>への寄附は1人あたり<b>合計で年1,000万円</b>まで(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_5-At_21_3" target="_blank" rel="noopener noreferrer">21条の3第3項</a>)。<b>※この欄は「選挙運動に関する寄附」を受ける場面の話</b>です(それ以外の金銭等の寄附は上の行のとおり禁止)。<b>物品等による寄附も時価に見積もって算入</b>されます</small></td></tr>
+            <tr><th>支援者の税控除</th><td><span class="kzB tri">△ 条件つき</span>対象公職なら<b>所得控除のみ</b>・選挙運動費用収支報告書に載った分だけ(<b>実質、選挙の前後</b>。控除の帰属年は<b>寄附した年</b>で、立候補・収支報告書への記載で<b>遡って確定</b>します)</td></tr>
           </table>
-          <div class="kzNote">前年に受けた分は、控除の確認書類が確定申告期限に間に合わないことがあります(下の「事後確定」参照)。</div>
+          <div class="kzNote">⚠️ <b>個人で受けると、受け取った側の税金も不利になります</b> — 政治活動に関して受けた寄附は<b>雑所得</b>として課税され、赤字を他の所得と差し引くこともできません(選挙運動に関する収入で収支報告がされたものは非課税)。<b>受け皿は政治団体に一本化するのが原則</b>です。<br>前年に受けた分は、控除の確認書類が確定申告期限に間に合わないことがあります(領収書の写しで先に申告し、書類が届いたら税務署へ提出。手続の詳細は「📖 くわしく」の「事後確定」欄)。</div>
         </div>
       </div>
-      <div class="more" style="margin-top:10px;">📚 <b>自分で確認するなら</b>: <a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/application/tebiki" target="_blank" rel="noopener noreferrer">東京都選管「政治団体の手引」(令和8年3月版)</a>が最も実務的です(寄附の制限／政治活動の規制／政治資金と税／収支報告書の章立てが、このページとほぼ対応しています。中身はPDF)。<br>出典: <a class="lawlink" href="https://www.soumu.go.jp/senkyo/seiji_s/naruhodo01.html" target="_blank" rel="noopener noreferrer">総務省 なるほど!政治資金</a> / <a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/documents/d/senkyo/3001kifuseigen" target="_blank" rel="noopener noreferrer">東京都選管 寄附の制限(PDF)</a>(金額・可否は目安。個別事情は所轄選管・税務署へ)</div>
+      <div class="more" style="margin-top:10px;">📚 <b>自分で確認するなら</b>: <a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/application/tebiki" target="_blank" rel="noopener noreferrer">東京都選管「政治団体の手引」(令和8年3月版)</a>が最も実務的です(寄附の制限／政治活動の規制／政治資金と税／収支報告書の章立てが、このページとほぼ対応しています。中身はPDF)。<br>出典: <a class="lawlink" href="https://www.soumu.go.jp/main_content/000174716.pdf" target="_blank" rel="noopener noreferrer">総務省「政治資金規正法のあらまし」(令和8年3月・令和6年法改正反映／PDF)</a> / <a class="lawlink" href="https://www.soumu.go.jp/main_content/001008217.pdf" target="_blank" rel="noopener noreferrer">総務省「改正政治資金規正法等の概要」(令和7年5月・令和8年4月一部改訂／PDF)</a> / <a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/documents/d/senkyo/08tebiki_p69-p83" target="_blank" rel="noopener noreferrer">東京都選管「政治団体の手引」第5章 寄附の制限(令和8年3月版／PDF)</a>(金額・可否は目安。個別事情は所轄選管・税務署へ)<br><small class="detailOnly">※ 都選管の「寄附の制限」1枚ものPDFは<b>平成30年1月発行</b>で2024-2025年の改正を反映していないため、リンクを差し替えました。</small></div>
     </div>
+
+    <p>※<b>パーティー券の対価は「寄附」ではないので別枠</b>です(企業・団体からも受けられる／ただし税控除はなし)。<b>⚠️ ただしパーティーには独自の制限があります</b> — <b>1回のパーティーで、同一の人・同一の団体から150万円を超える対価は受けられません</b>。<b>対価の支払も、原則として主催者の預貯金口座への振込みに限られます</b>(<b>いずれも違反は罰則の対象</b>)。上限・公開基準・条文は<b>📖 くわしく</b>へ。</p>
+    <h3 class="detailOnly">🎟️ 政治資金パーティー — 「寄附」ではないので別枠。ただし落とし穴が多い</h3>
+    <ul class="detailOnly">
+      <li><b>対価の支払は「寄附」ではありません</b> — だから<b>後援会・政党要件なしの政治団体でも企業・団体から受けられ</b>、年間の総枠制限(2,000万円／1,000万円)や個別制限(150万円)の計算にも入りません。<b>その代わり、支払った側に税控除はありません</b>(党費・会費と同じく「債務の履行としてされるもの」)</li>
+      <li><b>1回のパーティーで、同一の者から150万円を超える対価の支払は禁止</b>(規正法22条の8第1項)</li>
+      <li><b>公開基準</b>: 1回のパーティーごとに同一の者からの支払が<b>20万円超</b>で支払者の氏名等が収支報告書に記載・公表されます。<b>2027年1月1日以後に開催するパーティー</b>(かつ同日以後に収受する分)からは<b>5万円超</b>に下がります</li>
+      <li><b>2026年1月1日以後に開催するパーティー</b>の対価は、原則<b>主催者の預貯金口座への振込み</b>でなければ受けられません(当日会場での支払等の例外あり。遅滞なく口座に預け入れ)</li>
+      <li><b>2027年1月1日以後開催分</b>は、外国人・外国法人等(特例上場日本法人を除く)から対価の支払を受けることが禁止されます</li>
+      <li>収入1,000万円以上のものは<b>特定パーティー</b>として追加の報告対象。開催は政治団体が行うのが原則です</li>
+    </ul>
+    <div class="more detailOnly">📚 根拠: <a class="lawlink" href="https://www.soumu.go.jp/main_content/000174716.pdf" target="_blank" rel="noopener noreferrer">総務省「政治資金規正法のあらまし」令和8年3月 19-21ページ</a></div>
+
+    <h3 class="detailOnly">受け取った側の税金 — 「受け皿」で課税も変わる</h3>
+    <ul class="detailOnly">
+      <li><b>政治団体で受ける</b>: 寄附収入に<b>法人税・贈与税は課税されません</b>(人格なき社団として収益事業以外の所得は非課税)</li>
+      <li><b>政治家個人で受ける</b>: 政治活動に関して受けた寄附は<b>雑所得</b>になり、他の所得と合算して課税されます(政治活動の費用を差し引いた残余が課税対象。<b>赤字は他の所得と損益通算できません</b>)</li>
+      <li><b>例外</b>: <b>選挙運動</b>に関して受けた収入で<b>公選法189条の収支報告がされたもの</b>は非課税(<b>法人から</b>＝所得税法9条1項19号／<b>個人から</b>＝相続税法21条の3第1項6号)</li>
+      <li>👉 <b>つまり「個人で受ける」は、法令上の例外枠であるだけでなく、税務上も不利。</b>受け皿は政治団体に一本化するのが原則です(出典: <a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/documents/d/senkyo/08tebiki_p93-p98" target="_blank" rel="noopener noreferrer">東京都選管「政治団体の手引」令和8年3月版 93-94ページ</a>)</li>
+    </ul>
 
     <h3 class="detailOnly">支援者が受けられる税控除 — 受け皿別の早見表</h3>
     <table class="detailOnly">
       <tr><th>寄附の受け皿</th><th>控除の種類</th><th>対象になる時期</th></tr>
-      <tr><td><b>政党(支部含む)・政治資金団体</b></td><td>所得控除 or <b>税額控除30%</b>(有利な方を選べる)<br><small>限度は下の注記のとおり</small></td><td>通年</td></tr>
-      <tr class="cautionRow"><td colspan="3"><b>⚠️ 税額控除30%の3つの限度</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租税特別措置法41条の18第2項</a>) — ①控除の対象にできる寄附金は、他の寄附金と合わせて<b>その年の総所得金額等の合計額の40%</b>まで ②控除額は<b>(対象寄附金の合計−2,000円)×30%</b>(100円未満切捨て) ③控除額は<b>その年分の所得税額の25%が上限</b>。<b>所得税額が小さい方は30%満額にならないことがあります</b>。所得控除と税額控除は<b>いずれか有利な方を選択</b>します(<a class="lawlink" href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">国税庁 No.1260</a>。確定申告書等作成コーナーは自動で有利判定します)</td></tr>
-      <tr><td><b>現職</b>議員の後援会など(推薦・支持が本来の目的の団体)</td><td>所得控除のみ</td><td>通年</td></tr>
-      <tr><td><b>新人候補</b>の後援会など(同上)</td><td>所得控除のみ</td><td><b>立候補届出の年と、その前年だけ</b></td></tr>
-      <tr><td>候補者個人(選挙運動に関する寄附)</td><td>所得控除のみ</td><td>選挙運動費用収支報告書に載った寄附のみ(実質、選挙の前後)</td></tr>
+      <tr><td><b>政党(支部含む)・政治資金団体</b></td><td>所得控除 or <b>税額控除30%</b>(有利な方を選べる)<br><small>限度は次の行のとおり</small></td><td>通年</td></tr>
+      <tr class="cautionRow"><td colspan="3"><b>⚠️ 税額控除30%の3つの限度</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租税特別措置法41条の18第2項</a>) — ①控除の対象にできる寄附金は、他の寄附金と合わせて<b>その年の総所得金額等の合計額の40%</b>まで ②控除額は<b>(対象寄附金の合計−2,000円)×30%</b>(100円未満切捨て) ③控除額は<b>その年分の所得税額の25%相当額</b>(100円未満の端数は切捨て)が上限。<b>所得税額が小さい方は30%満額にならないことがあります</b>。所得控除と税額控除は<b>いずれか有利な方を選択</b>します(<a class="lawlink" href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">国税庁 No.1260</a>。確定申告書等作成コーナーは自動で有利判定します)。なお<b>この制度には適用期限があり、現行の条文では「令和11年(2029年)12月31日まで」の寄附が対象</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租税特別措置法41条の18第1項柱書</a>の「指定期間」)。改正法附則では<b>控除対象の拡大・控除率の引上げ</b>も検討事項とされているため、長期の計画は最新の税制改正でご確認ください</td></tr>
+      <tr class="detailOnly"><td><b>国会議員が主宰／主要構成員の政治団体・政策研究団体</b></td><td>所得控除のみ</td><td>通年<br><small>※<b>国会議員氏名届</b>の提出が要件。届けられている国会議員が全員現職でなくなると、その日から対象外</small></td></tr>
+      <tr><td><b>現職</b>議員の後援会など(推薦・支持が本来の目的の団体)</td><td>所得控除のみ</td><td>通年<br><small>※ただし<b>現職が次の選挙に立候補しなかった場合は、その公職の任期満了の日までにされた寄附に限られます</b></small></td></tr>
+      <tr><td><b>新人候補</b>の後援会など(同上)</td><td>所得控除のみ</td><td><b>立候補の届出をした年と、その前年だけ</b><br><small>※立候補しなければ対象外</small></td></tr>
+      <tr><td>政治家個人(選挙運動に関する寄附)</td><td>所得控除のみ</td><td>選挙運動費用収支報告書に載った寄附のみ(実質、選挙の前後)</td></tr>
     </table>
+    <p class="detailOnly" style="font-size:12.5px;">※ <b>党費・会費・パーティー会費は「寄附」ではありません</b>(規約に基づく債務の履行＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_1-At_4" target="_blank" rel="noopener noreferrer">規正法4条2項・3項</a>)。したがって<b>税控除の対象外</b>で、年間の上限(2,000万円／1,000万円／150万円)の計算にも入りません。<b>ただし法人その他の団体が負担する党費・会費は「寄附」とみなされる</b>ので(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_1-At_5" target="_blank" rel="noopener noreferrer">同5条2項</a>)、会社に法人会員として会費を払わせると企業・団体献金の規制にかかります。「会費なら控除できますか」と聞かれたら<b>できません</b>と答えてください。</p>
     <div class="ngbox detailOnly" style="margin-top:10px;"><h4>❌ 見落としやすい限定(ここでつまずく)</h4><ul>
+      <li><b>⚠️ 「自分のお金を自分の受け皿に入れて控除」は、どの受け皿でもできません</b> — <b>候補者本人が自己の後援会・資金管理団体にした寄附</b>や<b>候補者同士が互いの後援会に寄附し合う場合</b>は、「寄附をした者に特別の利益が及ぶと認められるもの」として控除の対象外です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租税特別措置法41条の18第1項柱書</a>、<a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/documents/d/senkyo/08tebiki_p93-p98" target="_blank" rel="noopener noreferrer">東京都選管「政治団体の手引」令和8年3月版 97ページ</a>)。<b>2026年1月1日から加わった「自分が代表の政党選挙区支部への寄附」の除外は、この原則の明文化</b>です — 後援会ルートに逃げても控除は出ません。<b>量的制限の枠外であることと、税控除が使えることは別の話</b>です</li>
       <li><b>対象になる公職の限定</b> — 政党・政治資金団体<b>以外</b>への寄附で控除が使えるのは<b>衆参議員・都道府県議・知事・政令市の議員/市長</b>の関係だけ。<b>一般の市町村議・市町村長・東京23区の区議/区長は対象外</b>(受け皿が政党支部なら公職を問わず可)</li>
-      <li><b>「資金管理団体だから控除」ではない</b> — 控除の根拠はその団体の<b>本来の目的</b>が特定の人の推薦・支持かどうか。設立届出の目的欄の書き方が実務上重要</li>
-      <li>政治献金に<b>住民税の控除はない</b>。年末調整も不可 — <b>確定申告+選管等の確認印付き「寄附金(税額)控除のための書類」</b>が必要</li>
+      <li><b>「資金管理団体だから控除」ではありません</b> — 政党・政治資金団体<b>以外</b>の受け皿で控除を使うには、①その団体の<b>本来の目的</b>が対象公職の人の推薦・支持であること(<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租特法41条の18第1項</a>)に加えて、②<b>選管の運用上、「被推薦書」(国会議員関係なら「国会議員関係政治団体に該当する旨の通知」)を設立届・異動届に添付して届け出てあること</b>が求められます。<b>現職の後援会でも、この届出がなければ控除の対象にならない</b>と案内している選管があります。<b>支援者に控除を案内する前に、所轄選管で確認してください。</b></li>
+      <li><b>タイミングと方法でも落ちます</b> — ①<b>団体が年の途中で控除の適格団体になった場合、それより前にした寄附は対象外</b>(被推薦書を出す前の寄附は救えません)。②<b>債権放棄(立替金の放棄など)による寄附は控除の対象になりません</b>(具体的には各税務署の判断。<a class="lawlink" href="https://www.pref.kyoto.jp/senkyo/documents/r5shotokuzeisochi.pdf" target="_blank" rel="noopener noreferrer">京都府選管</a>)</li>
+      <li>政治献金に<b>住民税の控除はない</b>。年末調整も不可 — <b>確定申告</b>が必要で、添付書類は①<b>選管等の確認印付き「寄附金(税額)控除のための書類」</b>、②<b>税額控除(30%)を選ぶ場合は「政党等寄附金特別控除額の計算明細書」</b>の2点です(②は<a class="lawlink" href="https://laws.e-gov.go.jp/law/332AC0000000026#Mp-Ch_2-Se_6-At_41_18" target="_blank" rel="noopener noreferrer">租税特別措置法41条の18第3項</a>が適用要件としており、様式は国税庁HP・税務署で入手)。<b>①は団体が収支報告書と一緒に選管へ出して確認印を受け、寄附者に交付する</b>流れなので、団体側は<b>確定申告期間に間に合うよう早めに収支報告書を提出</b>してください</li>
     </ul></div>
 
     <h3 class="detailOnly">立候補届出「前」の寄附と、控除の"事後確定"の仕組み</h3>
     <ul class="detailOnly">
       <li>選挙運動に関する寄附は届出前から受けられるが、支援者の控除は「<b>実際に立候補し、収支報告書に載って初めて遡って確定</b>」する仕組み。出馬しなければ控除は発生しない(寄附の返還等の整理も必要になる)</li>
-      <li>控除の帰属年は<b>寄附した年</b>。ただし「寄附金(税額)控除のための書類」は選挙後にまとめて発行されるため、確定申告期限に間に合わないことがあります。国税庁は「<b>間に合わない場合は寄附金の領収書(写)のみを添付して申告し、後日書類の送付を受けた後、速やかに税務署長に提出</b>」と案内しています(<a class="lawlink" href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">国税庁 No.1260</a>)。<b>前年の寄附で、申告期限までに立候補届出も収支報告書への記載も済んでいない場合の取扱いは個別事情により異なります。所轄税務署にご確認ください</b></li>
-      <li><b>年明けすぐの選挙は特に煩雑</b> — 12月と1月の寄附で控除年が割れる/150万円の上限は暦年でカウント/後援会の年次報告と選挙の報告が交錯。<b>受け皿の一本化・専用口座の分離・寄附者への案内文の事前準備</b>が対策</li>
+      <li>控除の帰属年は<b>寄附した年</b>。ただし「寄附金(税額)控除のための書類」は選挙後にまとめて発行されるため、確定申告期限に間に合わないことがあります。国税庁は「<b>間に合わない場合は寄附金の領収書(写)のみを添付して申告し、後日書類の送付を受けた後、速やかに税務署長に提出</b>」と案内しています(<a class="lawlink" href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">国税庁 No.1260</a>)。<b>前年分を遡って控除したい場合の手続は公開されています</b> — 前年分について<b>すでに確定申告をしている人は「更正の請求」</b>、<b>していない人は「期限後の確定申告」</b>を行います。いずれの場合も「寄附金(税額)控除のための書類」の提出が必要です(<a class="lawlink" href="https://www.pref.kyoto.jp/senkyo/documents/r5shotokuzeisochi.pdf" target="_blank" rel="noopener noreferrer">京都府選管「個人のする政治活動に関する寄附に係る所得税の優遇措置について」4-5ページ</a>)。なお<b>立候補しなかった場合は前年分も当年分も控除の対象外</b>です。具体的な適用は所轄税務署にご確認ください</li>
+      <li><b>年明けすぐの選挙は特に煩雑</b> — 12月と1月の寄附で控除年が割れる/150万円の上限は暦年でカウント/後援会の年次報告と選挙の報告が交錯。さらに<b>任期満了日の前90日からは、候補者等が自己の後援団体(資金管理団体を除く)に寄附できません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_199_5" target="_blank" rel="noopener noreferrer">公選法199条の5第3項・4項</a>)ので、自己資金の投入時期も逆算が必要です。<b>受け皿の一本化・専用口座の分離・寄附者への案内文の事前準備</b>が対策</li>
     </ul>
-    <div class="vol">🤝 <b>支える人(寄附する側)へ:</b> 「選挙のない年は控除がありません」と案内されたら、それは受け皿が候補者個人(または新人の後援会)だからです。政党支部宛てなら通年+30%税額控除が使えます。寄附するときは<b>宛先(受け皿)と控除書類の受け取り方</b>を確認しましょう。<br>⚠️ <b>寄附者の氏名は公表されます</b> — 同一の団体への寄附が<b>年5万円を超える</b>と、寄附者の<b>氏名・住所・職業・金額・年月日</b>が収支報告書に記載され(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_12" target="_blank" rel="noopener noreferrer">規正法12条1項1号ロ</a>)、<b>インターネットで公表</b>されます(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_4-At_20" target="_blank" rel="noopener noreferrer">20条</a>。公表期間は3年間)。なお<b>2027年1月1日以後に提出される収支報告書</b>からは、ネット公表される住所は<b>都道府県・市区町村名まで</b>に限定されますが、<b>当分の間これはオンライン提出した場合等に限られ</b>、その他の政治団体のオンライン提出は任意です。<b>寄附を募る前に、この点を寄附者に伝えておきましょう。</b></div>
-    <div class="more detailOnly">📚 根拠: 租税特別措置法41条の18/政治資金規正法21条の2/公職選挙法186条・189条。国税庁タックスアンサー <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1154.htm" target="_blank" rel="noopener noreferrer">No.1154(政治献金と寄附金)</a>・<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">No.1260(政党等寄附金特別控除)</a></div>
+    <div class="vol">🤝 <b>支える人(寄附する側)へ:</b> 「選挙のない年は控除がありません」と案内されたら、受け皿が政治家個人(または新人の後援会)だからです。政党支部宛てなら通年+30%税額控除。寄附するときは<b>宛先(受け皿)と控除書類の受け取り方</b>を確認しましょう。<br>⚠️ <b>寄附者の氏名は公表されます</b> — 同一の団体への寄附が<b>年5万円を超える</b>と<b>氏名・住所・職業・金額・年月日</b>が収支報告書に記載され<b>インターネットで公表</b>。<b>しかも税控除を受けるなら、年5万円以下でも同じ内容が記載・公表されます</b> — <b>「名前を出さずに控除を受ける」ことはできません</b>。どちらを取るかは<b>寄附者本人に選んでもらってください</b>。寄附を募る前に必ず伝えること。条文・公表期間・2027年からの住所表示の変更は<b>📖 くわしく</b>へ。
+      <span class="detailOnly">📖 <b>根拠と細目</b>: 年5万円超の記載は<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_2-At_12" target="_blank" rel="noopener noreferrer">規正法12条1項1号ロ</a>、インターネットでの公表は<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_4-At_20" target="_blank" rel="noopener noreferrer">20条</a>(公表期間は3年間)。税控除の要件が「収支報告書に寄附者が記載されていること」で、<b>5万円以下でも記入</b>が必要です(<a class="lawlink" href="https://www.senkyo.metro.tokyo.lg.jp/documents/d/senkyo/08tebiki_p93-p98" target="_blank" rel="noopener noreferrer">東京都選管「政治団体の手引」令和8年3月版 97ページ</a>)。<b>2027年1月1日以後に提出される収支報告書</b>からは、インターネットで公表される寄附者の住所は<b>都道府県・郡・市区町村の名称まで</b>に限定されます。<b>書面で提出する場合も、「住所限定報告書」を併せて提出すれば、そちらが公表されます。</b></span></div>
+    <div class="more detailOnly">📚 根拠: 政治資金規正法4条・5条・12条・18条・20条・21条・21条の2・21条の3・22条・22条の3〜22条の9/公職選挙法184条・186条・189条・199条・199条の5/租税特別措置法41条の18/所得税法9条1項19号/相続税法21条の3第1項6号。国税庁タックスアンサー <a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1154.htm" target="_blank" rel="noopener noreferrer">No.1154(政治献金と寄附金)</a>・<a href="https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1260.htm" target="_blank" rel="noopener noreferrer">No.1260(政党等寄附金特別控除)</a></div>
   </section>
 
   <!-- ===== S7 ホームページを立ち上げる ===== -->
-  <section class="panel p7" id="s7">
+  <section id="s7" class="panel p7" role="tabpanel" aria-labelledby="tab-s7">
     <h2>🏠 ホームページを立ち上げる</h2>
     <span class="period">平時(政治活動の早い段階で)</span>
-    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button></div></div>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
     <p>候補者・政治団体の「顔」になるのがホームページ。実は<b>構造さえ知れば、外注しなくても作れる時代</b>になっています(このページ自体もその方法で作られています)。まず全体像を「家を建てる」に例えて押さえましょう。</p>
     <h3>必要なもの一覧 — 「家を建てる」に例えると全部わかる</h3>
     <p class="simpleOnly" style="font-size:13px;">必要なのは<b>住所(ドメイン)・土地(サーバー)・建物(HTML等)・鍵(SSL)・郵便受け(フォーム)</b>など10項目ほど。要素ごとの費用と注意点の一覧表は「📖 くわしく」へ。</p>
@@ -726,26 +943,62 @@
       <li><b>検証は「使ってみる」でできる</b> — スマホで全ページを開く/フォームから自分でテスト送信して受信確認/自分の名前で検索。コードが読めなくてもできる品質チェック</li>
     </ol>
     <div class="okng">
-      <div class="okbox"><h4>⭕ 自作(AI活用)が向くケース</h4><ul><li>初期費用を抑えたい</li><li>活動報告などの更新が多い(修正が自分で数分・無料)</li><li>構造を理解して業者とも対等に話したい</li></ul></div>
+      <div class="okbox">
+        <h4>⭕ 自作(AI活用)が向くケース</h4>
+        <ul><li>初期費用を抑えたい</li><li>活動報告などの更新が多い(修正が自分で数分・無料)</li><li>構造を理解して業者とも対等に話したい</li></ul>
+      </div>
       <div class="ngbox"><h4>❌ 気をつけること</h4><ul><li>ドメインを他人名義で取られる契約</li><li>公開前の作りかけページを鍵なしで置く(検索エンジンにも見えます)</li><li>更新が止まったまま放置(活動停止に見える)</li></ul></div>
     </div>
-    <div class="tools">🧰 <b>公選法の留意:</b> ホームページでの政治活動は平時から自由ですが、内容が投票依頼(事前運動)にならないよう注意。選挙運動期間中のウェブ利用にも一定のルールがあります(詳しくは「📣 選挙運動」タブと選管へ)。</div>
+    <div class="tools">🧰 <b>公選法の留意:</b> ホームページでの政治活動は平時から自由ですが、内容が投票依頼(事前運動)にならないよう注意。選挙運動期間中のウェブ利用にも一定のルールがあります(詳しくは「📣 選挙運動」タブと選管へ)。<br>※<b>選挙運動のための有料ネット広告は原則禁止です</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_6" target="_blank" rel="noopener noreferrer">公選法142条の6</a>。候補者個人・後援会は出せません。<b>SNSの「投稿を宣伝する」ボタン＝ブーストも有料広告</b>。違反は2年以下の拘禁刑または50万円以下の罰金)。<br>※<b>あいさつを目的とする有料広告</b>(年賀・暑中見舞・慶弔・激励・感謝)も、ネット上の文書図画を含めて禁止(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_152" target="_blank" rel="noopener noreferrer">同152条</a>。50万円以下の罰金。<b>後援団体も対象</b>)。</div>
     <div class="vol">🤝 <b>体験談:</b> 筆者は2025年の初出馬時に制作を外注(40〜50万円)→2026年にAIと自作してリニューアル。顛末はブログ「政治家のホームページの『原価』の話」で公開しています。</div>
   </section>
 
   <!-- ===== S2 選挙の準備 ===== -->
-  <section class="panel p2" id="s2">
+  <section id="s2" class="panel p2" role="tabpanel" aria-labelledby="tab-s2">
     <h2>📦 選挙に向けた準備</h2>
     <span class="period">立候補を決めてから告示日まで</span>
-    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button></div></div>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
     <h3>チェックリスト</h3>
     <ol>
+      <li><b>⓪ まず被選挙権を確かめる(ここが×なら全部ムダになります)</b> — 議員は満25歳以上(知事は満30歳)＋<b>議会の議員だけ3か月以上の住所要件</b>。年齢は<b>投票日</b>で算定
+      <br><small class="detailOnly">① <b>年齢</b>: 市区町村議・市区町村長・都道府県議は<b>満25歳以上</b>、知事は<b>満30歳以上</b>。年齢は<b>「選挙の期日」(投票日)で算定</b>するので、<b>告示日に24歳でも投票日に25歳なら出られます</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_2-At_10" target="_blank" rel="noopener noreferrer">公選法10条1項・2項</a>)。<br>② <b>住所</b>: <b>議会の議員</b>は「その選挙権を有する者」であることが要件なので、<b>市区町村議はその市区町村に「引き続き3か月以上」住所があること</b>が必要です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_2-At_9" target="_blank" rel="noopener noreferrer">公選法9条2項</a>を通じた要件)。<b>転入届の日</b>から数えるので、引っ越して出馬する人は<b>告示日の3か月前までに住民票を移す</b>こと。都道府県議は、同じ都道府県内の市町村に3か月以上住んだことがあり、その後も引き続き県内に住所があれば足ります(同3項)。<b>⚠️ 一方、市区町村長・知事には住所要件がありません</b>(10条1項4号・6号は年齢だけを定めています)。<br>③ 特別区(23区)は、<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_17-At_266" target="_blank" rel="noopener noreferrer">公選法266条1項</a>により「市に関する規定」が適用されます。<br>④ <b>迷ったら選管に「私は被選挙権がありますか」と住民票の異動日を示して事前に確認</b>し、回答日と担当者名を記録に残す。</small></li>
+      <li><b>公務員・教員の方は「辞める日」の設計を最初に</b> — 在職中は立候補できず、<b>届出をした日に自動的に辞職扱い</b>(＝告示日が最後の在職日)
+      <br><small class="detailOnly">国・地方公共団体の公務員等は<b>在職中は立候補できません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_9-At_89" target="_blank" rel="noopener noreferrer">公選法89条1項</a>。消防団員など政令で定める例外あり)。そして<b>立候補の届出をした日に、退職に関する法令の定めにかかわらず、その職を辞したものとみなされます</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_9-At_90" target="_blank" rel="noopener noreferrer">公選法90条</a>)。<b>①給与が止まる日 ②健康保険の切替(任継・国保) ③退職手当の扱い ④年次休暇の消化 ⑤引継ぎ</b>を、告示日を起点に逆算して人事課に確認してください。<b>「辞職願が受理されるまで候補者になれない」わけではなく、逆に届出で自動的に辞職扱いになります。</b>独立行政法人・外郭団体・公立学校の教職員も対象になることがあるので、必ず所属の人事担当と選管の両方に確認を。</small></li>
       <li><b>立候補予定者説明会に参加</b> — 選管が開催。必要書類一式と日程がわかる</li>
       <li><b>供託金を準備</b> — 選挙の種類で額が異なる(公選法92条。例: 一般市の市議選・特別区議選30万円、<b>指定都市の市議選50万円</b>、都道府県議選60万円、一般市の市長選100万円、町村議選15万円。額は必ず選管で確認)。一定得票に届かないと没収</li>
-      <li><b>書類の事前審査</b> — 立候補届出書類を選管が事前チェックしてくれる</li>
-      <li><b>出納責任者を選任し、選管に届け出る</b> — 選挙運動の収支責任者1人を選任し(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_180" target="_blank" rel="noopener noreferrer">公選法180条1項</a>)、<b>文書で支出できる金額の最高額を定めて双方が署名押印</b>(同2項)、<b>氏名・住所・職業・生年月日・選任年月日を直ちに選管へ文書で届け出ます</b>(同3項)。選任・届出前の支出は原則不可<br><small>⚠️ <b>選挙運動費用には「法定制限額」があります</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_194" target="_blank" rel="noopener noreferrer">公選法194条</a>)。選挙区の選挙人名簿登録者数と議員定数から政令の算式で決まる上限で、超えると違反です(出納責任者の連座事由にもなりえます)。<b>額は選挙ごとに異なるので、必ず選管の立候補予定者説明会で確認を</b></small></li>
-      <li><b>選挙事務所・スタッフ体制</b> — 事務所は原則1か所</li>
-      <li><b>選挙運動用ツールの発注</b> — ポスター・ビラ・はがき・たすき等(数量・規格の上限あり)。<b>公費負担</b>(ポスター代・ビラ代・選挙カー等を公費で賄える制度)は条例により内容が異なるので要確認</li>
+      <li><b>届出書類を揃える・事前審査を受ける</b> — 事前審査は<b>告示の1〜2週間前</b>が通例。<b>戸籍抄本は本籍地に請求(郵送なら1〜2週間)／供託が済んでいないと届出は受理されない／通称認定は資材の発注前に</b>
+        <ul class="detailOnly">
+          <li>代表的な書類は次のとおり(<b>最終的な一覧と様式は必ずお住まいの選管のものに従ってください</b>)</li>
+          <li><b>立候補届出書</b>(本人届出／推薦届出のどちらか)・<b>宣誓書</b>(被選挙権があること等を誓う書面)</li>
+          <li><b>戸籍の謄本または抄本</b> — <b>本籍地の自治体に請求</b>します。遠方なら郵送で<b>1〜2週間</b>みておく</li>
+          <li><b>供託証明書</b> — 先に<b>法務局(供託所)で供託</b>を済ませ、受け取った書面を届出に添えます。<b>供託が終わっていないと届出は受理されません</b></li>
+          <li><b>所属党派(政治団体)証明書</b> — 公認を受ける場合のみ。<b>無所属なら不要</b></li>
+          <li><b>通称認定申請書</b> — 投票用紙に旧姓・ひらがな等を使いたい場合。<b>認定されないと戸籍名表記になり、ポスター・ビラ・たすきを作り直すことになる</b>ので、<b>資材の発注前</b>に申請・確認を</li>
+          <li><b>出納責任者選任届</b>(公選法180条3項)・<b>選挙事務所設置届</b>(同130条2項)</li>
+          <li>届出の受付は<b>告示日の決められた時間内</b>で、同時到着時は<b>くじ</b>でポスター掲示場の番号・選挙公報の掲載順が決まります。<b>何時に行くかを陣営で決めておく</b>こと</li>
+        </ul></li>
+      <li><b>選挙公報の原稿を告示前に完成させる</b> — 地方選挙の選挙公報は<b>条例がある自治体でのみ</b>発行。申請の締切は<b>告示日の直後</b>(多くは告示日から2日間)
+      <br><small class="detailOnly">告示日は届出・証紙受領・ポスター貼り・街宣初日が重なります。<b>原稿・顔写真・版下は告示前に完成させ、届出と同じ日に出す</b>のが実務。文字数・枠・手書き可否・写真の規格は<b>説明会で配られる様式</b>に合わせてください(自作レイアウトは差し替えになります)。経歴・肩書は事実と一字一句合わせる(虚偽事項公表罪)。<br>※締切と様式の根拠は自治体の条例です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_172_2" target="_blank" rel="noopener noreferrer">公選法172条の2</a>が、167条〜171条に準じて条例で定めると規定)。国政選挙と知事選は公選法168条1項が直接「公示・告示日から2日間」と定めています。</small></li>
+      <li><b>開票立会人を届け出る(締切は選挙期日の3日前)</b> — 候補者は<b>本人の承諾を得て1人</b>を選び、<b>投票日の3日前まで</b>に市町村選管へ届け出られます
+      <br><small class="detailOnly">その開票区を含む市町村の選挙人名簿に登録された人の中から選びます(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_7-At_62" target="_blank" rel="noopener noreferrer">公選法62条1項</a>)。届出が10人を超えるとくじで10人に絞られます(同2項)。開票は候補者本人が中に入れないため、<b>疑問票の判定や按分を自分の側から見てもらえる唯一の機会</b>です。<b>投票日当日や前日では間に合わないので、告示直後に人を決めて承諾をもらってください。</b></small></li>
+      <li><b>個人演説会の会場を押さえる(公営施設は開催日の2日前まで)</b> — 使う施設・日時・候補者名を<b>文書で市町村選管へ申し出</b>
+      <br><small class="detailOnly">学校・公民館などの<b>公営施設</b>を使う場合は、<b>開催日の2日前まで</b>に申し出が必要です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_163" target="_blank" rel="noopener noreferrer">公選法163条</a>)。<b>選挙期間が7日しかない市区町村議選では、告示日に期間中の会場・日時をまとめて申し出る</b>のが実務です。会場は先着・調整制なので、説明会で施設一覧と空き状況を必ず確認してください。</small></li>
+      <li><b>出納責任者を選任し、選管に届け出る</b> — 選挙運動の収支責任者1人を選任し(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_180" target="_blank" rel="noopener noreferrer">公選法180条1項</a>)、<b>文書で支出できる金額の最高額を定めて双方が署名押印</b>(同2項)、<b>公職の候補者の氏名・出納責任者の氏名・住所・職業・生年月日・選任年月日を直ちに選管へ文書で届け出ます</b>(同3項)
+      <br><small><b>選挙運動に関する支出は、原則として出納責任者でなければできません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_187" target="_blank" rel="noopener noreferrer">公選法187条1項</a>)。ただし<b>①立候補準備のために要する支出 ②電話・インターネット等を利用する方法による選挙運動に要する支出は対象外</b>で、<b>③出納責任者の文書による承諾を得た人</b>も支出できます(同項ただし書)。<b>出納責任者が就任する前に支出した立候補準備費用は、就任後直ちに精算します</b>(同2項)。告示前の資材発注・事務所契約はこの枠で進めるのが実務です。<b>承諾なしに支出すると、払った本人が3年以下の拘禁刑または50万円以下の罰金</b>(246条1項4号)。</small><br><small>⚠️ <b>選挙運動費用には「法定制限額」があります</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_194" target="_blank" rel="noopener noreferrer">公選法194条</a>)。選挙区の選挙人名簿登録者数と議員定数から政令の算式で決まる上限で、超えると違反です(出納責任者の連座事由にもなりえます)。<b>額は選挙ごとに異なるので、必ず選管の立候補予定者説明会で確認を</b></small></li>
+      <li><b>選挙事務所・スタッフ体制</b> — <b>市区町村議・市区町村長の選挙は事務所は1か所だけ</b>で、増設の例外はありません。<b>設置したら直ちに選管へ届出</b>・移動は1日1回まで
+      <br><small class="detailOnly">増設が認められるのは衆院小選挙区・参院選挙区・知事選のみです(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_131" target="_blank" rel="noopener noreferrer">公選法131条1項5号</a>・同項ただし書)。<b>設置したら直ちに選管へ届け出る</b>こと、<b>異動(移転・閉鎖)も届出が必要</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_130" target="_blank" rel="noopener noreferrer">公選法130条2項</a>)。移動は<b>1日1回まで</b>(同131条2項)。<br>⚠️ <b>告示前の「事務所」と「選挙事務所」は別物です。</b>告示前に借りる部屋は<b>政治活動用の事務所</b>で、看板を出すなら<b>選管の表示(証票)を受けた縦150×横40cm以内のもの・事務所ごとに2つまで</b>(143条16項1号・17項)。<b>告示前に「選挙事務所」と表示・呼称すると事前運動・無届を疑われます。</b></small></li>
+      <li><b>選挙運動用ツールの発注</b> — ポスター・ビラ・はがき・たすき等(数量・規格の上限あり)。<b>公費負担</b>(選挙運動用ポスターの作成・ビラの作成・選挙運動用自動車の使用を公費で賄える制度)は<b>条例がある自治体でのみ</b>実施され、品目・上限単価も条例ごとに違います(公選法141条8項・142条11項・143条15項が「前項の規定に準じて、条例で定めるところにより」としています)。
+      <br><b>⚠️ ここが最大の落とし穴</b>: 多くの自治体の条例は、公選法141条7項ただし書に準じて<b>「供託物没収点に達する得票がなければ公費負担を受けられない」</b>と定めています。つまり<b>票が届かなければ、ポスター代・ビラ代・選挙カー代は全額自己負担</b>になります。
+      <br><b>自分の没収点を必ず計算しておくこと</b>: 地方議会議員選挙の没収点＝<b>有効投票総数 ÷ 議員定数 × 1/10</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_9-At_93" target="_blank" rel="noopener noreferrer">公選法93条1項3号</a>)。長の選挙＝<b>有効投票総数 × 1/10</b>(同4号)。前回選挙の有効投票総数と定数で概算し、<b>「この票数を割ったら○○万円が自腹」という金額を先に出してから発注量を決める</b>。
+      <br><small class="detailOnly">公費負担の請求には業者との<b>契約書の写し・使用(作成)証明書</b>を期限内に出す必要があり、契約は<b>選管所定の様式で告示後に結ぶ</b>のが通例なので、説明会で必ず様式を受け取ってください。<b>自分の自治体の条例の条件は必ず選管で確認を。</b></small>
+      <div class="tablewrap"><table class="detailOnly">
+        <tr><th>選挙</th><th>選挙運動用通常葉書</th><th>選挙運動用ビラ</th></tr>
+        <tr><td>一般市の市議選・<b>特別区議選</b></td><td>2,000枚</td><td>2種類以内・4,000枚</td></tr>
+        <tr><td>指定都市の市議選</td><td>4,000枚</td><td>2種類以内・8,000枚</td></tr>
+        <tr><td>都道府県議選</td><td>8,000枚</td><td>2種類以内・16,000枚</td></tr>
+        <tr><td>町村議選</td><td>800枚</td><td>2種類以内・1,600枚</td></tr>
+      </table></div>
+      <small class="detailOnly">📮 <b>はがきは無料</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">公選法142条5項</a>)。郵便局で「選挙用である旨の表示」を受けて差し出します。<b>ビラは選管に届け出た種類のものだけ</b>(同1項)で、<b>選管の証紙を貼らないと配れません</b>(同7項)。<b>⚠️ 証紙は告示日に選管から交付されます。</b>ビラは告示前に印刷を終え、<b>告示日の朝に証紙を貼る人手(4,000枚なら3〜4人で半日が目安)</b>を必ず確保してください。ポスターの規格は長さ42cm×幅40cm以内(143条13項)。</small></li>
     </ol>
     <div class="okbox detailOnly" style="margin-top:10px;"><h4>📋 選挙運動用ポスターの入稿前チェック(2025〜2026年改正対応)</h4><ul>
       <li>規格は<b>長さ42cm×幅40cm以内</b>(公選法143条13項。2026年1月1日施行の改正で<b>候補者の選挙運動用ポスターは全ての選挙で同じ規格に統一</b>。衆院小選挙区・比例の政党用ポスターは長さ85cm×幅60cmの別枠。従来の個人演説会告知用ポスターは廃止)/表面に<b>掲示責任者と印刷者の氏名・住所</b>を必ず記載(<b>公選法144条5項</b>。小さすぎて読めない印刷は不可)</li>
@@ -758,29 +1011,34 @@
   </section>
 
   <!-- ===== S3 選挙運動期間 ===== -->
-  <section class="panel p3" id="s3">
+  <section id="s3" class="panel p3" role="tabpanel" aria-labelledby="tab-s3">
     <h2>📣 選挙運動期間 — できること・できないこと</h2>
     <span class="period">告示日の立候補届出後 〜 投票日の前日まで</span>
-    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button></div></div>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
     <p>立候補の届出が受理された瞬間から、初めて「投票してください」と言えるようになります。ただし<b>やり方は公職選挙法で細かく決まっています</b>。</p>
     <div class="okng">
       <div class="okbox"><h4>⭕ できること(主なもの)</h4><ul>
         <li>街頭演説(標旗を掲げて。<b>午前8時〜午後8時</b>(公選法164条の6))</li>
         <li>個人演説会の開催</li>
-        <li>選挙カー・拡声機での連呼(台数制限あり)<br><small>連呼できるのは①<b>演説会場</b>②<b>街頭演説の場所</b>③<b>選挙運動用自動車・船舶の上</b>に限られ、③は<b>午前8時〜午後8時</b>のみ(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_140_2" target="_blank" rel="noopener noreferrer">公選法140条の2第1項</a>。違反は2年以下の拘禁刑または50万円以下の罰金＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_243" target="_blank" rel="noopener noreferrer">243条1項1号の2</a>)。<b>学校・病院・診療所などの療養施設の周辺では静穏保持の努力義務</b>があります(同2項)。街宣マップの🔇音声配慮地点はこの趣旨です</small></li>
+        <li>選挙カー・拡声機での連呼(台数制限あり)<br><small>連呼できるのは①<b>演説会場</b>②<b>街頭演説の場所</b>③<b>選挙運動用自動車・船舶の上</b>に限られ、③は<b>午前8時〜午後8時</b>のみ(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_140_2" target="_blank" rel="noopener noreferrer">公選法140条の2第1項</a>。違反は2年以下の拘禁刑または50万円以下の罰金＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_243" target="_blank" rel="noopener noreferrer">243条1項1号の2</a>)。<b>学校・病院・診療所などの療養施設の周辺では静穏保持の努力義務</b>があります(同2項)。街宣マップの🔇音声配慮地点はこの趣旨です。</small><small class="detailOnly">🚗 <b>選挙運動用自動車は1台・拡声機1そろいまで</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_141" target="_blank" rel="noopener noreferrer">公選法141条1項</a>)。<b>選管が定める表示(標識)を車に付けないと使えません</b>(同5項)。<b>乗れるのは候補者と運転手(1台につき1人)を除いて4人以内</b>で、乗る人は<b>選管交付の腕章</b>が必要(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_141_2" target="_blank" rel="noopener noreferrer">141条の2第1項・2項</a>。違反は2年以下の拘禁刑または50万円以下の罰金＝243条1項2号の2)。<b>街頭演説の場所で選挙運動に従事できるのは候補者1人につき15人まで</b>で、<b>運転手の助手その他労務を提供する者も数に入ります</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_7" target="_blank" rel="noopener noreferrer">164条の7第1項</a>。腕章の着用義務は同2項、違反は243条1項8号の6)。<br><b>告示日に選管で受け取るもの＝①車の表示 ②腕章 ③街頭演説の標旗 ④ビラの証紙。</b>受領係を決め、受け取ったらその場で枚数を数えてください。<b>標旗は候補者1人に1本しか交付されず、標旗がなければ街頭演説自体ができません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_5" target="_blank" rel="noopener noreferrer">164条の5</a>)。つまり<b>同時に2箇所で街頭演説はできません</b> — 人員と時間の配分はこれを前提に組んでください</small></li>
         <li>選挙運動用ビラ(証紙貼付・枚数上限)・公営掲示場へのポスター・選挙運動用はがき</li>
-        <li>ネット選挙運動 — HP・SNS・動画での投票呼びかけOK(候補者も一般の人も)<br><small>⚠️ ただし<b>連絡先の表示義務</b>があります。ウェブサイト・SNS等で選挙運動用の文書図画を頒布する人は、<b>自分の電子メールアドレス等の連絡先が受信者の画面に正しく表示されるように</b>しなければなりません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_3" target="_blank" rel="noopener noreferrer">公選法142条の3第3項</a>)。<b>候補者だけでなく一般の人も対象</b>です(この義務自体に罰則はありませんが、守るのが前提の建て付けです)。SNSならプロフィール欄に連絡先を</small></li>
+        <li>ネット選挙運動 — HP・SNS・動画での<b>無料の</b>投票呼びかけはOK(候補者も一般の人も)。<b>⚠️ 有料のネット広告は原則NG(違反は罰則あり)。SNSの「投稿を宣伝する」ボタンも有料広告です</b>。条件と条文は「📖 くわしく」へ<small class="detailOnly">⚠️ <b>有料のネット広告は原則禁止です。</b>候補者の氏名・政党名(これらが類推される事項を含む)を表示した<b>選挙運動のための広告を有料で</b>ネット上の文書図画に掲載させることは、<b>時期を問わず禁止</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_6" target="_blank" rel="noopener noreferrer">公選法142条の6第1項</a>)。選挙運動期間中は、氏名等を出さず<b>選挙運動用サイトへ飛ばすだけのバナー広告も禁止</b>(同3項)。例外として有料バナーを出せるのは<b>候補者届出政党・衆議院名簿届出政党等・確認書の交付を受けた政党等だけ</b>(同4項)で、<b>候補者個人・後援会は出せません</b>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_243" target="_blank" rel="noopener noreferrer">243条1項3号の3</a>)。無料の投稿・シェアは可。<br>⚠️ また<b>連絡先の表示義務</b>があります。ウェブサイト・SNS等で選挙運動用の文書図画を頒布する人は、<b>自分の電子メールアドレス等の連絡先が受信者の画面に正しく表示されるように</b>しなければなりません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_3" target="_blank" rel="noopener noreferrer">公選法142条の3第3項</a>)。<b>候補者だけでなく一般の人も対象</b>です(この義務自体に罰則はありませんが、守るのが前提の建て付けです)。SNSならプロフィール欄に連絡先を</small></li>
         <li><b>たすき・胸章</b>の着用は<b>候補者本人のみ</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_143" target="_blank" rel="noopener noreferrer">公選法143条1項3号</a>)。<b>⚠️ 腕章は別ルール</b>で、<b>街頭演説に従事する運動員(候補者1人につき15人以内)と選挙運動用自動車の乗車者は、選管が定め交付する腕章の着用が「義務」</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_7" target="_blank" rel="noopener noreferrer">164条の7第2項</a>・<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_141_2" target="_blank" rel="noopener noreferrer">141条の2第2項</a>。<b>着けずに従事すると2年以下の拘禁刑または50万円以下の罰金</b>＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_243" target="_blank" rel="noopener noreferrer">243条1項2号の2・8号の6</a>)。枚数に限りがあるので選管で必ず受領してください</li>
-      <li><b>のぼり・旗は、街頭では選挙期間中も使えません</b>。使えるのは①<b>個人演説会の会場内・開催中</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_143" target="_blank" rel="noopener noreferrer">143条1項4号</a>)②<b>選挙運動用自動車に取り付けたもの</b>(同2号)③<b>確認団体が第14章の3に基づき使用するもの</b>(同16項4号)だけです</li>
+      <li><b>のぼり・旗は、街頭では選挙期間中も使えません</b>(使える場所の一覧は「🌱 政治活動」タブの「掲示物の落とし穴」にまとめています＝①選挙事務所の表示 ②<b>演説会場</b>の会場内・開催中〔<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_143" target="_blank" rel="noopener noreferrer">143条1項4号</a>。個人演説会に限らず政党演説会・政党等演説会も含みます〕 ③<b>選挙運動用自動車・船舶に取り付けたもの</b>〔同1項2号〕 ④<b>確認団体が第14章の3に基づき使用するもの</b>〔同16項4号〕)</li>
       </ul></div>
       <div class="ngbox"><h4>❌ できないこと(主なもの)</h4><ul>
-        <li>戸別訪問(投票を得させる目的・得させない目的のいずれの訪問も。公選法138条1項)</li>
+        <li>戸別訪問(投票を得る／得させる／得させない目的のいずれの訪問も。<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_138" target="_blank" rel="noopener noreferrer">公選法138条1項</a>)</li>
+        <li><b>気勢を張る行為</b> — 選挙運動のため、自動車を連ねたり隊伍を組んで往来するなどして気勢を張ることは禁止(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_140" target="_blank" rel="noopener noreferrer">公選法140条</a>。違反は1年以下の拘禁刑または30万円以下の罰金＝244条1項1号)。<b>選挙カーの連隊走行・支援者の隊列行進はNG</b></li>
+        <li><b>演説・連呼ができない場所</b> — ①<b>国または地方公共団体が所有し、または管理する建物</b>の中(<b>公営住宅は除く</b>。その建物で個人演説会・政党演説会等を開く場合も除く) ②<b>停車場その他鉄道地内</b>(駅の構内・改札前など。<b>駅前広場やデッキが鉄道地内に当たることがあります</b>) ③<b>病院・診療所その他の療養施設</b> — これらの場所では、<b>選挙運動のための演説と連呼ができません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_166" target="_blank" rel="noopener noreferrer">公選法166条</a>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>＝243条1項10号)<small class="detailOnly">⚠️ <b>二つの選挙が重なるときの300m規制</b> — 一方の選挙の選挙運動期間が他方の選挙の投票日にかかる場合、その<b>投票日当日、投票所を閉じる時刻までの間、投票所の入口から300メートル以内</b>では、選挙運動のための演説会(演説を含む)・街頭演説・選挙運動用自動車等の上での連呼ができません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_165_2" target="_blank" rel="noopener noreferrer">公選法165条の2</a>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>＝243条1項9号)。統一地方選など選挙が近接する年は、<b>相手の選挙の投票日の投票所の位置</b>を先に確認してください。<b>期日前投票所に同条が及ぶかは条文からは明らかでないため、所轄の選挙管理委員会に照会してください。</b></small></li>
+        <li><b>休憩所の設置</b> — 選挙運動のための休憩所やそれに類する設備は設けられません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_133" target="_blank" rel="noopener noreferrer">公選法133条</a>)。<b>支援者の自宅・店舗・事務所を運動員の休憩場所として提供するのも避け</b>、休憩は選挙事務所で<small class="detailOnly">(※133条違反そのものに対応する罰条は条文から確定できませんでした。扱いは所轄選管にご確認ください)</small></li>
+        <li><b>立場によって手伝えない人・制限される人がいます</b> — 公務員・教員の地位利用、特定公務員(公選法136条・136条の2・137条)。詳細は「🤝 支援者ガイド」</li>
         <li>飲食物の提供(湯茶・通常の菓子程度を除く)</li>
-        <li>買収・供応接待 — 最も重い違反。<b>連座制</b>で総括主宰者・出納責任者・親族・秘書・組織的選挙運動管理者など中心的な関係者の違反でも当選無効になりうる(公選法251条の2・251条の3)</li>
+        <li>買収・供応接待 — 最も重い違反。<b>連座制</b>で総括主宰者・出納責任者・地域主宰者・親族(父母・配偶者・子・兄弟姉妹で意思を通じて選挙運動をした者)・秘書・組織的選挙運動管理者などの違反でも、<b>候補者の当選が無効</b>になり、<b>かつその選挙区で同じ公職の選挙に5年間立候補できなくなります</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_251_2" target="_blank" rel="noopener noreferrer">公選法251条の2</a>・<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_251_3" target="_blank" rel="noopener noreferrer">251条の3</a>)
+          <br>⚠️ <b>選挙犯罪の本当の重さは「罰金」ではありません。罰金刑を受けただけでも、原則として5年間、選挙権と被選挙権を失います。</b>対象になる罪と条文は「📖 くわしく」へ<small class="detailOnly"><b>買収(221条)・事前運動と戸別訪問(239条)・地位利用(239条の2)・証紙ビラや連呼や街頭演説の違反(243条)・寄附禁止違反(249条の2)・虚偽事項公表(235条)は、罰金刑を受けただけで、判決確定の日から5年間、選挙権と被選挙権を失います</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_252" target="_blank" rel="noopener noreferrer">公選法252条1項</a>)。拘禁刑なら刑を終えてさらに5年(同2項)、買収等を繰り返すと10年(同3項)。裁判所が情状により短縮・免除することがあります(同4項)。<b>なお罰金でも停止にならない例外</b>があり、<b>244条の罪(ポスターの無承諾掲示・街頭演説の時間違反・気勢を張る行為)と252条の3の罪(団体の政治活動の制限違反)は252条1項の対象外</b>です(拘禁刑なら対象)。<b>選挙権を失っている人は選挙運動もできません</b>(137条の3)。</small></li>
         <li><b>電子メール</b>での選挙運動 — 送信できる主体は選挙の種類ごとに限定され、<b>一般の市区町村議選では候補者本人のみ</b>(一般の人は転送も不可)<span style="color:#a16207;">※<b>2026年7月に成立した改正法(2027年3月1日施行)</b>で一般の人も可になります(備考は「📖 くわしく」表示で)</span></li>
         <li>署名運動(公選法138条の2)・選挙に関する人気投票の経過や結果の公表(同138条の3)</li>
-        <li><b>証紙ビラ(選挙運動用ビラ)のポスティング・郵送</b> — 頒布は新聞折込/事務所内/個人演説会場内/街頭演説での手渡しのみ(142条・243条)。※<b>機関紙誌の選挙期間中の頒布は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a>の厳しい条件つき</b>(党本部が直接発行・届出済み各1種類・号外は不可・「通常の方法」に限る。詳細は「🌱政治活動」タブ)。平時の投函は自由。確認団体ビラは対象選挙(参院選・都道府県議選・指定都市議選・知事選・市長選)に限り投函可(「🌱政治活動」タブのポスティング欄)</li>
-        <li>18歳未満の選挙運動</li>
+        <li><b>証紙ビラ(選挙運動用ビラ)のポスティング・郵送</b> — 頒布は新聞折込/事務所内/個人演説会場内/街頭演説での手渡しのみ(142条・243条)。※<b>機関紙誌の選挙期間中の頒布は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a>の厳しい条件つき</b>(党本部が直接発行・届出済み各1種類・号外は不可・「通常の方法」に限る。詳細は「🌱政治活動」タブ)。平時の投函は自由。確認団体ビラは<b>対象選挙に限り</b>投函可(対象選挙の一覧は「🌱政治活動」タブのポスティング欄。<b>確認団体ビラに候補者名・顔写真は入れられません</b>＝201条の6第2項ただし書)</li>
+        <li>18歳未満の選挙運動(※機械的な労務は除く。例外の範囲はこのタブ末尾の支援者向け欄へ)</li>
       </ul></div>
     </div>
     <div class="detailOnly" style="background:#fefce8; border:1.5px dashed #a16207; border-radius:12px; padding:10px 14px; font-size:12.5px; margin-top:14px; color:#713f12;">
@@ -792,44 +1050,58 @@
         <li><b>虚偽情報対策</b> — 利用者全体に「虚偽・歪曲した情報で選挙の公正を害さない」責務規定+プラットフォーム事業者の削除対応(罰則なし)</li>
       </ul>
     </div>
-    <div class="vol">🤝 <b>支える人(ボランティア):</b> 原則<b>完全無報酬</b>が条件(報酬を払えるのは、①選管に届け出た事務員・車上運動員・手話通訳者・要約筆記者と、②選挙運動のために使用する<b>労務者</b>(単純労務)だけ。<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_197_2" target="_blank" rel="noopener noreferrer">公選法197条の2第1項・2項</a>。<b>条文上は1日50人が上限枠</b>で、実際に何人まで届け出られるかは選挙ごとに政令・選管が定めるので要確認)。無償のつもりでも<b>謝礼・金品</b>を受け取ると買収に問われるおそれ。<b>弁当だけは例外</b>で、陣営が<b>法定の弁当料・法定数の範囲内</b>で選挙事務所で出す弁当は適法に受け取れます(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_139" target="_blank" rel="noopener noreferrer">公選法139条ただし書</a>。額と食数は選挙ごとに決まるので陣営・選管に確認を)。それを超える飲食提供は、湯茶と通常用いられる程度の菓子を除き禁止です。SNSでの応援シェアはOK(なりすまし・虚偽情報はNG)。</div>
+    <div class="vol">🤝 <b>支える人(ボランティア):</b> 原則<b>完全無報酬</b>が条件(報酬を払えるのは、①<b>選挙運動のために使用する労務者</b>(単純労務)＝その額の定め方は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_197_2" target="_blank" rel="noopener noreferrer">197条の2第1項</a>、②<b>選挙運動に従事する者</b>(事務員・車上運動員・手話通訳者・要約筆記者)＝同<b>第2項</b>だけ。②は<b>候補者1人につき1日50人の枠内で、各選挙ごとに政令で定める員数まで</b>で、報酬額は政令の基準に従って選管が定めます。<b>第1項は、選挙運動に従事する者への実費弁償の額の定め方も定めています</b>。報酬を受ける人の届出の手続は選管の様式と案内に従ってください)。無償のつもりでも<b>謝礼・金品</b>を受け取ると買収に問われるおそれ。<b>弁当だけは例外</b>で、陣営が<b>法定の弁当料・法定数の範囲内</b>で選挙事務所で出す弁当は適法に受け取れます(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_139" target="_blank" rel="noopener noreferrer">公選法139条ただし書</a>。額と食数は選挙ごとに決まるので陣営・選管に確認を)。それを超える飲食提供は、湯茶と通常用いられる程度の菓子を除き禁止です。SNSでの応援シェアはOK(なりすまし・虚偽情報はNG)。</div>
     <div class="tools">🧰 <b>この期間の道具:</b> 選挙運動用ポスター/ビラ(証紙)/はがき/たすき/標旗/腕章/選挙カー — いずれも枚数・規格・台数の上限あり。多くは公費負担の対象(条例確認)。</div>
   </section>
 
   <!-- ===== S4 投票日 ===== -->
-  <section class="panel p4" id="s4">
+  <section id="s4" class="panel p4" role="tabpanel" aria-labelledby="tab-s4">
     <h2>🗳️ 投票日 — 選挙運動は「前日まで」</h2>
     <span class="period">投票日当日</span>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
+    <div class="vol volBig">🗳️ <b>先に押さえること: 投票は「投票日」より前に始まっています。</b>期日前投票は<b>告示日の翌日から投票日の前日まで</b>行われ、地方選挙では<b>投票の3〜4割</b>がここで入ります。<b>この期間中も、公選法で許される態様での選挙運動は通常どおりできます</b>(政府答弁書・内閣参質199第6号／令和元年8月15日「期日前投票の期間中も、同法において許される態様において選挙運動をすることは可能である」)。したがって<b>「最終日に全力」ではなく、期日前が始まる序盤〜中盤に山を作る</b>のが実務です。選挙運動が一切できなくなるのは<b>投票日当日</b>だけです。</div>
+    <h3>投票日当日にできること・できないこと</h3>
     <ul>
-      <li>投票日当日の選挙運動は<b>一切禁止</b>。「今日は投票日!〇〇候補へ!」というSNS投稿もNG(前日までの投稿がネット上に残っているのは問題なし)</li>
+      <li>投票日当日の選挙運動は<b>一切禁止</b>(選挙運動ができるのは立候補届出日から<b>投票日の前日まで</b>＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_129" target="_blank" rel="noopener noreferrer">公選法129条</a>)。「今日は投票日!〇〇候補へ!」というSNS投稿もNG。<b>前日までの投稿がネット上に残っているのは問題ありません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_3" target="_blank" rel="noopener noreferrer">142条の3第2項</a>)</li>
+      <li>🏛️ <b>政治活動の側も、当日だけ一斉に止まります</b> — 選挙期間中の政治活動の禁止は「<b>選挙の当日まで</b>」続くのに、<b>確認団体の例外は「選挙の期日の前日まで」</b>しかありません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_9" target="_blank" rel="noopener noreferrer">201条の9第1項柱書・ただし書</a>、都道府県議・指定都市議は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_8" target="_blank" rel="noopener noreferrer">201条の8第1項</a>)。つまり<b>投票日当日は、確認団体であってもポスターの掲示・ビラの頒布・政談演説会・街頭政談演説・立札看板の掲示・宣伝告知のための自動車と拡声機の使用がすべて不可</b>です。<b>前日まで走らせていた宣伝カーは当日は出さない／前日に貼った確認団体ポスターの扱いは前日までに所轄選管へ確認する</b>——この段取りを前日のうちに決めてください。連呼と文書図画への候補者氏名の記載の禁止も当日まで続きます(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_13" target="_blank" rel="noopener noreferrer">201条の13第1項</a>)。違反は<b>100万円以下の罰金</b>(252条の3第1項)</li>
       <li>候補者・運動員ができるのは、静かに見守ることと、投票所での手続きくらい</li>
       <li>有権者の「投票に行こう!」という<b>特定候補に触れない一般的な呼びかけ</b>は可</li>
-      <li>期日前投票・不在者投票の制度もこの機会に周知しておくと親切</li>
+      <li>🔍 <b>開票を自分の側から見てもらえます</b> — 候補者は<b>開票立会人</b>を1人届け出られますが、<b>締切は投票日の3日前</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_7-At_62" target="_blank" rel="noopener noreferrer">公選法62条1項</a>)。<b>当日や前日では間に合いません</b>。手続は「📦 選挙の準備」タブへ</li>
     </ul>
-    <div class="vol">🤝 <b>支える人:</b> 当日にできる応援はありません。友人へ「投票行った?」と聞くのはOK、「〇〇さんに入れてね」はNG。</div>
+    <div class="vol">🤝 <b>支える人:</b> 当日にできる応援はありません。友人へ「投票行った?」と聞くのはOK、「〇〇さんに入れてね」はNG。<b>期日前投票の期間中(告示日の翌日〜前日)なら、通常の選挙運動と同じことができます。</b></div>
   </section>
 
   <!-- ===== S5 選挙のあと ===== -->
-  <section class="panel p5" id="s5">
+  <section id="s5" class="panel p5" role="tabpanel" aria-labelledby="tab-s5">
     <h2>📊 選挙のあと — 終わってからが本番の手続き</h2>
     <span class="period">投票日の翌日から</span>
-    <h3>候補者側がやること</h3>
+    <div class="candBar"><span class="htLabel">表示:</span><div class="candToggle"><button type="button" class="cdBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button><button type="button" class="cdBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button></div></div>
+    <h3>候補者側がやること(手続)</h3>
     <ol>
-      <li><b>選挙運動費用収支報告書の提出</b> — 出納責任者が選挙の期日から<b>15日以内</b>(公選法189条)に選管へ。領収書添付</li>
+      <li><b>選挙運動費用収支報告書の提出</b> — 出納責任者が<b>選挙の期日から15日以内</b>に選管へ(領収書添付)。<b>⚠️ ここで終わりではありません</b>: 15日以内の提出<b>より後</b>に寄附・収入・支出があったときは、<b>その日から7日以内</b>に追加の報告書を出す必要があります(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_189" target="_blank" rel="noopener noreferrer">公選法189条1項</a>)。選挙後は<b>ポスター代の精算・ガソリン代・事務所の原状回復費・公費負担の対象外分</b>の請求が遅れて届くので、<b>「最後の支払いが済むまで出納責任者の仕事は続く」</b>と考えてください。支払いは<b>できるだけ15日以内に寄せる</b>のが実務上の対策です</li>
+      <li><b>掲示物の撤去</b> — 選挙事務所を廃止したとき・選挙運動用自動車の使用を終えたとき・演説会が終わったときは、<b>そのつど直ちに</b>その表示のために使った文書図画を撤去します(公選法143条の2)。<b>公営掲示場以外に貼った選挙運動用ポスター</b>と、<b>164条の2第2項の立札・看板</b>は、<b>選挙の期日後すみやかに</b>撤去します(同178条の2)。従わないと選管の撤去処分の対象です(147条3号)<small class="detailOnly">※143条の2・178条の2は<b>本サイトでは条文の逐語を確認しきれていないため、条文ページへの直リンクを付けていません。</b>対象物と期限は<b>所轄選管で必ず確認してください。</b></small></li>
       <li><b>公費負担の請求手続</b> — ポスター代・ビラ代等の請求書類を業者・選管と処理</li>
-      <li><b>当選した場合</b> — 当選証書の受領。<b>当選御礼のあいさつ行為には制限</b>(お礼の文書・あいさつ広告は原則不可。自筆の信書・インターネット(SNS等)での御礼は可(公選法178条))</li>
-      <li><b>落選した場合</b> — 政治団体は存続可能。平時の政治活動ルールに戻って次に備える<br><small>⚠️ <b>「落選のごあいさつ」も当選御礼と同じ制限を受けます</b>。条文は「<b>当選又は落選に関し</b>」と定めています(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_178" target="_blank" rel="noopener noreferrer">公選法178条</a>)。<b>戸別訪問でのお礼回り・お礼のビラやポスター・新聞雑誌の利用・集会の開催は不可</b>。<b>自筆の信書と、インターネット(SNS等)での御礼は可</b>です(同2号)</small></li>
+      <li><b>当選した場合</b> — 当選証書の受領。<b>当選御礼のあいさつ行為には制限</b>(お礼の文書・あいさつ広告は原則不可。<b>自筆の信書・いただいた祝辞等への答礼の信書・インターネット(SNS等)での御礼は可</b>＝公選法178条2号)</li>
+      <li><b>落選した場合</b> — 政治団体は存続可能。平時の政治活動ルールに戻って次に備える<br><small>⚠️ <b>「落選のごあいさつ」も当選御礼と同じ制限を受けます</b>。条文は「<b>当選又は落選に関し</b>」と定めています(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_178" target="_blank" rel="noopener noreferrer">公選法178条</a>)。<b>戸別訪問でのお礼回り・お礼のビラやポスター・新聞雑誌の利用・集会の開催は不可</b>。可なのは<b>①自筆の信書 ②当選・落選に関する祝辞や見舞い等への「答礼のためにする信書」(これは自筆でなくても可) ③インターネット(SNS等)での御礼</b>の3つです(同2号)</small></li>
       <li><b>政治団体の年次収支報告</b> — 選挙と関係なく毎年、12月31日現在で締めて<b>翌年3月31日まで</b>(その間に国政選挙の公示日〜投票日がかかる場合は4月30日まで)に提出(規正法12条1項)</li>
     </ol>
     <div class="ngbox" style="margin-top:10px;"><h4>❌ 選挙後にやりがちな違反</h4><ul><li>当選御礼のポスター・ビラ・広告・当選祝賀会等の集会の開催(公選法178条)</li><li>運動員への「打ち上げ」での過度な飲食提供・慰労金(買収・供応に問われうる)</li></ul></div>
-    <div class="vol">🤝 <b>支える人:</b> 選挙後の慰労会は費用の出どころ・程度に注意。報告書に載る支出です。</div>
+    <div class="ngbox" style="margin-top:10px;"><h4>⚠️ お金の報告は、守らないと公民権停止まで行きます</h4><ul>
+      <li><b>収支報告書を出さない／記載すべき事項を書かない／虚偽を書く</b> → <b>5年以下の拘禁刑または100万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_6-At_25" target="_blank" rel="noopener noreferrer">規正法25条1項</a>)</li>
+      <li><b>団体の代表者が会計責任者の選任・監督を怠った</b>とき → <b>代表者自身が50万円以下の罰金</b>(同2項)。<b>候補者本人が罰を受ける経路です</b></li>
+      <li>これらで<b>罰金刑を受けただけでも、裁判が確定した日から5年間、選挙権と被選挙権を失います</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/323AC1000000194#Mp-Ch_6-At_28" target="_blank" rel="noopener noreferrer">規正法28条1項</a>。拘禁刑なら刑を終えてさらに5年＝同2項。裁判所が情状により短縮・免除することがあります＝同3項)</li>
+    </ul>
+      <p>公職選挙法側の公民権停止(252条)と<b>別建て</b>です。会計責任者は「名前だけ」で引き受けてはいけない役です。</p>
+    </div>
+    <div class="vol volBig">🤝 <b>支える人も対象です:</b> 選挙のあとの「当選／落選のごあいさつ」の制限は、条文上<b>「何人も」</b>が対象です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_178" target="_blank" rel="noopener noreferrer">公選法178条</a>柱書)。支援者が<b>お礼のビラ・ポスターを配る／貼る、お礼回りの戸別訪問をする、新聞・雑誌を利用する、祝賀会その他の集会を開く、当選人の氏名を言い歩く</b>のはいずれも不可。可なのは<b>①自筆の信書 ②いただいた祝辞・見舞い等への「答礼のためにする信書」(自筆でなくても可) ③インターネット(SNS等)での御礼</b>の3つです(同2号)。</div>
+    <div class="vol">🤝 <b>支える人:</b> 選挙後の慰労会は費用の出どころ・程度に注意。報告書に載る支出です。<br><b>会計責任者を頼まれた方へ:</b> 帳簿の記載と報告書の責任を負う役で、違反すると<b>5年以下の拘禁刑または100万円以下の罰金＋5年間の公民権停止</b>の対象になります(規正法25条・28条)。引き受ける前に業務量と体制を確認してください。</div>
   </section>
 
   <!-- ===== S-HELP 支援者ガイド ===== -->
-  <section class="panel p7" id="sHelp">
+  <section id="sHelp" class="panel p7" role="region" aria-labelledby="openHelp">
     <h2>🤝 手伝いたい人へ — 支援者ガイド</h2>
     <span class="period">全国どこからでも・できることから</span>
-    <p>「応援したいけど、何をしていいか分からない」——そんな支援者のためのページです。<b>ポスティング・辻立ち・街頭演説</b>の3つを中心に、<b>何を手伝えるか / してよいこと / してはいけないこと</b>をまとめました。</p>
+    <p>「応援したいけど、何をしていいか分からない」——そんな支援者のためのページです。<b>ポスティング・辻立ち・街頭演説・ポスター貼り・電話かけ</b>の5つの持ち場について、<b>何を手伝えるか / してよいこと / してはいけないこと</b>をまとめました。</p>
 
     <div class="helpIntro">
       🧭 <b>まず、たった2つの大原則:</b><br>
@@ -838,37 +1110,51 @@
       迷ったら <b>選挙管理委員会に確認 + 陣営・仲間に共有</b> が鉄則です。
     </div>
 
+    <div class="hBox info">👤 <b>まず「自分は手伝える立場か」を確かめてください。</b><br>
+      ・<b>まったく選挙運動ができない人</b>(在職中): 選挙管理委員会の委員・職員／裁判官／検察官／会計検査官／公安委員会の委員／<b>警察官</b>／<b>収税官吏・徴税の吏員</b><br>
+      ・<b>国・地方の公務員、行政執行法人等の役職員</b>: 選挙運動そのものは可能ですが、<b>「地位を利用して」は禁止</b>(部下・取引先・窓口で会う住民への働きかけ、職場の名簿やメールの利用など)。<b>後援会をつくる・入会を勧めることも、地位を利用して行えば禁止</b>です(<b>違反は罰則あり</b>)<br>
+      ・<b>学校・幼保連携型認定こども園の先生</b>(学校教育法の学校の長・教員が対象): 児童・生徒・学生に対する<b>教育上の地位を利用した選挙運動は禁止</b>(<b>違反は罰則あり</b>)<br>
+      ・<b>選挙犯罪等で選挙権・被選挙権を失っている人</b>も選挙運動ができません<br>
+      ・<b>18歳未満の人は選挙運動ができません</b>が、<b>ビラ折り・証紙貼りの補助・資材運びなどの「選挙運動のための労務」は例外として可</b>です。逆に<b>18歳以上なら、その選挙区の選挙権がなくても手伝えます</b>(引っ越してきて間もない方・他の市区町村にお住まいの方・外国籍の方も)<br>
+      公務員・教員の方は、<b>職場の服務規程でさらに厳しく制限されていることがあります。</b>該当しそうな方は<b>必ず所属先と選管の両方に確認</b>してください。条文と刑量は「📖 くわしく」へ
+      <span class="detailOnly">──<br>根拠: 特定公務員の選挙運動の禁止＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_136" target="_blank" rel="noopener noreferrer">公選法136条</a>(7号列挙)。公務員等の地位利用の禁止＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_136_2" target="_blank" rel="noopener noreferrer">136条の2第1項</a>、<b>後援団体の結成・結成の準備への関与・構成員となることの勧誘は同2項3号で明文禁止</b>(違反は<b>2年以下の拘禁刑または30万円以下の罰金</b>＝239条の2第2項)。教育者の地位利用＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_137" target="_blank" rel="noopener noreferrer">137条</a>(1年以下の拘禁刑または30万円以下の罰金＝239条1項1号)。選挙権・被選挙権を有しない者の選挙運動の禁止＝137条の3。18歳未満＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_137_2" target="_blank" rel="noopener noreferrer">137条の2第1項・2項ただし書</a>(労務の例外)。服務規程の例＝国家公務員法102条・人事院規則14-7。</span></div>
+
     <div class="helpBar">
       <span class="htLabel">表示:</span>
-      <div class="helpToggle" role="tablist">
-        <button type="button" class="htBtn on" data-mode="simple">🟢 かんたん版</button>
-        <button type="button" class="htBtn" data-mode="detail">📖 くわしく(法的根拠つき)</button>
+      <div class="helpToggle" role="group" aria-label="表示の詳しさを選ぶ">
+        <button type="button" class="htBtn on" data-mode="simple" aria-pressed="true">🟢 かんたん版</button>
+        <button type="button" class="htBtn" data-mode="detail" aria-pressed="false">📖 くわしく(法的根拠つき)</button>
       </div>
     </div>
-    <p class="help" style="font-size:12px; color:var(--muted); margin-bottom:6px;">※「かんたん版」は要点だけ。「くわしく」を押すと各カードの下に<b>法的な根拠・条文・細かい注意</b>が開きます。</p>
+    <p class="help" style="font-size:12px; color:#4b5563; margin-bottom:6px;">※「🟢 かんたん版」は<b>現場で必要な結論</b>だけ。「📖 くわしく」を押すと各カードの下に<b>法的な根拠・条文・細かい注意</b>が開きます(切り替えは<b>他のタブと共通</b>です)。</p>
 
+    <!-- 持ち場カードは details/summary の1列アコーディオン(A-13)。
+         カードを増やすときは <details class="helpCard" style="--hc:…; --hcbg:…; --hct:…">
+         ＋ <summary class="hcHead"> の形をそのまま複製する(open は1枚目だけ)。
+         3列グリッドに戻すと5枚目で2段目が2,351pxまで伸び、右端に空セルができる。 -->
     <div class="helpCards">
 
       <!-- ポスティング -->
-      <div class="helpCard" style="--hc:#d97706; --hcbg:#fef3c7;">
-        <div class="hcHead">
+      <details class="helpCard" open style="--hc:#d97706; --hcbg:#fef3c7; --hct:#92400e;">
+        <summary class="hcHead">
           <div class="hcIcon">📮</div>
-          <div class="hcName">ポスティング</div>
-          <span class="hcWhen">平時◎ / 選挙中も一部OK</span>
-        </div>
+          <h3 class="hcName">ポスティング</h3>
+          <span class="hcWhen">平時◎ / 選挙中は原則ストップ</span>
+        </summary>
         <div class="hcBody">
           <div class="hcOne">チラシ(政策リーフ・機関誌)を郵便受けへ。自宅の近所からできる王道の手伝い。</div>
-          <div class="hcSub ok">してよいこと</div>
+          <h4 class="hcSub ok">してよいこと</h4>
           <ul class="hcList hcOK">
-            <li>政策リーフ・機関誌の投函(確認団体ビラは対象選挙のみ)</li>
+            <li>政策リーフの投函／<b>政党機関誌は平時のみ自由</b>(選挙期間中は条件つき・罰則あり)／確認団体ビラは対象選挙のみ(<b>候補者名・顔写真は入れられません</b>)</li>
             <li>「お断り」でないポストに、中まで全部入れきる</li>
             <li>静かに開閉・清潔感のある服装で</li>
           </ul>
-          <div class="hcSub ng">してはいけないこと</div>
+          <h4 class="hcSub ng">してはいけないこと</h4>
           <ul class="hcList hcNG">
             <li>証紙ビラ(選挙運動用ビラ)の投函</li>
             <li>「立入禁止」「チラシお断り」を無視して入る</li>
-            <li>平時に「投票して」と書いたビラを配る</li>
+            <li>平時に「投票して」と書いたビラを配る／<b>配りながら口で「〇〇さんをお願いします」と言う</b>(どちらも事前運動)</li>
+            <li><b>告示日以後</b>に政党機関誌の無差別ポスティングを新しく始める(条件つき・罰則あり)</li>
           </ul>
         </div>
         <div class="hcDetail detailOnly">
@@ -876,27 +1162,30 @@
           <b>証紙ビラ</b>を配れるのは①新聞折込②選挙事務所内③個人演説会場内④街頭演説での手渡しだけ(公選法142条6項)。投函・郵送は違反で<b>2年以下の拘禁刑または50万円以下の罰金</b>(243条)。<br>
           <b>立入禁止・お断り無視</b>は住居侵入罪(刑法130条=3年以下の拘禁刑か10万円以下の罰金)・軽犯罪法1条32号。<br>
           宛名(「〇〇様」)を入れると<b>信書</b>になり郵便法4条違反のおそれ。<br>
+          <b>政党機関誌</b>は平時の投函は自由だが、<b>選挙期間中は公選法<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a></b>の条件(党本部直接発行・届出済み各1種類・号外不可・公示告示日前6か月間に平常行われていた「通常の方法」)を外れると<b>100万円以下の罰金</b>(252条の3第1項)。<b>告示日が来たらポスティングは一旦止めて陣営に確認</b>してください。<br>
+          <b>確認団体ビラ</b>は対象選挙(参院選・都道府県議選・指定都市議選・知事選・市長選〔特別区長選含む〕)の期間中だけ投函できますが、<b>その選挙区の特定の候補者の氏名や、氏名が類推される事項(顔写真・通称・キャッチフレーズ等)を記載したビラは使えません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_6" target="_blank" rel="noopener noreferrer">201条の6第2項ただし書</a>。100万円以下の罰金)。配れるのは「政党名＋政策」だけのビラだと考えてください。<br>
+          <b>📎 証紙貼りを手伝うときの3つ:</b> ①<b>証紙のないビラは1枚も現場に出さない</b>(証紙なしのビラを配ると<b>配った人</b>が2年以下の拘禁刑または50万円以下の罰金＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">公選法142条7項</a>・243条1項3号)。②<b>貼り終わった束と未貼りの束は、机も箱も分ける</b>(混ざるのが事故の原因)。③<b>選管から交付された枚数より多く配らない／証紙を剥がして別の紙に貼り替えない</b>。貼る位置・向きは選管や陣営の指示に従ってください。<br>
           雨・強風の日は避ける/貯まったポストは入れない/2名で片側ずつ・ジグザグ歩行を避ける。<br>
           → 詳細は「🌱 政治活動」タブの📮ポスティング欄へ。
         </div>
-      </div>
+      </details>
 
       <!-- 辻立ち -->
-      <div class="helpCard" style="--hc:#0d9488; --hcbg:#ccfbf1;">
-        <div class="hcHead">
+      <details class="helpCard" style="--hc:#0d9488; --hcbg:#ccfbf1; --hct:#115e59;">
+        <summary class="hcHead">
           <div class="hcIcon">🚩</div>
-          <div class="hcName">辻立ち・朝立ち</div>
+          <h3 class="hcName">辻立ち・朝立ち</h3>
           <span class="hcWhen">平時の政治活動</span>
-        </div>
+        </summary>
         <div class="hcBody">
           <div class="hcOne">駅前や交差点に立ってあいさつ・政策を訴える。のぼり持ちやビラ配りで一緒に立てる。</div>
-          <div class="hcSub ok">してよいこと</div>
+          <h4 class="hcSub ok">してよいこと</h4>
           <ul class="hcList hcOK">
             <li>一緒に立ってあいさつ・お辞儀・ビラ配り</li>
-            <li>「本人」やイメージカラー・政党名ののぼり持ち</li>
+            <li>イメージカラーや「本人」型ののぼり持ち<br><small>※<b>氏名・顔写真入りは不可</b>。<b>政党名やスローガンのみ</b>は可とする選管もありますが、掲示の時期・場所・方法を総合判断するため<b>選管で回答が分かれます</b>。事前に陣営・選管へ確認を</small></li>
             <li>政策を語る(平時の政治活動として)</li>
           </ul>
-          <div class="hcSub ng">してはいけないこと</div>
+          <h4 class="hcSub ng">してはいけないこと</h4>
           <ul class="hcList hcNG">
             <li>氏名・顔写真入りののぼり／立て看板</li>
             <li>平時に「投票してください」と言う</li>
@@ -905,29 +1194,30 @@
         </div>
         <div class="hcDetail detailOnly">
           <span class="hdTitle">📖 くわしく(根拠)</span>
-          <b>氏名入りののぼり・立て看板は常時禁止</b>(公選法143条16項)。ひらがな表記・顔写真・氏名入り後援会名も同じ。使えるのは事務所の証票付き看板か演説会の会場内だけ。街頭では<b>「本人」型・政党名型</b>にする。<br>
+          <b>氏名入りののぼり・立て看板は原則掲示禁止</b>(公選法143条16項)。ひらがな表記・顔写真・氏名入り後援会名も同じ。<b>使える場所は「🌱 政治活動」タブの一覧のとおり</b>(事務所の選管証票付き看板／演説会の会場内／選挙運動用自動車に取り付けたもの／確認団体が第14章の3に基づき使用するもの)。街頭では<b>「本人」型・政党名型</b>にする。<br>
           マイクを使うなら道路使用・騒音への配慮を。長時間の場所占有はトラブルの元。<br>
           平時に投票を頼むと<b>事前運動</b>(公選法129条)。<br>
+          <b>⚠️ 告示日を越えると、辻立ちは「平時の政治活動」ではなくなります。</b>告示日からは選挙運動のルール(標旗・時間・人数・腕章)が働き、<b>確認団体の届出をしていない後援会は、政談演説会・街頭政談演説・立札看板・ビラ・拡声機が止まる選挙があります</b>(「🌱 政治活動」タブの「告示日が来ると、後援会の政治活動はいったん止まります」へ)。<b>のぼり・看板・たすきを告示日に何に差し替えるかを、前日までに決めておいてください。</b><br>
           → 詳細は「🌱 政治活動」タブの「掲示物の落とし穴」へ。
         </div>
-      </div>
+      </details>
 
       <!-- 街頭演説 -->
-      <div class="helpCard" style="--hc:#0284c7; --hcbg:#e0f2fe;">
-        <div class="hcHead">
+      <details class="helpCard" style="--hc:#0284c7; --hcbg:#e0f2fe; --hct:#075985;">
+        <summary class="hcHead">
           <div class="hcIcon">📣</div>
-          <div class="hcName">街頭演説</div>
+          <h3 class="hcName">街頭演説</h3>
           <span class="hcWhen">平時=政策のみ / 選挙中=投票依頼OK</span>
-        </div>
+        </summary>
         <div class="hcBody">
           <div class="hcOne">候補や弁士がマイクで訴える場。支援者は聴衆・ビラの運び手・盛り上げ役で活躍できる。</div>
-          <div class="hcSub ok">してよいこと</div>
+          <h4 class="hcSub ok">してよいこと</h4>
           <ul class="hcList hcOK">
-            <li>選挙中: ビラ手渡し・拍手・SNS拡散(のぼりは<b>街頭では</b>選挙中も不可＝例外は個人演説会の会場内と選挙運動用自動車。たすき・胸章は候補者本人のみ。<b>腕章は逆に、街頭演説の従事者・車上運動員は選管交付のものを着ける義務</b>)</li>
+            <li>選挙中: ビラ手渡し・拍手・SNS拡散(のぼりは<b>街頭では</b>選挙中も不可＝例外は<b>①演説会場内 ②選挙運動用自動車に取り付けたもの ③確認団体が第14章の3に基づき使用するもの</b>〔一覧は「🌱 政治活動」タブ〕。たすき・胸章は候補者本人のみ。<b>腕章は逆に、街頭演説の従事者・車上運動員は選管交付のものを着ける義務</b>。<b>人数にも上限</b>があり、街頭演説の場所で選挙運動に従事できるのは<b>候補者1人につき15人まで</b>〔<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_7" target="_blank" rel="noopener noreferrer">164条の7第1項</a>。<b>運転手の助手や荷物運びも数に入ります</b>〕、選挙カーに乗れるのは<b>候補者・運転手1人を除いて1台4人まで</b>〔<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_141_2" target="_blank" rel="noopener noreferrer">141条の2第1項</a>〕。<b>腕章が足りないときは手伝わず、見物の側に回ってください</b>)</li>
             <li>平時: 政策の街頭活動(投票依頼はしない)</li>
             <li>自宅からSNSで応援シェア(選挙中も可)</li>
           </ul>
-          <div class="hcSub ng">してはいけないこと</div>
+          <h4 class="hcSub ng">してはいけないこと</h4>
           <ul class="hcList hcNG">
             <li>報酬・謝礼・金品を受け取る(買収に問われうる)<br><small>※<b>弁当は例外あり</b> — 陣営が法定の弁当料・法定数の範囲内で選挙事務所で出す弁当は適法(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_139" target="_blank" rel="noopener noreferrer">139条ただし書</a>)</small></li>
             <li>18歳未満が選挙運動をする</li>
@@ -936,28 +1226,106 @@
         </div>
         <div class="hcDetail detailOnly">
           <span class="hdTitle">📖 くわしく(根拠)</span>
-          選挙運動の街頭演説は<b>標旗の掲示が必要・時間はおおむね8時〜20時</b>(公選法164条の5・164条の6)。標旗の設置は陣営が行う。<br>
-          支援ボランティアは<b>完全無報酬が原則</b>。報酬を払えるのは、①選管に届け出た事務員・車上運動員・手話通訳者・要約筆記者と、②選挙運動のために使用する<b>労務者</b>(単純労務)だけ(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_197_2" target="_blank" rel="noopener noreferrer">公選法197条の2第1項・2項</a>。条文上は1日50人が上限枠で、実人数は政令・選管が定める)。無償のつもりでも<b>謝礼・金品</b>の受領は<b>買収</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_221" target="_blank" rel="noopener noreferrer">221条</a>)に問われうる(<b>法定の弁当料・法定数の範囲内の弁当は例外</b>＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_139" target="_blank" rel="noopener noreferrer">139条ただし書</a>)。<br>
+          選挙運動の街頭演説は、<b>①演説者がその場所にとどまり ②選管交付の標旗を掲げて</b>行う場合しかできません(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_5" target="_blank" rel="noopener noreferrer">公選法164条の5第1項1号</a>)。<b>標旗は候補者1人に1本だけ</b>です(同3項1号。参院比例・合同選挙区は別)。つまり<b>標旗がない場所で、支援者が勝手に「街頭演説」を始めることはできません</b>(違反は2年以下の拘禁刑または50万円以下の罰金＝243条1項8号の4)。<b>歩きながら訴える「流し演説」も不可</b>です。警察官等から求められたら標旗を提示します(同4項。拒むと1年以下の拘禁刑または30万円以下の罰金＝244条1項5号の2)。時間は<b>午前8時〜午後8時</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_164_6" target="_blank" rel="noopener noreferrer">164条の6第1項</a>。条文は「午後8時から翌日午前8時までの間はできない」と定めています。違反は1年以下の拘禁刑または30万円以下の罰金＝244条1項6号)。<b>学校・病院等の周辺では静穏保持の努力義務</b>(同2項が140条の2第2項を準用)、<b>長時間にわたり同一の場所にとどまらない努力義務</b>(同3項)もあります。<b>応援弁士として話したいときは、必ず標旗の下で・陣営の指示に従って</b>ください。<br>
+          支援ボランティアは<b>完全無報酬が原則</b>。報酬を払えるのは、①<b>選挙運動のために使用する労務者</b>(単純労務)＝額の定め方は<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_197_2" target="_blank" rel="noopener noreferrer">公選法197条の2第1項</a>、②<b>選挙運動に従事する者</b>(事務員・車上運動員・手話通訳者・要約筆記者)＝同<b>第2項</b>だけ(②は候補者1人につき1日50人の枠内で、各選挙ごとに政令で定める員数まで)。第1項は<b>選挙運動に従事する者への実費弁償</b>の額の定め方も定めています。無償のつもりでも<b>謝礼・金品</b>の受領は<b>買収</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_221" target="_blank" rel="noopener noreferrer">221条</a>)に問われうる(<b>法定の弁当料・法定数の範囲内の弁当は例外</b>＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_139" target="_blank" rel="noopener noreferrer">139条ただし書</a>)。<br>
           <b>18歳未満の選挙運動は禁止</b>。SNSでの応援はOK(なりすまし・虚偽情報はNG)、メール送信は現行は候補者・政党のみ(2026年7月成立の改正法により2027年3月1日から一般も可)。<br>
           証紙ビラは街頭演説の場所で聴衆・通行人へ<b>手渡し</b>のみ(投函・かごへの配布はNG)。<br>
+          <b>有料のネット広告は出さないでください</b> — 候補者名・政党名を出した選挙運動の有料広告は時期を問わず禁止で、選挙期間中は<b>選挙運動用サイトへ飛ばすだけのバナーも禁止</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_6" target="_blank" rel="noopener noreferrer">公選法142条の6</a>。2年以下の拘禁刑または50万円以下の罰金)。<b>SNSの「投稿を宣伝する」ボタン(ブースト)も有料広告です。</b>無料の投稿・シェアは可。<br>
+          <b>SNSで選挙運動の投稿をするときは、一般の人にも連絡先の表示義務があります</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142_3" target="_blank" rel="noopener noreferrer">公選法142条の3第3項</a>。プロフィール欄にメールアドレス等を)。<br>
           → 詳細は「📣 選挙運動」タブへ。
         </div>
-      </div>
+      </details>
+
+      <!-- ポスター貼り -->
+      <details class="helpCard" style="--hc:#7c3aed; --hcbg:#ede9fe; --hct:#5b21b6;">
+        <summary class="hcHead">
+          <div class="hcIcon">🪧</div>
+          <h3 class="hcName">ポスター貼り</h3>
+          <span class="hcWhen">平時=政治活動用 / 告示後=選挙運動用</span>
+        </summary>
+        <div class="hcBody">
+          <div class="hcOne">掲示板への貼付けと、民家の塀などをお借りして貼る作業。<b>いちばん「うっかり犯罪」が起きる持ち場</b>です。</div>
+          <h4 class="hcSub ok">してよいこと</h4>
+          <ul class="hcList hcOK">
+            <li>公営掲示場の<b>自分の候補者の区画だけ</b>に貼る(<b>告示日の届出受理後</b>)</li>
+            <li>塀をお借りするときは<b>先に住んでいる人の承諾</b>を取る(口頭でも可。誰にいつもらったか記録を残す)</li>
+            <li>剥がれ・めくれを見つけたら<b>自分の陣営のものだけ</b>直す</li>
+          </ul>
+          <h4 class="hcSub ng">してはいけないこと</h4>
+          <ul class="hcList hcNG">
+            <li><b>他の候補者のポスターを剥がす・上に貼る・汚す</b>(ずれていたから直した、落ちていたから貼った、も含めて絶対にやらない。<b>4年以下の拘禁刑または100万円以下の罰金</b>＝このページで一番重い罰則)</li>
+            <li>承諾を取らずに他人の塀・門・シャッターに貼る(罰則あり)</li>
+            <li>区画を間違えて貼る／告示前に選挙運動用ポスターを貼る</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          <b>他候補のポスターを毀棄すると選挙の自由妨害罪＝4年以下の拘禁刑または100万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_225" target="_blank" rel="noopener noreferrer">公選法225条2号</a>)。<b>このページで一番重い罰則</b>です。<br>
+          <b>公営掲示場を設ける選挙(都市部はほぼ全て)</b>では、選挙運動用ポスターは<b>掲示場の自分の区画以外に貼れません</b>。<b>掲示場を設けない選挙</b>では、他人の工作物に貼るとき<b>居住者等(いなければ管理者・所有者)の承諾が必須</b>で(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_145" target="_blank" rel="noopener noreferrer">145条2項</a>)、違反は<b>1年以下の拘禁刑または30万円以下の罰金</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_244" target="_blank" rel="noopener noreferrer">244条1項3号</a>)。承諾なく貼られたものは<b>居住者等が撤去できます</b>(同3項。掲示場を設ける選挙でも同様)。<br>
+          <b>平時の政治活動用ポスター(2連等)は145条の対象外</b>ですが、他人の工作物に無承諾で貼れば<b>軽犯罪法1条33号</b>(みだりに他人の家屋その他の工作物にはり札をする罪)に触れえます。実務では<b>必ず承諾を取り、記録を残す</b>こと。<br>
+          屋外広告物条例で掲示を禁じている場所・物件があります。電柱は電力会社・通信会社の所有物で、公選法上の例外に当たる場合でも<b>所有者の許諾は別に必要</b>です。<br>
+          <b>氏名入りの政治活動用ポスターを貼ってある候補者は、立候補した日のうちに選挙区内のそれを撤去する義務</b>があります(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_14" target="_blank" rel="noopener noreferrer">201条の14第1項</a>)。<b>告示日の撤去班</b>を事前に決めておいてください。<br>
+          → 詳細は「📦 選挙の準備」タブのポスター入稿前チェックと、所轄選管へ。
+        </div>
+      </details>
+
+      <!-- 電話かけ -->
+      <details class="helpCard" style="--hc:#0f766e; --hcbg:#ccfbf1; --hct:#115e59;">
+        <summary class="hcHead">
+          <div class="hcIcon">☎️</div>
+          <h3 class="hcName">電話かけ</h3>
+          <span class="hcWhen">選挙期間中◎ / 平時は投票依頼NG</span>
+        </summary>
+        <div class="hcBody">
+          <div class="hcOne">家からできる持ち場。<b>選挙期間中の電話での投票依頼は自由にできます</b>(戸別訪問とは別扱いです)。</div>
+          <h4 class="hcSub ok">してよいこと</h4>
+          <ul class="hcList hcOK">
+            <li><b>告示日〜投票日の前日</b>に電話で投票をお願いする(この期間かぎり)</li>
+            <li>平時は、集会の案内・後援会入会のお願い(投票依頼はしない)</li>
+            <li>「もう結構です」と言われたらすぐ切り、名簿に記録して二度かけない</li>
+          </ul>
+          <h4 class="hcSub ng">してはいけないこと</h4>
+          <ul class="hcList hcNG">
+            <li><b>告示日より前</b>に「投票してください」と言う(事前運動。罰則あり)</li>
+            <li><b>投票日当日</b>にかける</li>
+            <li>名簿を自分の端末・クラウドにコピーして持ち帰る／他の目的に使う／返却しない</li>
+          </ul>
+        </div>
+        <div class="hcDetail detailOnly">
+          <span class="hdTitle">📖 くわしく(根拠)</span>
+          電話での投票依頼は<b>戸別訪問には当たりません</b> — <a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_138" target="_blank" rel="noopener noreferrer">公選法138条1項</a>は「<b>戸別に訪問</b>」を要件としており、電話を禁じる条文はありません。ただし<b>告示前は事前運動</b>(公選法129条。1年以下の拘禁刑または30万円以下の罰金＝239条1項1号)、<b>投票日当日は選挙運動が一切禁止</b>です。実務上の扱いは所轄選管の案内でも確認してください。<br>
+          <b>電話に使う名簿は第三者の個人情報です。</b>陣営から受け取ったら、①使い道は電話かけだけ ②自分の端末やクラウドにコピーしない ③終わったら返す・消す ④紛失したらすぐ陣営に連絡——を守ってください。
+        </div>
+      </details>
 
     </div>
 
-    <div class="helpFoot">
-      🚫 <b>3つとも共通のNG(これだけは覚えて):</b>
-      <span class="ngItem">①<b>買収・お金や物のやりとり</b>(受けても渡してもNG。総括主宰者・出納責任者など中心的な関係者の違反で候補者が当選無効になる連座制も)</span>
-      <span class="ngItem">②<b>投票日当日の選挙運動</b>(SNS投稿もNG)</span>
-      <span class="ngItem">③<b>ウソ・なりすまし</b>。</span><br>
+    <div class="hBox caution">💸 <b>「私が立替えておきます」は、やる前に陣営へ。</b>選挙運動に関する支出は、原則として<b>出納責任者だけ</b>ができます。ボランティアが自分のお金で払うには、<b>出納責任者の「文書による」承諾</b>が必要です。承諾なしに払うと<b>払った本人が罰せられ、罰金でも5年間、選挙権・被選挙権を失います</b>。コピー代・ガソリン代・文具代・差し入れ代、すべて同じです。<b>立候補準備のための支出と、電話・インターネット利用の支出は対象外</b>です。
+      <span class="detailOnly">根拠: <a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_187" target="_blank" rel="noopener noreferrer">公選法187条1項</a>(本文＝出納責任者以外は支出できない／ただし書＝出納責任者の文書による承諾を得た者はできる／立候補準備費用と電話・インターネット等を利用する方法による選挙運動の費用は対象外)。違反は<b>3年以下の拘禁刑または50万円以下の罰金</b>(246条1項4号)で、罰金でも5年間の公民権停止(252条1項)。出納責任者が就任する前に支出した立候補準備費用は、就任後直ちに精算します(187条2項)。</span></div>
+
+    <div class="hBox alert">🎁 <b>「先生のお名前で」は絶対にやらないでください。</b>候補者・政治家が選挙区内の人にお金や物を贈ることは禁止ですが、<b>禁止されているのは候補者側だけではありません</b>。<br>
+      ・<b>候補者の名義で、支援者が香典・祝儀・寸志・差し入れを出す</b> → <b>出した人が禁止・罰則あり</b><br>
+      ・<b>候補者に「お祭りに寸志を」「町会に寄付を」とお願いする</b> → <b>頼んだ人が禁止</b>(威迫を伴って勧誘・要求すると罰則)<br>
+      ・<b>候補者名義の寄附を、他の人に頼む・求める</b> → 同じく禁止<br>
+      香典や祝儀は、<b>本人が自分の名前で出し、かつ法律の例外に当たる場合</b>にしか出せません(例外の中身は「🧭 まず知る」タブ)。「うちの地域の慣習だから」は通りません。迷ったら必ず選管に確認を。
+      <span class="detailOnly">根拠: <a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14-At_199_2" target="_blank" rel="noopener noreferrer">公選法199条の2第2項</a>(候補者等を名義人とする選挙区内の者への寄附は候補者等以外の者はしてはならない。<b>50万円以下の罰金</b>＝249条の2第4項)／同3項(何人も、候補者等に対して選挙区内の者への寄附を勧誘・要求してはならない。威迫して勧誘・要求した場合は249条の2第5項)／同4項(候補者等を名義人とする寄附の勧誘・要求の禁止)。親族・政党・政治教育集会の実費補償等の除外があります。</span></div>
+
+    <div class="hBox alert">
+      🚫 <b>どの持ち場でも共通のNG(6つ)。これだけは覚えてください:</b>
+      <span class="ngItem">①<b>家や会社を1軒ずつ訪ね歩いて投票をお願いする(戸別訪問)</b> — <b>時期を問わず禁止・罰則あり</b>。投票を入れさせない目的の訪問も同じ。「演説会のご案内」と言って1軒ずつ回る／候補者名を言いながら歩くのも、選挙運動のためなら禁止行為に<b>みなされます</b>。<b>投票依頼を伴わないあいさつ回り・後援会入会のお誘いは平時なら可</b>ですが、話の実質で判断されます<span class="detailOnly">(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_138" target="_blank" rel="noopener noreferrer">公選法138条1項・2項</a>。1年以下の拘禁刑または30万円以下の罰金＝239条1項3号)</span></span>
+      <span class="ngItem">②<b>買収・お金や物のやりとり</b>(受けても渡してもNG。<b>罰則あり</b>)。<b>⚠️ 班長・地区リーダー・取りまとめ役を引き受けた方は特に注意</b> — 「選挙運動の計画づくりや、手伝う人の指揮・監督をする人」は<b>組織的選挙運動管理者等</b>に当たり、その人が買収等で拘禁刑になると<b>候補者の当選が無効になり、5年間その選挙区で立候補できなくなります</b>(連座制)。<b>役を引き受けるときは、お金に一切触らない体制にしてください。</b><span class="detailOnly">(買収＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_221" target="_blank" rel="noopener noreferrer">公選法221条</a>。3年以下の拘禁刑または50万円以下の罰金。連座制＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_251_3" target="_blank" rel="noopener noreferrer">251条の3第1項</a>)</span></span>
+      <span class="ngItem">③<b>陣営への差し入れ・場所の提供</b> — 飲食物の提供は「何人も」禁止で、<b>支援者からの差し入れも対象・罰則あり</b>(湯茶と通常用いられる程度の菓子、法定の弁当料・法定数の範囲内で選挙事務所で出す弁当は除く)。<b>「うちを休憩所に使って」もNG</b>。<b>選挙カーを何台も連ねて走らせる・隊列を組んで歩くのもNG</b>(気勢を張る行為・罰則あり)<span class="detailOnly">(飲食物＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_139" target="_blank" rel="noopener noreferrer">公選法139条</a>。2年以下の拘禁刑または50万円以下の罰金＝243条1項1号。休憩所＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_133" target="_blank" rel="noopener noreferrer">133条</a>。気勢＝<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_140" target="_blank" rel="noopener noreferrer">140条</a>。1年以下の拘禁刑または30万円以下の罰金＝244条1項1号)</span></span>
+      <span class="ngItem">④<b>投票日当日の選挙運動</b>(SNS投稿もNG。前日までの投稿が残っているのは問題ありません)</span>
+      <span class="ngItem">⑤<b>ウソ・なりすまし</b>(経歴や公認の虚偽は虚偽事項公表罪で<b>罰則あり</b>。候補者本人のふりをした投稿もNG)</span>
+      <span class="ngItem">⑥<b>選挙のあとの「お礼」</b> — お礼のビラ・ポスター・お礼回りの戸別訪問・祝賀会は「<b>何人も</b>」不可。<b>自筆の信書・いただいた祝辞等への答礼の信書・SNSでの御礼はOK</b><span class="detailOnly">(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_178" target="_blank" rel="noopener noreferrer">公選法178条</a>柱書・2号)</span></span><br>
+      ⚠️ <b>選挙違反の本当の重さは「罰金」ではありません。罰金刑を受けただけでも、判決確定の日から原則5年間、選挙権と被選挙権を失います。応援したつもりで、5年間投票できなくなる</b>——これが一番こわい結果です。<span class="detailOnly">(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_252" target="_blank" rel="noopener noreferrer">公選法252条1項</a>。拘禁刑なら刑を終えてさらに5年＝同2項、買収等の繰り返しで10年＝同3項、裁判所が情状により短縮・免除することがあります＝同4項。なお244条の罪〔ポスターの無承諾掲示・街頭演説の時間違反・気勢を張る行為〕と252条の3の罪〔団体の政治活動の制限違反〕は、罰金のときは252条1項の対象外です。拘禁刑なら対象。)</span><br>
       困ったら「これって大丈夫?」と<b>陣営・選管に一言確認</b>を。その一手間があなたと候補者を守ります。
     </div>
-    <div class="more">📚 根拠: 公選法129条・142条・143条・164条の5/6・201条の6/201条の8/201条の9・221条・243条/刑法130条/軽犯罪法1条32号/郵便法4条。数値・可否は目安、実務は所轄選管で確認を。</div>
+    <div class="more">📚 根拠: 公選法129条・133条・136条・136条の2・137条・137条の2・138条・139条・140条・142条・142条の3・142条の6・143条・145条・164条の5/6/7・178条・187条・197条の2・199条の2・201条の6/201条の8/201条の9/201条の13/201条の14/201条の15・221条・225条・243条・244条・246条・251条の3・252条・252条の3/刑法130条/軽犯罪法1条/郵便法4条。数値・可否は目安、実務は所轄選管で確認を。</div>
   </section>
 
   <!-- ===== S6 活動スケジュール ===== -->
-  <section class="panel p6" id="s6">
+  <section id="s6" class="panel p6" role="region" aria-labelledby="openSched">
     <h2>🗓️ 活動スケジュールをつくる</h2>
     <span class="period">統一選準備の基本モデル+あなたの計画表</span>
     <p>実施内容のタグをクリックして時期を決めると、下のスケジュール表に自動で行が追加されます(時期順に自動ソート・No自動採番)。担当は右の「👥 メンバー」を表の行へドラッグして追加します。入力内容はこのブラウザ内(localStorage)にのみ保存されます(サーバーには送信されません)。<b>ただし「Googleスプレッドに出力」「CSV」「Excel」を使うと、入力した氏名を含む表が外部サービスやファイルに書き出されます。共有範囲はご自身で管理してください。</b></p>
@@ -969,7 +1337,12 @@
       <div class="countdown" id="countdown"></div>
       <div class="todayLabel" id="todayLabel"></div>
     </div>
-    <p class="help">※ 投票日を入れると告示日に自動で7日前が入ります(<b>一般市・特別区の議員/一般市の市長選の目安</b>。公選法33条5項では<b>都道府県議・指定都市議は9日前、指定都市の長は14日前、知事は17日前、町村は5日前</b>。選挙により異なるので修正してください)。なお初期表示の投票日は<b>過去の慣例からの仮置き</b>で、統一地方選の期日は臨時特例法で確定します。</p>
+    <p class="help">※ 投票日を入れると告示日に自動で7日前が入ります(<b>一般市・特別区の議員/一般市の市長選の目安</b>。公選法33条5項では<b>都道府県議・指定都市議は9日前、指定都市の長は14日前、知事は17日前、町村は5日前</b>。選挙により異なるので修正してください)。なお初期表示の投票日は<b>過去の慣例からの仮置き</b>で、統一地方選の期日は臨時特例法で確定します。<br>
+      ※ <b>告示日をご自分で入力したあとに投票日を変えた場合は、投票日との間隔(日数)を保ったまま</b>告示日もずれます(自動の「7日前」には戻しません)。</p>
+    <p class="help" style="border-left:3px solid #dc2626; background:#fef2f2; color:#7f1d1d; padding:6px 9px; border-radius:6px;">
+      ⚠️ <b>選挙運動の予定は「最終日(投票日の前日)」までに置いてください。</b>投票日当日の選挙運動は、SNSを含め<b>一切禁止</b>です(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_129" target="_blank" rel="noopener noreferrer">公選法129条</a>)。<b>確認団体のポスター掲示・ビラ頒布・政談演説会も、投票日当日は認められていません</b>(<a class="lawlink" href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_9" target="_blank" rel="noopener noreferrer">201条の9第1項ただし書</a>の例外は「選挙の期日の前日まで」)。<br>
+      ⚠️ <b>「3週前」「2週前」「1週前」は投票日からの日数です。</b>告示日が9日前・14日前・17日前の選挙(都道府県議・指定都市議・指定都市の長・知事など)では、<b>これらが告示日より後＝選挙運動期間の中</b>に入ります。表の「目安の月日」が前後して見えるのもこのためです。<b>書類チェック・事前審査・資材発注は、必ず「告示日」から逆算</b>してください。
+    </p>
 
     <h3>🏷️ 実施内容(タグをクリックして予定に追加)</h3>
     <p class="help">クリックすると「いつからいつまで」を入力できます。✓付きは配置済み(クリックで修正・削除)。</p>
@@ -1023,10 +1396,10 @@
   </section>
 
   <footer>
-    出典: 公職選挙法・政治資金規正法(<b>2026年9月時点の e-Gov 法令検索の現行条文を参照</b>。2025〜2026年の改正に対応)・総務省／各選挙管理委員会／国税庁の公表資料。<b>条文の当てはめ・解釈は個別事情により異なります。</b><br>本文中の青いリンクは、クリックすると<b>e-Gov法令検索のその条文</b>や公的機関の該当ページに直接飛びます。<br>
+    出典: 公職選挙法・政治資金規正法(<b>2026年10月時点の e-Gov 法令検索の現行条文を参照</b>。2025〜2026年の改正に対応し、2027年施行分は施行日を明記)・総務省／各選挙管理委員会／国税庁の公表資料。<b>条文の当てはめ・解釈は個別事情により異なります。</b><br>本文中の<b>下線と ↗ がついたリンク</b>は、クリックすると<b>e-Gov法令検索のその条文</b>や公的機関の該当ページに飛びます。<br>
     本ページは一般的な情報提供であり法的助言ではありません。法改正や運用変更で内容が古くなる場合があります。個別の適用は必ず所轄の選挙管理委員会・弁護士等の専門家にご確認ください。<br>
-    作成日: 2026-07-12 ／ 最終更新日: 2026-09-12(法令の一次照合・2025〜2026年改正対応のうえ全体公開)<br>
-    ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura
+    作成日: 2026-07-12 ／ 最終更新日: 2026-10-06 ／ 法令照合日: 2026-10-06<br>
+    ライセンス: <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a> / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)
   </footer>
 </div>
 
@@ -1068,54 +1441,66 @@
 </div>
 
 <script>
+  var prefersReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function clearActive(){
-    document.querySelectorAll('.stop').forEach(function(b){b.classList.remove('active');});
+    document.querySelectorAll('.stop').forEach(function(b){
+      b.classList.remove('active');
+      b.setAttribute('aria-selected','false');
+    });
     document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
     document.querySelectorAll('.ctaBtn').forEach(function(b){b.classList.remove('active');});
   }
-  document.querySelectorAll('.stop').forEach(function(btn){
+  var stops = [].slice.call(document.querySelectorAll('.stop'));
+  stops.forEach(function(btn, i){
     btn.addEventListener('click', function(){
       clearActive();
       btn.classList.add('active');
-      document.getElementById(btn.dataset.p).classList.add('active');
-      document.getElementById(btn.dataset.p).scrollIntoView({behavior:'smooth', block:'start'});
+      btn.setAttribute('aria-selected','true');
+      var p = document.getElementById(btn.dataset.p);
+      p.classList.add('active');
+      p.scrollIntoView({behavior: prefersReduce ? 'auto' : 'smooth', block:'start'});
+    });
+    /* 矢印キーでタブ移動(role="tab" を名乗る以上の最低限) */
+    btn.addEventListener('keydown', function(e){
+      var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if(!d) return;
+      e.preventDefault();
+      var n = stops[(i + d + stops.length) % stops.length];
+      n.focus(); n.click();
     });
   });
   function ctaOpen(btnId, panelId){
     document.getElementById(btnId).addEventListener('click', function(){
       clearActive();
       this.classList.add('active');
-      document.getElementById(panelId).classList.add('active');
-      document.getElementById(panelId).scrollIntoView({behavior:'smooth', block:'start'});
+      var p = document.getElementById(panelId);
+      p.classList.add('active');
+      p.scrollIntoView({behavior: prefersReduce ? 'auto' : 'smooth', block:'start'});
     });
   }
   ctaOpen('openSched','s6');
   ctaOpen('openHelp','sHelp');
 
-  /* 🤝 支援者ガイド: かんたん/くわしく トグル */
+  /* ===== かんたん/くわしく トグル(全タブ＋支援者ガイドを1つの状態で切替) =====
+     以前は .cdBtn(8タブ) と .htBtn(支援者ガイド) でJSが2本に分かれ、互いに同期しなかった。
+     そのうえ ids に s6・sHelp が入っていなかったので、
+     支援者ガイドに detailOnly で足した注意は「どのモードでも永久に表示されない」状態だった。
+     ※ ids に書いた id のパネルだけが切替対象になる。
+        新しいタブに detailOnly / simpleOnly を書くときは、必ずこの配列に id を追加すること。 */
   (function(){
-    var help = document.getElementById('sHelp');
-    document.querySelectorAll('.helpToggle .htBtn').forEach(function(b){
-      b.addEventListener('click', function(){
-        document.querySelectorAll('.helpToggle .htBtn').forEach(function(x){x.classList.remove('on');});
-        b.classList.add('on');
-        if(b.dataset.mode === 'detail'){ help.classList.add('showDetail'); }
-        else { help.classList.remove('showDetail'); }
-      });
-    });
-  })();
-
-  /* 🚀 出馬を考える人向けタブ: かんたん/くわしく トグル(s0〜s8の各タブ共通で切替) */
-  (function(){
-    var ids = ['s0','s1','s8','s7','s2','s3','s4','s5'];
-    var btns = document.querySelectorAll('.candToggle .cdBtn');
+    var ids = ["s0","s1","s8","s7","s2","s3","s4","s5","s6","sHelp"];   /* 切替対象の全パネル(増やしたらここに追加) */
+    var btns = document.querySelectorAll('.candToggle .cdBtn, .helpToggle .htBtn');
     if(!btns.length) return;
     function setMode(mode){
       ids.forEach(function(id){
         var p = document.getElementById(id);
         if(p){ p.classList.toggle('showDetail', mode === 'detail'); }
       });
-      btns.forEach(function(b){ b.classList.toggle('on', b.dataset.mode === mode); });
+      btns.forEach(function(b){
+        var on = (b.dataset.mode === mode);
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
     }
     btns.forEach(function(b){ b.addEventListener('click', function(){ setMode(b.dataset.mode); }); });
   })();
@@ -1127,7 +1512,11 @@
     if(!kzBtns.length || !kzCards.length) return;
     function kzShow(k){
       kzCards.forEach(function(c){ c.style.display = (c.id===k) ? 'block' : 'none'; });
-      kzBtns.forEach(function(b){ b.classList.toggle('active', b.dataset.k===k); });
+      kzBtns.forEach(function(b){
+        var on = (b.dataset.k===k);
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
     }
     kzBtns.forEach(function(b){ b.addEventListener('click', function(){ kzShow(b.dataset.k); }); });
     kzShow(kzBtns[0].dataset.k);
@@ -1164,6 +1553,8 @@ const BUCKETS = [
   {id:"last",  label:"最終日",    days:1},
   {id:"vote",  label:"投票日",    days:0},
 ];
+/* 「投票日」の位置(=20)。index を直書きしないで必ずこれを使う(BUCKETS を増やしても追従する) */
+const VOTE_IX = BUCKETS.findIndex(function(b){ return b.id==="vote"; });
 
 const MODEL = {
   pre:   "本人ポスターを貼る/地域課題の調査開始/意見交換会開催/自治会や地元の行事に参加/ホームページ作成",
@@ -1173,7 +1564,7 @@ const MODEL = {
   m8:    "選対本部発足・コアスタッフ決定",
   m6:    "2連ポスター(本人ポスター👉2連に貼替)/SNS毎日更新/告示ポスター予約",
   m5:    "宛名転記",
-  m4:    "宛名データ化/ウグイス・運転手打診/政策発表会会場予約/街宣車看板・選挙広報・証紙ビラのデザインたたき台",
+  m4:    "宛名データ化/ウグイス・運転手打診/政策発表会会場予約/街宣車看板・選挙公報・証紙ビラのデザインたたき台",
   m3:    "(宛名)目視確認/事務所探し/⚠️運動員説明会をやるならこの頃",
   m2:    "事前準備/政策発表会/選挙事務所契約/⚠️立候補予定者事前説明会 — これを待っているとだいたい遅い",
   m15:   "説明会後は資材デザインの最終確認だけで、すぐ発注できる状態にしておく",
@@ -1210,12 +1601,21 @@ const SEED_ITEMS = [
 ];
 
 /* 項目ごとの推奨時期(初期値の目安)。値は BUCKETS のindex [開始, 終了]。
-   基本モデル(MODEL)と整合。あくまで目安で、モーダルで自由に変更可。 */
+   基本モデル(MODEL)と整合。あくまで目安で、モーダルで自由に変更可。
+
+   ⚠️ 選挙運動・団体の政治活動に当たる項目の終了に 20(投票日) を入れてはいけない。
+      選挙運動ができるのは立候補届出日から投票日の前日まで(公選法129条)。
+      確認団体の政治活動も、例外が許されるのは「選挙の期日の前日まで」
+      (201条の9第1項ただし書。柱書の禁止期間は「選挙の当日まで」で、両者はずれている)。
+      したがってこれらの項目の終了は必ず 19(最終日＝投票日の前日)までにする。
+   ※ index は BUCKETS の並び順そのまま(18=告示日 / 19=最終日 / 20=投票日)。
+      BUCKETS に要素を足す・順番を変えるときは、この値と localStorage の
+      保存済み assign[].start/end が同じだけずれるので、必ず同時に移行すること。 */
 var REC_DEFAULT = [10,10]; // 該当がなければ「3ヶ月前」
 var REC = {
-  "本人ポスター掲示":[0,7], "確認団体ポスター掲示":[18,20], "2連ポスターに貼替":[7,7],
+  "本人ポスター掲示":[0,7], "確認団体ポスター掲示":[18,19], "2連ポスターに貼替":[7,7],
   "告示ポスター予約":[7,7], "政党用ポスターに貼替":[17,17],
-  "ホームページ作成":[0,3], "SNS毎日更新":[7,20], "辻立ち":[3,20], "街宣":[18,20],
+  "ホームページ作成":[0,3], "SNS毎日更新":[7,19], "辻立ち":[3,19], "街宣":[18,19],
   "ポスティング":[3,17], "政策発表会":[11,11], "意見交換会":[0,9], "地元行事への参加":[0,17],
   "ボランティア募集":[2,9], "支援者100人づくり":[3,9], "ウグイス・運転手打診":[9,9], "運動員説明会":[10,10],
   "街宣車の予約":[1,1], "選対本部発足":[5,5], "宛名転記":[8,8], "宛名データ化":[9,9],
@@ -1256,7 +1656,23 @@ function load(){
     nextId: SEED_ITEMS.length,
   };
 }
-function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+/* 保存は必ずここを通す。Cookie/サイトデータを全ブロックした環境では localStorage への
+   アクセス自体が例外になり、黙って握りつぶすと「配置したのに行が増えない」「メンバーを足しても
+   出ない」と、壊れているようにしか見えない。1回だけ画面に警告を出す(マップ側の saveLocal と同じ方針)。 */
+let saveWarned = false;
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); return true; }
+  catch(e){
+    if(!saveWarned){
+      saveWarned = true;
+      const q = /quota|exceed/i.test(e && e.name || "") || (e && (e.code===22 || e.code===1014));
+      alert(q
+        ? "⚠️ この端末に保存できませんでした(保存容量がいっぱいです)。いまの入力は、ページを閉じると消えます。先に「📄 スプレッド用CSV」か「📥 Excelダウンロード」で書き出してください。"
+        : "⚠️ この端末に保存できませんでした(ブラウザの設定でサイトのデータ保存が無効になっています)。入力はこの画面を閉じると消えます。先に「📄 スプレッド用CSV」か「📥 Excelダウンロード」で書き出してください。");
+    }
+    return false;
+  }
+}
 
 function pDate(v){ const a=v.split("-").map(Number); return new Date(a[0],a[1]-1,a[2]); }
 function fmtMD(d){ return (d.getMonth()+1)+"/"+d.getDate(); }
@@ -1449,6 +1865,18 @@ function renderModalMembers(){
     box.appendChild(sp);
   }
 }
+/* モーダルの初期値ヒント。終了に「投票日」が選ばれているときは警告に差し替える。
+   (既に保存済みの予定を開いたときも出る。旧版で投票日まで伸ばした予定を直してもらうため) */
+function updateRecHint(isAssigned){
+  const el=$("mRecHint"); if(!el) return;
+  if(+$("mEnd").value === VOTE_IX){
+    el.innerHTML = "⚠️ <b>投票日当日は選挙運動が一切禁止です</b>(公選法129条)。確認団体の政治活動も、例外は<b>投票日の前日まで</b>です(201条の9第1項ただし書)。投票日当日に置けるのは、選挙運動でない活動だけです。";
+    el.style.color = "#b91c1c";
+  }else{
+    el.textContent = isAssigned ? "" : "💡 初期値はこの項目の目安時期です（自由に変更できます）";
+    el.style.color = "#0d9488";
+  }
+}
 function openModal(itemId){
   editingId=itemId;
   const it=state.items.find(function(x){return x.id===itemId;});
@@ -1459,9 +1887,8 @@ function openModal(itemId){
   const a=state.assign[itemId];
   const rec=recFor(it);
   $("mStart").value=a?a.start:rec.start; $("mEnd").value=a?a.end:rec.end;
-  if($("mRecHint")){
-    $("mRecHint").textContent = a ? "" : "💡 初期値はこの項目の目安時期です（自由に変更できます）";
-  }
+  updateRecHint(!!a);
+  $("mEnd").onchange=function(){ updateRecHint(!!a); };
   $("mNo").value=(a && a.no!=null)?a.no:"";
   tempMembers = a ? JSON.parse(JSON.stringify(a.members||[])) : [];
   renderModalMembers();
@@ -1506,6 +1933,16 @@ $("dSave").onclick=function(){
 $("dCancel").onclick=closeDrop;
 $("dropOverlay").onclick=function(e){ if(e.target===$("dropOverlay")) closeDrop(); };
 
+/* Esc で開いているモーダルを閉じる(背景タップと同じ「キャンセル」の意味)。
+   ⚠️ 既存の openModal/closeModal・openDrop/closeDrop には手を入れない。
+      同じ名前の関数を新設すると巻き上げで既存定義を上書きし、
+      スケジュールの保存・削除・キャンセルがまとめて動かなくなる。 */
+document.addEventListener("keydown", function(e){
+  if(e.key !== "Escape") return;
+  if($("dropOverlay").classList.contains("open")){ closeDrop(); return; }
+  if($("overlay").classList.contains("open")){ closeModal(); }
+});
+
 /* ===== メンバー管理 ===== */
 $("addMemberBtn").onclick=function(){
   const row=$("memberAddRow");
@@ -1520,13 +1957,28 @@ $("memberOk").onclick=function(){
 $("memberName").addEventListener("keydown",function(e){ if(e.key==="Enter") $("memberOk").click(); });
 
 /* ===== 設定・新規項目・リセット ===== */
+/* 告示日は選挙運動期間・証紙交付・選挙公報の申請・公費負担契約のすべての起点なので、
+   利用者が手で入れた告示日を投票日の変更で黙って「7日前」に戻してはいけない
+   (知事選17日前・町村5日前では2〜10日ずれ、資材と人員の手配がまとめてずれる)。
+   手入力済みのときは投票日との間隔(日数)を保ったままずらす。 */
 $("voteDate").onchange=function(e){
   if(!e.target.value) return;
+  const prevVote=state.voteDate, prevKokuji=state.kokujiDate;
   state.voteDate=e.target.value;
-  state.kokujiDate=toISO(new Date(pDate(state.voteDate).getTime()-7*DAY));
+  if(state.kokujiUserSet && prevVote && prevKokuji){
+    const diff = pDate(prevVote).getTime() - pDate(prevKokuji).getTime();
+    state.kokujiDate = toISO(new Date(pDate(state.voteDate).getTime() - diff));
+  }else{
+    state.kokujiDate = toISO(new Date(pDate(state.voteDate).getTime()-7*DAY));
+  }
   save(); renderAll();
 };
-$("kokujiDate").onchange=function(e){ if(!e.target.value) return; state.kokujiDate=e.target.value; save(); renderAll(); };
+$("kokujiDate").onchange=function(e){
+  if(!e.target.value) return;
+  state.kokujiDate=e.target.value;
+  state.kokujiUserSet=true;   /* 以後は自動上書きしない(旧データは未設定=falsyなので従来どおり) */
+  save(); renderAll();
+};
 $("addItemBtn").onclick=function(){
   const name=$("newName").value.trim(); if(!name) return;
   state.items.push({id:"i"+(state.nextId++), name:name, cat:$("newCat").value});
@@ -1536,7 +1988,9 @@ $("newName").addEventListener("keydown",function(e){ if(e.key==="Enter") $("addI
 let resetArmed=false;
 $("resetBtn").onclick=function(){
   if(!resetArmed){ resetArmed=true; $("resetBtn").textContent="もう一度押すとリセットします⚠️"; setTimeout(function(){resetArmed=false; $("resetBtn").textContent="入力内容をリセット";},3000); return; }
-  localStorage.removeItem(LS_KEY); state=load(); resetArmed=false; $("resetBtn").textContent="入力内容をリセット"; renderAll();
+  /* 保存不可環境では removeItem 自体が例外になる。ここで止まると画面だけ古いままになるので包む */
+  try{ localStorage.removeItem(LS_KEY); }catch(e){}
+  state=load(); resetArmed=false; $("resetBtn").textContent="入力内容をリセット"; renderAll();
 };
 CATS.forEach(function(c){ const o=document.createElement("option"); o.value=c.id; o.textContent=c.name; $("newCat").appendChild(o); });
 
@@ -1556,12 +2010,38 @@ function modelTableRows(){
   BUCKETS.forEach(function(b){ rows.push([b.label, bucketMonthLabel(b), MODEL[b.id]||""]); });
   return rows;
 }
+/* 書き出した表は陣営内をメール・LINEで転送され、担当者の実名入りで第三者の手に渡りうる。
+   ページ上の免責・出典・「選管で確認」は付いて行かないので、3つの出力ボタンが必ず通る
+   ここ(metaRows)に1回だけ入れる。
+   ※著作権表示は「見出しセル＋本文セル」の2セルに分ける。1つのセルに見出しと本文を
+     つないで書くと、末尾に JS の引用符や括弧が付いて LICENSE 1行目との逐語一致検査を
+     すり抜ける形になるため(build/precheck.py の G2)。 */
 function metaRows(){
   const k = state.kokujiDate || toISO(new Date(pDate(state.voteDate).getTime()-7*DAY));
-  return [["活動スケジュール(選挙と政治活動の歩き方)"],["告示日", k, "投票日", state.voteDate],[""]];
+  return [
+    ["活動スケジュール(選挙と政治活動の歩き方)"],
+    ["告示日", k, "投票日", state.voteDate],
+    ["出典", "選挙と政治活動の歩き方 https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/"],
+    ["作成者", "Yukinobu Nakamura(個人として作成したものです)"],
+    ["出力日", toISO(new Date())],
+    ["⚠️ 注意", "この表の「基本モデル」は一例です。時期・内容・掲示物の取扱いは、必ず所轄の選挙管理委員会の日程・説明会で確認してください。本表は一般的な情報提供であり、法的助言ではありません。"],
+    ["⚠️ 選挙運動の期間", "選挙運動ができるのは立候補届出日から投票日の前日までです(公選法129条)。投票日当日の選挙運動はネットを含め一切禁止です。確認団体の政治活動も、例外は投票日の前日までです(201条の9第1項ただし書)。"],
+    ["⚠️ 個人情報", "担当欄に他の方の氏名が入っている場合があります。共有範囲はご自身の責任で管理し、不要になったら削除してください(ニックネーム・イニシャルでの入力も可)。"],
+    ["ライセンス", "PolyForm Noncommercial License 1.0.0 (https://polyformproject.org/licenses/noncommercial/1.0.0)"],
+    ["Required Notice", "Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)"],
+    [""]
+  ];
 }
 function allRows(){
   return metaRows().concat(entryRows(), [[""]], modelTableRows());
+}
+/* 先頭が = + - @ TAB CR の値は、Excel や Googleスプレッドシートが数式として評価してしまう
+   (メモ・氏名・実施内容名はすべて自由入力なので必ず通る経路)。先頭に ' を付けて無効化する。
+   ※この画面はCSVの取り込みを持たないので、剥がす処理(unquote)は不要。
+     .xlsx 側は t="inlineStr" で出しているため数式化せず、対策はCSVとTSVの2経路で足りる。 */
+function csvSafe(v){
+  const s = (v==null ? "" : String(v));
+  return /^[=+\-@\t\r]/.test(s) ? "'"+s : s;
 }
 
 /* ===== Googleスプレッド出力 ===== */
@@ -1579,7 +2059,7 @@ function copyFallback(text){
   ta.remove(); return ok;
 }
 $("sheetBtn").onclick=function(){
-  const tsv = allRows().map(function(r){return r.join("\t");}).join("\n");
+  const tsv = allRows().map(function(r){return r.map(csvSafe).join("\t");}).join("\n");
   copyText(tsv).then(function(ok){
     if(ok){
       $("exportHint").textContent="✅ 表をコピーしました。開いた新規スプレッドシートのA1セルで貼り付け(Ctrl+V)してください。";
@@ -1658,7 +2138,7 @@ $("xlsxBtn").onclick=function(){
 function toCsvText(rows){
   return rows.map(function(r){
     return r.map(function(c){
-      c=(c==null?"":String(c));
+      c=csvSafe(c);
       return /[",\n\r]/.test(c) ? '"'+c.replace(/"/g,'""')+'"' : c;
     }).join(",");
   }).join("\r\n");

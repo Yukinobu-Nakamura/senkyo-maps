@@ -10,6 +10,8 @@ Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukino
 - 地図タイル(国土地理院 / OpenStreetMap contributors)
 - `data/setai_*.geojson` の原データ(政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データ。
   政府標準利用規約(第2.0版)に準拠＝商用利用可・加工可。出典表示必須、加工時は加工した旨の明記が必要)
+- `data/suginami_gaisen.csv` の原データ(杉並区ほかの公表資料。座標は国土地理院 住所検索APIで付与し、
+  加工して作成。取得時点は種別ごとに異なる)
 - 国土地理院API(逆ジオコーダ・住所検索)
 
 The scope of "the software" under these terms is limited to the code and content authored by the licensor.

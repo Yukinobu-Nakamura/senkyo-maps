@@ -6,11 +6,44 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ポスターマップ — 掲示板の貼付け管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=35">
+<link rel="stylesheet" href="../assets/common.css?v=38">
+<style>
+  /* ☰ ツール: 狭い画面でボタン帯が何段にも積み上がり、地図と左の⛶・現在地・検索が
+     画面の外へ落ちて操作できなくなるのを防ぐ。閉じているときは見出しと同じ行に収まる。
+     ※3マップで同じ指定(将来 assets/common.css へ集約してよい) */
+  header.appbar details.toolWrap > summary{ list-style:none; display:inline-block; cursor:pointer;
+    font-size:12px; font-weight:bold; background:rgba(255,255,255,.18); color:#fff;
+    border-radius:8px; padding:6px 10px; }
+  header.appbar details.toolWrap > summary::-webkit-details-marker{ display:none; }
+  header.appbar details.toolWrap > summary:hover{ background:rgba(255,255,255,.32); }
+  header.appbar details.toolWrap[open]{ flex:1 1 100%; }
+  header.appbar details.toolWrap[open] > summary{ margin-bottom:6px; }
+  /* ポスター貼りの警告帯。赤い1行(summary)は常時表示し、根拠と条文は開いたときだけ出す。
+     ⚠️ サンプルバー(#sampleBar)はCSVを読み込むと消えるので、警告は必ず別の要素に置く
+        (実際に貼り始めるのはCSVを読み込んだ後なので、そこで消えては意味がない)。 */
+  details.warnbar{ background:#fef2f2; border-bottom:2px solid #dc2626; color:#7f1d1d;
+    font-size:12.5px; line-height:1.7; padding:6px 12px; }
+  details.warnbar > summary{ cursor:pointer; font-weight:700; list-style:none; }
+  details.warnbar > summary::-webkit-details-marker{ display:none; }
+  details.warnbar .wbBody{ margin-top:4px; font-weight:400; }
+  @media (max-width:420px){ details.warnbar{ font-size:11.5px; padding:5px 10px; } }
+  /* 「地図の何もない所をタップで上のボタン帯もまとめて消える」(ガイドの案内)に、この帯も揃える。
+     common.css の body.uiHidden の列(appbar/.samplebar/.noticebar)は免責バーまで隠すのに、
+     ここだけ残ると「画面いっぱい」の案内が嘘になる。ツールを戻せば必ず一緒に戻る。 */
+  body.uiHidden details.warnbar{ display:none !important; }
+  /* 世帯数パネルが画面の下へ落ちて3割しか見えない問題の対策。狭い/低い画面では
+     画面の下端を基準に開き、パネル全体が必ず画面内に収まるようにする。 */
+  @media (max-width:700px), (max-height:700px){
+    .setaiCtl .stPanel{ position:fixed; right:10px; top:auto; bottom:12px;
+      width:min(268px, calc(100vw - 20px)); max-height:calc(100vh - 110px); }
+  }
+</style>
 </head>
 <body>
 <header class="appbar">
   <h1>🗺️ ポスターマップ</h1>
+  <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer" style="align-self:center;" title="政治活動・選挙運動のルール解説(別タブで開きます)">📖 ルールを確認</a>
+  <details class="toolWrap" id="toolWrap" open><summary>☰ ツール</summary>
   <div class="toolbar">
     <label class="filebtn">📂 CSV読込<input type="file" id="csvIn"></label>
     <button id="csvOut">💾 CSV書出</button>
@@ -18,12 +51,15 @@
     <a class="dlbtn" href="../dist/poster_map_standalone.html" download="ポスターマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="../" style="align-self:center;">← トップ</a>
   </div>
+  </details>
 </header>
+<noscript><div class="samplebar" style="background:#fef2f2; border-bottom:2px solid #dc2626; color:#7f1d1d; font-weight:700;">⚠️ このページは JavaScript が無効だと地図を表示できません。ブラウザの設定で JavaScript を有効にしてください。ルールの解説(読みもの)は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/">📖 選挙と政治活動の歩き方</a> でご覧いただけます。</div></noscript>
+<details class="warnbar" id="warnBar" open><summary>⚠️ <b>他の候補者のポスターは剥がさない・上に貼らない・触らない</b>(4年以下の拘禁刑)。<span style="font-weight:400">貼れる場所と、塀をお借りするときの承諾のルールはここをタップ</span></summary><div class="wbBody">① 「ずれていたから直した」「落ちていたから貼り直した」も含めて、<b>他の候補者のポスターには触らない</b>でください(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_225" target="_blank" rel="noopener noreferrer">公選法225条2号</a>の選挙の自由妨害罪。<b>4年以下の拘禁刑または100万円以下の罰金</b>で、このツール群で扱う中で最も重い罰則です)。<br>② <b>貼れるのは公営掲示場の自分の候補者の区画だけ。</b>選挙運動用ポスターを貼れるのは<b>告示日の届出が受理されてから</b>で、ポスター掲示場が設けられる選挙(都市部はほぼ全て)では<b>自分の候補者に割り当てられた区画だけ</b>です。<br>③ <b>民家・店舗の塀をお借りするときは、先に住んでいる人の承諾を。</b>掲示場を設けない選挙では、他人の工作物に貼るときに<b>居住者等(いなければ管理者・所有者)の承諾が必要</b>です(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_145" target="_blank" rel="noopener noreferrer">公選法145条2項</a>。違反は1年以下の拘禁刑または30万円以下の罰金＝244条1項3号。承諾なく貼られたものは居住者等が撤去できます＝同3項)。平時の政治活動用ポスター(2連等)は145条の対象外ですが、無承諾で他人の工作物に貼れば別の法令に触れえます。<b>必ず承諾を取り、誰にいつもらったかを記録に残してください。</b><br>ルールの全体は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer">📖 選挙と政治活動の歩き方</a> へ。</div></details>
 <div class="samplebar" id="sampleBar">⚠️ 表示中はサンプル(ダミー)データです。実際の掲示場一覧は選挙管理委員会の公表資料からCSVで読み込んでください。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=35"></script>
+<script src="../assets/common.js?v=38"></script>
 <script>
 "use strict";
 /* ステータス定義(ここを書き換えれば増減可能) */
@@ -62,7 +98,7 @@ const setaiCtl = addSetaiLayers(map, { sessionKey: "posterMap" });
 rememberMapSession(map, "posterMap", { baseLayers, overlays: statusLayers });
 addGuideControl(map, "🗺️ ポスターマップの使い方",
   `<ol>
-    <li><b>掲示場データを読み込む</b> — 右上「📂 CSV読込」で選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示はダミーのサンプル)</li>
+    <li><b>掲示場データを読み込む</b> — 画面上の<b>「☰ ツール」</b>を開いて「📂 CSV読込」から、選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示はダミーのサンプル)</li>
     <li><b>ピンをタップ</b> — ステータス(未/完了/予約/要確認/異常)とメモを保存。色が変わり右上の完了率も更新されます</li>
     <li><b>表示を絞る</b> — 右上のレイヤボタンでステータス別に表示切替、左の📍で現在地表示</li>
     <li><b>🏠 世帯数を重ねる</b> — 右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックで配下の区が全部ON</b>、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に(この選択と色分けはこの端末に保存され、次に開いたときもそのままです)。未収録の自治体は「➕ 自治体の追加をリクエスト」から</li>
@@ -217,6 +253,24 @@ document.getElementById("resetBtn").onclick = () => {
     boards.forEach(b => { if (edits[b.id]) Object.assign(b, edits[b.id]); });
   }
   renderBoards();
+})();
+
+/* ☰ ツールの開閉。狭い画面では閉じた状態で始める(ヘッダが何段にも積み上がると
+   #map が潰れ、左の⛶・現在地・地名検索が画面の外へ落ちて操作できなくなる)。
+   開閉でヘッダの高さが変わるので、そのたびに地図のサイズを再計算させる。 */
+(function () {
+  const narrow = window.matchMedia("(max-width: 1024px)").matches;
+  const tw = document.getElementById("toolWrap");
+  if (tw) {
+    if (narrow) tw.removeAttribute("open");
+    tw.addEventListener("toggle", () => map.invalidateSize());
+  }
+  /* 警告帯も狭い画面では畳む。赤い1行(summary)は閉じていても必ず見える */
+  const wb = document.getElementById("warnBar");
+  if (wb) {
+    if (narrow) wb.removeAttribute("open");
+    wb.addEventListener("toggle", () => map.invalidateSize());
+  }
 })();
 
 /* 同じマップを別タブでも開いているときの上書き事故を警告する */

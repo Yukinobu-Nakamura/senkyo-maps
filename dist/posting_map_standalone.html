@@ -244,10 +244,23 @@ body.uiHidden .noticebar{ display:none !important; }
   border:1.5px solid currentColor; background:#fff; color:inherit; border-radius:8px; padding:4px 9px; white-space:nowrap; }
 .appNotice .anClose{ flex:none; border:none; background:none; color:inherit; font-size:16px; line-height:1; cursor:pointer; padding:2px 2px 2px 4px; }
 
-/* 免責バー */
+/* 免責バー。中身は <details open>(要点を summary に常時表示し、全文はその場で開閉) */
 .noticebar{ display:flex; align-items:flex-start; gap:10px; background:#fef2f2; border-bottom:1.5px solid #ef4444; color:#7f1d1d; font-size:12px; line-height:1.6; padding:6px 12px; }
-.noticebar .noticeClose{ flex:none; margin-left:auto; align-self:center; width:24px; height:24px; border:1px solid #fca5a5; background:#fff; color:#b91c1c; border-radius:6px; cursor:pointer; font-size:12px; line-height:1; }
+.noticebar .noticeDetails{ flex:1; min-width:0; }
+.noticebar .noticeDetails > summary{ cursor:pointer; list-style:none; }
+.noticebar .noticeDetails > summary::-webkit-details-marker{ display:none; }
+.noticebar .noticeDetails > summary::after{ content:" ▾"; color:#b91c1c; font-weight:700; }
+.noticebar .noticeDetails[open] > summary::after{ content:" ▴"; }
+.noticebar .noticeBody{ margin-top:4px; }
+.noticebar .noticeClose{ flex:none; margin-left:auto; align-self:flex-start; width:24px; height:24px; border:1px solid #fca5a5; background:#fff; color:#b91c1c; border-radius:6px; cursor:pointer; font-size:12px; line-height:1; }
 .noticebar .noticeClose:hover{ background:#fee2e2; }
+/* 印刷/PDF化で畳んだ免責・スクロールで隠れた部分が落ちないようにする
+   (紙・PDFからライセンス表示と免責が消えるのを防ぐ) */
+@media print{
+  .noticebar{ max-height:none !important; overflow:visible !important; }
+  .noticebar .noticeDetails > .noticeBody{ display:block !important; }
+  .noticebar .noticeBody::after{ content:none !important; }
+}
 
 /* 地名検索コントロール */
 .placeSearch{ background:#fff; border-radius:8px; box-shadow:0 1px 5px rgba(0,0,0,.4); padding:2px; }
@@ -260,13 +273,21 @@ body.uiHidden .noticebar{ display:none !important; }
 .placeSearch .psItem:hover{ background:#eef2ff; }
 .noticebar .noticeLic{ font-size:11px; color:#374151; }
 .noticebar .noticeLic a{ color:#166534; }
-/* 小さい画面で免責バーが画面の半分以上を占め、地図が数十pxしか残らない問題の対策
-   (実測 iPhone SE 320x568: 免責339px / 地図85px=15%、凡例が地図の外にはみ出してタップできない)。
+/* 免責バーが画面を占領して地図が数十pxしか残らない問題の対策
+   (実測 iPhone SE 320x568: 対策前は 免責339px / 地図85px=15%で、凡例が地図の外に出てタップできない)。
    文面は一切削らず、バーの中だけでスクロールできるようにして高さの上限を設ける。
-   元に戻すときはこの @media ブロックを消すだけでよい。 */
-@media (max-width:600px){
-  .noticebar{ max-height:30vh; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-}
+   ★上限は必ず <details> ではなく **バー全体(.noticebar)** に掛ける。
+     全文(.noticeBody)側だけに掛けると「要点(summary)＋上限」の足し算になり、
+     バーが 170px → 322px に伸びて地図が 200px → 39px まで潰れる(実測・2026-10-06)。
+   ★上限は全幅に掛ける。スマホだけに掛けると、PC(1280x800)で 90px → 190px に伸びて
+     地図が 529px → 251px になる(免責の文面を法務指摘で長くしたため。実測・2026-10-06)。
+   ★そのうえで summary と ✕ を sticky にして、スクロールしても要点と閉じるボタンが
+     必ず見えるようにする(ここが対策前との違い。対策前は先頭から170pxの任意の位置が見えるだけ)。 */
+.noticebar{ max-height:min(30vh, 170px); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+.noticebar .noticeDetails > summary{ position:sticky; top:0; background:#fef2f2; z-index:2;
+  box-shadow:0 7px 7px -7px rgba(127,29,29,.35); }
+.noticebar .noticeClose{ position:sticky; top:0; z-index:3; }
+.noticebar .noticeBody::after{ content:"▲ ここまでが全文です"; display:block; font-size:11px; color:#b91c1c; text-align:center; padding-top:5px; }
 
 /* ===== デバイス別最適化: 画面幅に応じてヘッダ・ツールバーを段階的にコンパクト化し地図面積を確保 =====
    〜700px=スマホ / 701〜1024px=タブレット / 1025px〜=PC(既定スタイル) */
@@ -275,6 +296,14 @@ body.uiHidden .noticebar{ display:none !important; }
   .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11.5px; padding:5px 9px; }
   .samplebar{ font-size:11.5px; padding:4px 10px; }
 }
+/* 狭い画面では見出しとボタン帯を縦に分け、ボタンを確実に折り返す。
+   header が flex のままだと h1 の min-width:180px に押されてツールバーが
+   はみ出し、右端のボタンが画面外で切れていた(320pxで実測21px欠け) */
+@media (max-width: 700px){
+  header.appbar{ flex-wrap:wrap; }
+  header.appbar h1{ flex:1 1 100%; min-width:0; }
+  .toolbar{ flex:1 1 100%; min-width:0; }
+}
 @media (max-width: 700px){ /* スマホ */
   header.appbar{ padding:6px 10px; gap:6px; }
   header.appbar h1{ font-size:14px; min-width:0; }
@@ -282,6 +311,26 @@ body.uiHidden .noticebar{ display:none !important; }
   .toolbar button, .toolbar label.filebtn, .toolbar a.dlbtn{ font-size:11px; padding:5px 8px; }
   .samplebar{ font-size:11px; padding:4px 10px; }
 }
+
+/* ===== 地図に重ねたコントロールが画面外へ落ちるのを防ぐ(design S-4) =====
+   Leaflet の縦積みコントロール列は地図が低いと下へ伸び続け、#map の overflow:hidden に
+   切られて「描画ツール・⛶・一覧・❓ガイド」に永久に触れなくなる
+   (実測: 320×568 の5ページ全部、1280×800 のポスティングマップでも再現)。
+   列の中で折り返し、それでも足りなければ列ごとスクロールさせる。
+   ※ 画面幅ではなく「地図の高さが足りないとき」に起きるので幅での出し分けはしない。
+   ※ align-items を付けないと、幅の違う箱(34pxのトグルと160pxの統計箱)が同じ幅に
+      引き伸ばされて見た目が変わる。 */
+.leaflet-top.leaflet-left,
+.leaflet-top.leaflet-right{
+  display:flex; flex-direction:column; flex-wrap:wrap;
+  align-content:flex-start; max-height:calc(100% - 16px);
+}
+.leaflet-top.leaflet-left{ align-items:flex-start; overflow-y:auto; overscroll-behavior:contain; }
+.leaflet-top.leaflet-right{ align-items:flex-end; }
+/* ※ 下隅(.leaflet-bottom)にも同じ max-height+スクロールを当てると、
+   地理院タイル・Leaflet の出典表示(attribution)が箱の中へ押し込まれて
+   画面外になる(320×568 で実測)。出典は常時見えている必要があるので当てない。
+   街宣マップの凡例が地図の上端で切れる件は、凡例側の高さで対処すること。 */
 
 /* 目次の末尾に置く「ちょっとしたコツ」(ページ側の .gNote をたたんで入れる) */
 .guidePanel .gNoteBox{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:7px; }
@@ -332,11 +381,39 @@ body.uiHidden .noticebar{ display:none !important; }
   /* 説明文バー(details化): スマホでは初期折りたたみで地図を広く使う(開閉はJS不要のネイティブ動作) */
   details.samplebar summary{ cursor:pointer; font-weight:700; }
   details.samplebar .introBody{ margin-top:3px; }
+  /* 証紙ビラの警告は「畳める説明」の中に入れてはいけない(スマホでは初期状態で閉じているため)。
+     帯は増やさず、説明バーの先頭=summary に常時表示で置く。赤は「やると罰則」の意味に限定。 */
+  details.samplebar summary .pstAlert{ display:block; text-align:left; font-weight:700;
+    background:#fef2f2; border-left:4px solid #dc2626; color:#7f1d1d;
+    border-radius:5px; padding:5px 8px; margin:0 0 4px; line-height:1.7; }
+  details.samplebar summary .introOpen{ display:block; font-size:12px; }
+  /* 既定の開閉マーカー(▶)は、中身をブロックにした今は赤い警告枠の上に単独で1行ぽつんと出る。
+     開閉の合図は .introOpen の「(タップで開閉)」が担うのでマーカーは消す。 */
+  details.samplebar > summary{ list-style:none; }
+  details.samplebar > summary::-webkit-details-marker{ display:none; }
+  /* ☰ ツール: 狭い画面でボタン帯が何段にも積み上がり、地図と左の編集ツール・一覧・⛶ が
+     画面の外へ落ちて操作できなくなるのを防ぐ。閉じているときは見出しと同じ行に収まる。
+     ※3マップで同じ指定(将来 assets/common.css へ集約してよい) */
+  header.appbar details.toolWrap > summary{ list-style:none; display:inline-block; cursor:pointer;
+    font-size:12px; font-weight:bold; background:rgba(255,255,255,.18); color:#fff;
+    border-radius:8px; padding:6px 10px; }
+  header.appbar details.toolWrap > summary::-webkit-details-marker{ display:none; }
+  header.appbar details.toolWrap > summary:hover{ background:rgba(255,255,255,.32); }
+  header.appbar details.toolWrap[open]{ flex:1 1 100%; }
+  header.appbar details.toolWrap[open] > summary{ margin-bottom:6px; }
+  /* 世帯数パネルが画面の下へ落ちて3割しか見えない問題の対策。狭い/低い画面では
+     画面の下端を基準に開き、パネル全体が必ず画面内に収まるようにする。 */
+  @media (max-width:700px), (max-height:700px){
+    .setaiCtl .stPanel{ position:fixed; right:10px; top:auto; bottom:12px;
+      width:min(268px, calc(100vw - 20px)); max-height:calc(100vh - 110px); }
+  }
 </style>
 </head>
 <body>
 <header class="appbar">
   <h1>📮 ポスティングマップ</h1>
+  <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer" style="align-self:center;" title="政治活動・選挙運動のルール解説(別タブで開きます)">📖 ルールを確認</a>
+  <details class="toolWrap" id="toolWrap" open><summary>☰ ツール</summary>
   <div class="toolbar">
     <label class="filebtn">📂 読込(GeoJSON/GPX)<input type="file" id="gjIn"></label>
     <label class="filebtn">📋 管理表CSV取込<input type="file" id="mgIn"></label>
@@ -348,9 +425,11 @@ body.uiHidden .noticebar{ display:none !important; }
     <a class="dlbtn" href="https://yukinobu-nakamura.github.io/senkyo-maps/dist/posting_map_standalone.html" download="ポスティングマップ.html" title="このアプリを1つのHTMLファイルとして保存(メール・LINE等で人に渡せます)">⬇️ アプリを保存</a>
     <a href="https://yukinobu-nakamura.github.io/senkyo-maps/" style="align-self:center;">← トップ</a>
   </div>
+  </details>
 </header>
 <div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。原本・最新版: <a href="https://yukinobu-nakamura.github.io/senkyo-maps/">https://yukinobu-nakamura.github.io/senkyo-maps/</a></div>
-<details class="samplebar" id="introBar" open><summary>📖 使い方の説明(タップで開閉)</summary><div class="introBody">左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択と色分けは<b>この端末に保存され、次に開いたときもそのまま</b>です)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>)。</div></details>
+<noscript><div class="samplebar" style="background:#fef2f2; border-bottom:2px solid #dc2626; color:#7f1d1d; font-weight:700;">⚠️ このページは JavaScript が無効だと地図を表示できません。ブラウザの設定で JavaScript を有効にしてください。ルールの解説(読みもの)は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/">📖 選挙と政治活動の歩き方</a> でご覧いただけます。</div></noscript>
+<details class="samplebar" id="introBar" open><summary><span class="pstAlert">🚫 選挙運動用ビラ(<b>証紙ビラ</b>)を郵便受けに<b>投函・郵送するのは禁止</b>です(罰則あり)。このマップは<b>政治活動用ビラ・政党機関紙誌</b>の配布管理用。<b>「チラシお断り」のポスト・立入禁止の建物には入らない。</b></span><span class="introOpen">📖 配れる場所のルールと使い方(タップで開閉)</span></summary><div class="introBody"><b>🚫 証紙ビラを配れるのは ①新聞折込 ②選挙事務所の中 ③個人演説会の会場の中 ④街頭演説の場所での手渡し だけです</b>(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">公選法142条6項・7項</a>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>)。<b>政党の機関紙誌も、選挙期間中は条件つき</b>です(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a>。条件を外れた団体の頒布は<b>100万円以下の罰金</b>)。<b>実施前に所轄の選挙管理委員会へ照会してください。</b><br><b>🚪 現場での線引き</b>: 「チラシお断り」の表示があるポスト、オートロックの内側、「立入禁止」「関係者以外立入禁止」の表示がある敷地・建物には<b>入らない</b>でください(住居侵入・軽犯罪法の問題になります)。管理人・住人に止められたらその場で引き返す。ルールの全体は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer">📖 選挙と政治活動の歩き方</a> へ。<br>左のツールで配布区域(ポリゴン)や配布ルート(線)を描き、図形をクリックして状態・色/濃さ・担当・メモを記録。データはこの端末に保存され、GeoJSONで書出→他メンバーに共有できます。スマホの記録アプリ等で取ったルートは<b>GPXファイル(結合したものも可)を「📂読込」で取り込め</b>ます。<br><b>📋 管理表CSV取込</b>=「ポスティング管理表」(Googleフォーム→スプレッドシート)をCSV書き出しして取り込むと、<b>丁目ごとに色分けした点</b>(ステータス色)で<b>担当・配布予定/実績枚数</b>まで地図表示します(1日1回の取り込み想定・この端末内のみ)。右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックを入れると配下の区が全部ON</b>になり、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に切り替えられます(この選択と色分けは<b>この端末に保存され、次に開いたときもそのまま</b>です)。自分の選挙区の世帯数一覧は<b>「🏠世帯数CSV」</b>で取込可(<a href="#" id="reqOpen">未収録自治体の追加リクエストはこちら</a>。<b>GitHubの「公開Issue」として投稿されるので、書いた内容は誰でも読めます</b>。必要なのは<b>都道府県と自治体名だけ</b>で、陣営名・候補者名・活動時期・連絡先は書かないでください)。</div></details>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -369,9 +448,13 @@ function createBaseLayers() {
     maxZoom: 19,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   });
+  /* 全国最新写真(シームレス)は空中写真と人工衛星画像の合成レイヤで、地理院タイル一覧の
+     備考欄が第三者クレジット(GRUS画像=© Axelspace 等)の表示を求めている。
+     「© 国土地理院」だけでは権利者表示が欠ける。文言を増やすときは推測で書かず、
+     必ず一覧 https://maps.gsi.go.jp/development/ichiran.html の備考欄を写すこと。 */
   const gsiPhoto = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", {
     maxZoom: 18,
-    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">地理院タイル(全国最新写真シームレス)</a> / 一部にGRUS画像(&copy; Axelspace)を使用',
   });
   return { "地理院地図(淡色)": gsiPale, "OpenStreetMap": osm, "航空写真(地理院)": gsiPhoto };
 }
@@ -401,15 +484,20 @@ function addLocateControl(map) {
    ガイド(❓ボタン)の中に自動で差し込む。文面はここ1か所を直せば全マップに反映される。
    ・読み手が「必要な1問だけ読む」使い方なので、質問はアコーディオン(details)にして
      開いた直後は見出しだけ見える状態にする(NN/g: 段階的開示は2段まで・見出しで中身を予告する)
-   ・「⬇️ アプリを保存」が無いページでは .faqDl を、「☁️ 同期」が無いページでは .teamSync を自動で外す */
+   ・「⬇️ アプリを保存」が無いページでは .faqDl を、「☁️ 同期」が無いページでは .teamSync を自動で外す
+   ・.teamSync は「ポスティングマップだけにある機能」の目印として使う(☁️同期の有無で判定)。
+     👤名前・GPX取込・図形タップの地名取得・🏠世帯数CSVの位置推定もポスティング専用なので、
+     それらに触れる文もこのクラスに入れる(ポスター・街宣で「無いボタン」の案内が出ないように)
+   ・件数(「○問」)はここに書かない。ページごとに .faqDl / .teamSync が外れて実数が変わるため、
+     buildGuideMenu 側で実数から算出している(固定値を書くと必ずずれる) */
 const FAQ_HTML = `
-<p class="faqLead">このアプリは<b>データを預かる場所を持たない地図</b>です。描いた内容は<b>あなたの端末の中だけ</b>に保存され、インターネット上には送られません。だから<b>他の人にも作成者にも見えません</b>。人に渡したいときだけ「💾 書出」でファイルにして渡します。</p>
+<p class="faqLead">このアプリは<b>作成者側にデータを預かる場所を持たない地図</b>です。描いた内容は<b>あなたの端末の中</b>に保存され、<b>作成者には送られません</b>(作成者はサーバーを持っていません)。人に渡したいときだけ「💾 書出」でファイルにして渡します。<br><span class="faqNote">※ただし、<b>地図を表示するとき</b>・<b>図形を描いた/タップして地名を自動表示するとき</b>・<b>🔍地名検索や🏠世帯数CSVの位置を自動推定するとき</b>は、国土地理院のサーバーへ座標や地名の文字を問い合わせます。また<b>「☁️ 同期」を設定した場合だけは、図形・担当者名・メモ・登録者名がチーム自身のGoogleスプレッドシートへ送信されます</b>。どの操作がどこへ通信するかは、下の「どこに通信しますか?」をご覧ください(そのページに無い機能の通信は起きません)。</span></p>
 <div class="faqTools"><button type="button" class="faqAll">すべて開く</button></div>
 
 <details class="faqItem"><summary>ダウンロードせず、URLのまま使って大丈夫?</summary><div class="faqA"><b>大丈夫です。むしろそれが基本の使い方です。</b>URLを開くと、そのつど<b>まっさらなアプリ</b>が読み込まれ、あなたが描いた内容はその端末の中から復元されます。スマホなら共有ボタン →「ホーム画面に追加」で、アプリのように1タップで開けます。</div></details>
 
 <details class="faqItem"><summary>描いた区域やルートは、他の人に見えますか?</summary><div class="faqA">見えません。同じURLを他の人が開いても、その人の画面は<b>白紙</b>です。<br>
-<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから「全消去(状態リセット)」しておくと安心です。</span></div></details>
+<span class="faqNote">※例外は「その端末を他の人が使ったとき」。共用のパソコンやタブレットでは、使い終わりに「💾 書出」で保管してから<b>画面上部の消去/リセットのボタン</b>を押してください(図形・管理表・表示設定が消えます)。<span class="teamSync">このボタンでは<b>👤名前(実名)と ☁️同期の設定(URLと合言葉)も一緒に消えます</b>。消さずに端末を渡すと、次に使う人が「☁️ 同期」を押すだけでチーム全員の区域・ルート・担当者名・メモを見られます(同期を使い続ける場合は、あとでURLと合言葉をもう一度入れ直してください)。</span></span></div></details>
 
 <details class="faqItem"><summary>データはどこに保存されていますか?</summary><div class="faqA">端末の<b>ブラウザの中</b>です。写真のように「ファイル」として残るわけではありません。取り出したいときは「💾 書出」を押すとファイルになります。</div></details>
 
@@ -420,7 +508,8 @@ const FAQ_HTML = `
 
 <details class="faqItem"><summary>電波のないところでも使えますか?</summary><div class="faqA">使えません。地図そのものを毎回インターネットから取り寄せているため、保存したファイル版でも通信が必要です。</div></details>
 
-<details class="faqItem"><summary>GPX(歩いた記録)を取り込むと、どこに入りますか?</summary><div class="faqA">その端末の中に入ります(ネットには送られません)。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。</div></details>
+<details class="faqItem teamSync"><summary>GPX(歩いた記録)を取り込むと、どこに入りますか?</summary><div class="faqA">その端末の中に入ります。<b>元のGPXファイルはそのまま残る</b>ので、万一マップ側が消えても取り込み直せます。<br>
+<span class="faqNote">※取り込んだルートをタップすると地名が自動表示されます。このとき<b>そのルートの中心の緯度・経度</b>だけを国土地理院へ問い合わせます(歩いた全地点を送るわけではありません)。また<b>「☁️ 同期」を設定している場合は、取り込んだルートもチームの共有先へ送信されます</b>。</span></div></details>
 
 <details class="faqItem"><summary>保存したデータが消えることはありますか?</summary><div class="faqA">あります。次の4つに注意してください。
 <ol class="faqList">
@@ -452,8 +541,24 @@ const FAQ_HTML = `
 </ol>
 <span class="faqNote">※🏠世帯数の凡例は、<b>世帯数を表示していないときは出ません</b>。自治体を選んで地図に世帯数が出た時点で開いた状態で現れ、「»」で右端へ畳めます。</span></div></details>
 
-<details class="faqItem"><summary>自分のデータが作成者や他のチームに送られることはありますか?</summary><div class="faqA">ありません。このアプリはデータを預かる仕組みを持っていません。通信するのは<b>地図の画像・地名の検索・世帯数などの公開データの取得</b>のためだけです。<br>
-<span class="faqNote">※「☁️ 同期」を設定した場合だけ、チーム自身が用意した保存先(チームのGoogleスプレッドシート)にデータが送られます。設定しなければ通信しません。</span></div></details>
+<details class="faqItem teamSync"><summary>選挙運動用ビラ(証紙ビラ)は投函できますか?</summary><div class="faqA"><b>できません。</b>選挙運動用ビラ(証紙ビラ)を郵便受けに<b>投函・郵送することは禁止</b>されています。配れるのは<b>①新聞折込 ②選挙事務所の中 ③個人演説会の会場の中 ④街頭演説の場所での手渡し</b>の4つだけです(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_142" target="_blank" rel="noopener noreferrer">公選法142条6項・7項</a>。違反は<b>2年以下の拘禁刑または50万円以下の罰金</b>)。このマップは<b>政治活動用ビラ・政党機関紙誌</b>の配布管理に使ってください。<br>
+<span class="faqNote">※政党の機関紙誌も、<b>選挙期間中は条件つき</b>です(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_14_3-At_201_15" target="_blank" rel="noopener noreferrer">201条の15</a>。条件を外れた団体の頒布は100万円以下の罰金)。<b>実施前に所轄の選挙管理委員会へ照会してください。</b>「チラシお断り」のポスト・立入禁止の建物には入らないでください。ルールの全体は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer">📖 選挙と政治活動の歩き方</a> へ。</span></div></details>
+
+<details class="faqItem"><summary>自分のデータが作成者や他のチームに送られることはありますか?</summary><div class="faqA"><b>作成者には送られません。</b>作成者はデータを預かるサーバーを持っていません。他のチームにも送られません。<br>
+<span class="faqNote">※ただし「端末の外に何も出ない」わけではありません。<b>地図の画像の取り寄せ</b>・<b>🔍地名検索</b><span class="teamSync">・<b>図形を描いた/タップしたときの地名の自動取得</b>・<b>🏠世帯数CSVの位置の自動推定</b></span>では、国土地理院のサーバーへ座標や文字を問い合わせます。<span class="teamSync">また<b>「☁️ 同期」を設定した場合だけ</b>、チーム自身が用意した保存先(チームのGoogleスプレッドシート)に図形・担当者名・メモ・登録者名が送られます(設定しなければ通信しません)。</span>内訳は次の項目をご覧ください。</span></div></details>
+
+<details class="faqItem"><summary>どこに通信しますか?(送信先の一覧)</summary><div class="faqA">このアプリが通信するのは次だけです。<span class="teamSync"><b>担当・メモ・登録者名が端末の外に出るのは、最後の「☁️ 同期」を自分で設定したときだけ</b>です。</span>
+<ol class="faqList">
+<li><b>地図の画像</b> — 国土地理院／OpenStreetMap。見ている範囲の画像を取り寄せます</li>
+<li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
+<li><b>世帯数などの公開データ</b> — このサイト自身</li>
+<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>を送ります</li>
+<li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
+<li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
+<li class="teamSync"><b>☁️ 同期(設定したときだけ)</b> — <b>チーム自身が用意したGoogleスプレッドシート</b>。区域・ルートの座標と<b>担当・メモ・登録者名</b>を送ります。設定しなければ通信しません</li>
+<li class="teamSync"><b>未収録自治体の追加リクエスト(自分でボタンを押したときだけ)</b> — GitHub。<b>作成者のリポジトリの「公開Issue」</b>として投稿されるので、<b>書いた内容は誰でも読めます</b>。送られるのは入力した<b>都道府県・自治体名</b>などで、地図に描いた内容は送りません</li>
+</ol>
+<span class="faqNote">※第三者の個人情報(氏名・住所等)をメモ欄に書く場合は、上の送信先に出ることを前提にご判断ください。</span></div></details>
 `;
 
 /* ===== 👥 チームでの回し方(1枚) =====
@@ -531,11 +636,16 @@ function buildGuideMenu(panel) {
     panes.push(d);
   };
   addPane("gTeam", "👥 チームでの回し方", "配る→編集→返す→統合の手順と注意3つ", TEAM_HTML);
-  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと(15問)", FAQ_HTML);
+  addPane("gFaq", "❓ よくある質問", "保存・共有・iPhoneのこと", FAQ_HTML);
 
   /* そのページに無い機能の項目は出さない */
   if (!document.querySelector("a.dlbtn")) panel.querySelectorAll(".faqDl").forEach((el) => el.remove());
   if (!document.getElementById("syncBtn")) panel.querySelectorAll(".teamSync").forEach((el) => el.remove());
+
+  /* 件数はページごとに変わる(上で .faqDl / .teamSync を外すため)。必ず実数から出す。
+     固定文字列で書くと、問を増減したとき・街宣マップ(⬇️保存が無い)で必ずずれる */
+  const faqPane = panel.querySelector("#gFaq");
+  if (faqPane) faqPane.dataset.desc = "保存・共有・iPhoneのこと(" + faqPane.querySelectorAll(".faqItem").length + "問)";
 
   /* 目次 */
   const menu = document.createElement("div");
@@ -804,6 +914,17 @@ function showAppNotice(html, level, actions) {
      mini   : 畳んだときにタブへ縦書きで出す短いラベル(例 "🏠 世帯数")
      key    : 開閉状態を覚えるキー(null なら覚えない=毎回開いた状態から)
      render : 中身を書き込む関数 render(bodyEl)。開くたびに呼ばれる */
+/* innerHTML に入れる前の共通エスケープ(& < > " ' をすべて実体参照に)。
+   属性値・テキストのどちらに入れても安全な唯一の関数にする。
+   世帯数パネルの絞り込み欄(.stQ)の入力は renderPanel() でそのまま innerHTML に
+   入っていたため、`<img src=x onerror=…>` を貼り付けさせる誘導で任意のスクリプトが
+   動き、☁️同期のトークン(localStorage)を外部へ送れる状態だった(2026-10-06 是正)。 */
+function escHtmlAttr(v) {
+  return (v == null ? "" : String(v))
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 /* 凡例の1行を作る。色チップとラベルを flex で横並びに固定し、
    箱が狭いときに「チップだけ残ってラベルが次の行へ落ちる」折り返しを防ぐ。
    (インライン要素＋<br> で組むと、行の残り幅が足りない時にチップとラベルの間で改行される) */
@@ -891,10 +1012,15 @@ function addUiHideControl(map, opts) {
     if (hidden === v) return;
     hidden = v;
     container.classList.toggle("uiHidden", v);
-    /* 地図の外にある上部のボタン帯・説明バーも一緒に隠す(中村さん指示 2026-09-18)。
+    /* 地図の外にある上部のボタン帯・説明バー・免責バーも一緒に隠す
+       (中村さん指示 2026-09-18、コミット 7e555eb)。
        ここを隠すと地図の高さが変わるので invalidateSize で作り直す。
-       免責バー(.noticebar)は法務レビュー済みの表示のため、ここでは隠さない
-       (元から✕で閉じられる)。 */
+       どの要素を隠すかは assets/common.css の `body.uiHidden …` 側で決めている。
+       免責バーは「消える」のではなく隠れるだけで、ツールを戻すと必ず一緒に戻る。
+       ※この挙動を変える(免責バーだけ残す)かどうかは中村さん判断。CSSの該当セレクタから
+         `.noticebar` を外すだけで切り替わる。
+       ※出典クレジット(地図タイル・e-Stat)は attribution 側に出しているので、
+         ここで隠れても表示は残る(common.css の attribution の !important)。 */
     document.body.classList.toggle("uiHidden", v);
     map.invalidateSize({ animate: false });
     chip.style.display = v ? "block" : "none";
@@ -989,24 +1115,64 @@ function guardStandaloneDownload() {
   });
 }
 document.addEventListener("DOMContentLoaded", guardStandaloneDownload);
+/* ファイル選択の共通処理。
+   ★handler は必ず try/catch で包み、finally で inputEl.value を空に戻す。
+     これを怠ると、壊れたGeoJSON(Leaflet が未知の geometry.type で throw する)を
+     選んだときに (1) 成否が画面に出ない (2) value が残るので同じファイルを選び直しても
+     change が発火せず無反応 — という「選び直せない」状態になる(2026-10-06 是正)。 */
 function onFileSelected(inputEl, handler) {
   inputEl.addEventListener("change", () => {
     const f = inputEl.files[0];
     if (!f) return;
+    const fail = (e) => {
+      if (e) console.error(e);
+      alert("このファイルは取り込めませんでした(中身の形式が想定と違います)。\n" + ((e && e.message) ? e.message : ""));
+    };
     const reader = new FileReader();
+    reader.onerror = () => {
+      inputEl.value = "";
+      alert("ファイルを読み取れませんでした。別のファイルでお試しください。");
+    };
     reader.onload = () => {
-      handler(reader.result, f.name);
-      inputEl.value = ""; // 同じファイルの再選択を許可
+      const text = reader.result;
+      /* 選管や自治体が公表するCSVは Shift_JIS(CP932)が多い。UTF-8として読むと
+         置換文字(U+FFFD)が並ぶので、その場合だけ読み直す */
+      if (typeof text === "string" && text.indexOf("�") >= 0) {
+        const r2 = new FileReader();
+        r2.onload = () => {
+          try { handler(r2.result, f.name); } catch (e) { fail(e); } finally { inputEl.value = ""; }
+        };
+        r2.onerror = () => { inputEl.value = ""; alert("ファイルを読み取れませんでした。別のファイルでお試しください。"); };
+        r2.readAsText(f, "shift_jis");
+        return;
+      }
+      try { handler(text, f.name); }
+      catch (e) { fail(e); }
+      finally { inputEl.value = ""; }   /* 同じファイルの再選択を許可(失敗時も必ず戻す) */
     };
     reader.readAsText(f, "utf-8");
   });
 }
 
-/* ---- CSV (RFC4180の範囲で簡易対応) ---- */
+/* ---- CSV (RFC4180の範囲で簡易対応) ----
+   Excel・Googleスプレッドシートは「=」「+」「-」「@」やタブ・復帰で始まるセルを
+   数式として評価する。メモや氏名に =HYPERLINK("http://…"&A1) と書き込まれたCSVを
+   受け取った人が開くと、その人の端末で実行される(CSVインジェクション)。
+   書き出す側で先頭に ' を付けて無効化し、読み戻す側で ' を剥がす
+   (片方だけだと往復のたびに ' が増えてデータが汚れる)。 */
+const CSV_FORMULA_HEAD = /^[=+\-@\t\r]/;
+function csvSafe(v) {
+  const s = String(v == null ? "" : v);
+  return CSV_FORMULA_HEAD.test(s) ? "'" + s : s;
+}
+function csvUnsafeStrip(s) {
+  return (s.charAt(0) === "'" && CSV_FORMULA_HEAD.test(s.slice(1))) ? s.slice(1) : s;
+}
 function parseCsv(text) {
   const rows = [];
   let row = [], field = "", inQ = false;
   const src = text.replace(/^﻿/, "");
+  const push = () => { row.push(csvUnsafeStrip(field)); field = ""; };
   for (let i = 0; i < src.length; i++) {
     const c = src[i];
     if (inQ) {
@@ -1014,21 +1180,21 @@ function parseCsv(text) {
         if (src[i + 1] === '"') { field += '"'; i++; } else { inQ = false; }
       } else field += c;
     } else if (c === '"') inQ = true;
-    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === ",") { push(); }
     else if (c === "\n" || c === "\r") {
       if (c === "\r" && src[i + 1] === "\n") i++;
-      row.push(field); field = "";
+      push();
       if (row.some((v) => v !== "")) rows.push(row);
       row = [];
     } else field += c;
   }
-  row.push(field);
+  push();
   if (row.some((v) => v !== "")) rows.push(row);
   return rows;
 }
 function toCsv(rows) {
   const esc = (v) => {
-    const s = String(v == null ? "" : v);
+    const s = csvSafe(v);
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
   return rows.map((r) => r.map(esc).join(",")).join("\r\n");
@@ -1121,7 +1287,17 @@ function gpxToGeoJSON(text) {
 }
 
 /* ---- 免責バー(全マップ共通・毎回表示・✕で閉じる) ----
-   常に表示し、ユーザー自身の操作で閉じる方式(「見ていない」を防ぐため保存しない)。 */
+   常に表示し、ユーザー自身の操作で閉じる方式(「見ていない」を防ぐため保存しない)。
+   ★<details open> で畳む形にしている(中村さん判断 2026-10-06)。
+     320pxでは全文の半分以上が枠外に落ちるため、summary に要点を常時表示し、
+     全文はその場で開閉できるようにする。open 属性は外さないこと
+     (閉じた状態を既定にすると「掲示している」という評価が弱まる)。
+     summary に入れる5点は固定要件: ①個人が無償・as is ②一般的な情報で法律上の助言ではない
+     ③故意または重大な過失を除く責任制限 ④非商用ライセンス ⑤内容の基準日。
+     ③は消費者契約法8条3項(重過失を除く旨の明示)の要請なので要約側からも外さない。
+   ★日付はサイト全体で1つに揃える(2026-10-06)。ここを直したら
+     index.html / arukikata/index.html の日付表示と GATE_VER も同時に直す
+     (build/precheck.py の G1 が集合で検査する)。 */
 (function () {
   function addNoticeBar() {
     const header = document.querySelector("header.appbar");
@@ -1129,8 +1305,11 @@ function gpxToGeoJSON(text) {
     const bar = document.createElement("div");
     bar.className = "noticebar";
     bar.innerHTML =
-      '<span>⚠️ <b>ご利用にあたって:</b>本ツールは有志が無償で提供するものです。現状のまま提供し、不具合の修補や動作・内容の保証は行いません。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。​‌‌​​​‌​‌‌​‌' +
-      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で<b>利用・複製・改変・再配布</b>できます(再配布・改変配布の際は、<b>ライセンス全文またはそのURLと下記の Required Notice の添付が必要</b>)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial 1.0.0</a>)に従います / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></span>' +
+      '<details class="noticeDetails" open>' +
+      '<summary>⚠️ <b>ご利用にあたって</b>(タップで全文の開閉) — <b>作成者(中村幸信)</b>が個人として無償・<b>現状のまま(as is)</b>提供／<b>一般的な情報のご案内で法律上の助言ではありません</b>／<b>故意または重大な過失による場合を除き責任を負いません</b>／<b>非商用ライセンス(PolyForm Noncommercial License 1.0.0)</b>／内容は<b>最終更新日(2026年10月6日)時点</b></summary>' +
+      '<div class="noticeBody">本ツールは<b>作成者(中村幸信)が個人として無償で提供する</b>ものです。現状のまま(as is)提供し、不具合の修補や動作・内容の保証は行いません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>本ツールを用いた政治活動・選挙運動が関係法令(公職選挙法等)に適合するかの確認は、利用者ご自身の責任で行ってください</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。<b>法令上許される範囲で</b>、ご利用に関連して生じた損害について、作成者の故意または重大な過失による場合を除き、作成者は責任を負いません。​‌‌​​​‌​‌‌​‌<b>本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。</b>' +
+      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で<b>利用・複製・改変・再配布</b>できます(再配布・改変配布の際は、<b>ライセンス全文またはそのURLと下記の Required Notice の添付が必要</b>)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a>)に従います / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>' +
+      '</details>' +
       '<button class="noticeClose" title="閉じる" aria-label="免責表示を閉じる">✕</button>';
     header.insertAdjacentElement("afterend", bar);
     bar.querySelector(".noticeClose").onclick = () => bar.remove();
@@ -1258,7 +1437,13 @@ const SETAI_BINS = [
   { min: 0,    color: "#eff3ff", label: "〜999世帯" },
 ];
 function setaiColor(n){ for (const b of SETAI_BINS){ if (n >= b.min) return b.color; } return SETAI_BINS[SETAI_BINS.length - 1].color; }
-const SETAI_CREDIT = "出典: 政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域集計・小地域境界データを加工して作成";
+/* e-Stat の出典表示。政府標準利用規約(第2.0版)は出典記載と「加工した旨」の明記を求めるので、
+   この文字列から「出典」「加工して作成」を落とさないこと。
+   凡例の中だけに置くと、地図を1タップして道具を隠した瞬間に出典だけが消え、
+   加工済みの国勢調査データだけが出典なしで表示される画面ができてしまう。
+   そのため Leaflet の attribution にも出す(attribution は uiHidden でも表示され続ける
+   = assets/common.css の `.leaflet-container.uiHidden .leaflet-control-attribution{display:block !important}`)。 */
+const SETAI_CREDIT = '出典: <a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener noreferrer">政府統計の総合窓口(e-Stat) 統計GIS</a> 国勢調査(2020年)小地域集計・小地域境界データを加工して作成';
 
 /* ===== 表示指標の切替(2026-09 属性追加) =====
    GeoJSON properties(make_setai_geojson.py --stats が付与):
@@ -1461,7 +1646,8 @@ function addSetaiLayers(map, opts) {
   }
   /* 名称が空の実在区域が全国に48件ある(境界・統計とも名称なし。人口は持つ)。
      数字だけのラベルにならないよう、町丁字コードでフォールバック表示する */
-  function setaiName(p) { return p.name || `(名称なし: ${p.key.slice(5)})`; }
+  /* 戻り値は必ず innerHTML(ラベル・ポップアップ)に入るのでここでエスケープしておく */
+  function setaiName(p) { return escHtmlAttr(p.name || `(名称なし: ${p.key.slice(5)})`); }
   function labelHtml(p) {
     const v = metricVal(p);
     const mu = metricUnit();
@@ -1688,12 +1874,12 @@ function addSetaiLayers(map, opts) {
            <button type="button" data-all="${ci}">全選択</button>
            <button type="button" data-none="${ci}">全クリア</button>
          </div>
-         ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${w.code}"${desired.has(w.code) ? " checked" : ""}>${w.name}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
+         ${c.wards.map(w => `<label class="stWard"><input type="checkbox" data-ward="${escHtmlAttr(w.code)}"${desired.has(w.code) ? " checked" : ""}>${escHtmlAttr(w.name)}${wards[w.code] && wards[w.code].fetching ? ' <span class="stLoad">読込中</span>' : ""}</label>`).join("")}
        </div>`;
     return `<div class="stCity">
       <div class="stCityRow">
-        <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${c.city}</b>${query ? `<span class="stPref">${c.pref}</span>` : ""}</label>
-        ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length > 1 ? c.wards.length + "区" : c.wards[0].name}</span></button>` : ""}
+        <label class="stCityLbl"><input type="checkbox" data-city="${ci}"${st === "on" ? " checked" : ""}><b>${escHtmlAttr(c.city)}</b>${query ? `<span class="stPref">${escHtmlAttr(c.pref)}</span>` : ""}</label>
+        ${sub2 ? `<button type="button" class="stExp" data-exp="${ci}" aria-label="区の一覧">${open ? "▾" : "▸"}<span class="stCnt">${c.wards.length > 1 ? c.wards.length + "区" : escHtmlAttr(c.wards[0].name)}</span></button>` : ""}
       </div>${sub}</div>`;
   }
 
@@ -1707,17 +1893,18 @@ function addSetaiLayers(map, opts) {
         const c = cities[ci];
         return (c.city + c.pref + c.wards.map(w => w.name).join("")).indexOf(query) >= 0;
       });
+      const qv = escHtmlAttr(query);   /* 入力そのままを innerHTML に入れない(DOM XSS対策) */
       rows = hit.length
-        ? `<div class="stNote">「${query}」に一致: ${hit.length}件</div>` + hit.map(cityRow).join("")
-        : `<div class="stNote">「${query}」に一致する自治体はありません。未収録なら下のリンクからリクエストできます</div>`;
+        ? `<div class="stNote">「${qv}」に一致: ${hit.length}件</div>` + hit.map(cityRow).join("")
+        : `<div class="stNote">「${qv}」に一致する自治体はありません。未収録なら下のリンクからリクエストできます</div>`;
     } else {
       rows = prefOrder.map(pf => {
         const cis = byPref[pf];
         const open = openPrefs.has(pf);
         const nSel = cis.filter(cityHasSelection).length;
         return `<div class="stPrefBlock">
-          <button type="button" class="stPrefRow" data-pref="${pf}">
-            <span class="stPrefArrow">${open ? "▾" : "▸"}</span><b>${pf}</b>
+          <button type="button" class="stPrefRow" data-pref="${escHtmlAttr(pf)}">
+            <span class="stPrefArrow">${open ? "▾" : "▸"}</span><b>${escHtmlAttr(pf)}</b>
             <span class="stCnt">${cis.length}</span>
             ${nSel ? `<span class="stSel">${nSel}件選択中</span>` : ""}
           </button>
@@ -1726,7 +1913,7 @@ function addSetaiLayers(map, opts) {
       }).join("");
     }
     const extra = opts.extra
-      ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${opts.extra.label}</label></div>`
+      ? `<div class="stExtra"><label class="stWard"><input type="checkbox" data-extra="1"${map.hasLayer(opts.extra.layer) ? " checked" : ""}>${escHtmlAttr(opts.extra.label)}</label></div>`
       : "";
     const head = indexState === "loading" ? `<div class="stLoadBar">収録自治体の一覧を読み込み中…</div>`
       : indexState === "error" ? `<div class="stLoadBar">一覧を読み込めませんでした。インターネット接続を確認して開き直してください。</div>`
@@ -1902,6 +2089,13 @@ function addSetaiLayers(map, opts) {
   }
   function refreshLegend() {
     const active = desired.size > 0 || (opts.extra && map.hasLayer(opts.extra.layer));
+    /* 出典は凡例だけに置かない。凡例は地図を1タップすると隠れるが、塗りと数値ラベルは
+       残るため「出典なしで加工済み国勢調査データだけが出ている画面」ができてしまう。
+       attribution は uiHidden でも表示され続けるので、そこにも同じ出典を出す。 */
+    if (map.attributionControl) {
+      if (active && !map.__setaiAttr) { map.attributionControl.addAttribution(SETAI_CREDIT); map.__setaiAttr = true; }
+      else if (!active && map.__setaiAttr) { map.attributionControl.removeAttribution(SETAI_CREDIT); map.__setaiAttr = false; }
+    }
     if (active && !legendCtl) {
       legendCtl = L.control({ position: "bottomright" });
       legendCtl.onAdd = () => {
@@ -2118,7 +2312,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
   </div>
   <div class="gPane" id="gp2">
     <ol>
-      <li>上部の<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
+      <li>上部の<b>「☰ ツール」</b>を開いて<b>「📂読込(GeoJSON/GPX)」</b>を押す</li>
       <li>スマホの記録アプリ等で保存した<b>GPXファイル</b>を選ぶ(複数をまとめた<b>結合GPX</b>も可)</li>
       <li>「〇本のルートを読み込みました」の確認 → つづけて<b>「『済』として記録しますか?」</b>を聞かれます。<b>［OK］=歩き終わった記録として「済」</b>(色は「済」の色・既定は紫)、<b>［キャンセル］=「予定」のまま</b>(従来どおりの赤)。どちらも薄め表示で、あとから図形タップで変更できます</li>
       <li>あとは通常どおり、線をタップして状態・担当・メモを記録</li>
@@ -2127,14 +2321,14 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
   </div>
   <div class="gPane" id="gp3">
     <ol>
-      <li>まず上部の<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
+      <li>まず上部の<b>「☰ ツール」</b>を開いて<b>「👤名前」</b>で自分の名前を設定(書出時にも聞かれます)。図形に<b>登録者</b>として記録され、統合時に「誰の登録か」が分かります</li>
       <li>各メンバーが<b>「💾GeoJSON書出」</b>→ファイルを取りまとめ役に送る</li>
       <li>取りまとめ役が<b>「📂読込」</b>で順に読み込む → <b>賢く統合</b>されます(同じ図形は更新が新しい方を採用・重複は増えない)。統合結果を書出して全員に配り直せば完了</li>
       <li>(任意)ファイルの受け渡しなしで共有したいチームは<b>「☁️ 同期」</b>も使えます。<b>仕組み</b>=チームの“共有倉庫”(チームのGoogleスプレッドシート)と送受信して全員のマップを同じ状態にします。<b>メンバーのやること</b>=①代表者から<b>URLと合言葉(トークン)</b>を受け取る→②「☁️ 同期」を押して貼り付ける→③以後は作業の前後に「☁️ 同期」を押すだけ。<b>何度押しても図形は増えません</b>(同じ図形は自動で1つに整理)。<b>代表者のやること</b>=“倉庫”の設置(約10分・無料。手順: <a href="https://github.com/Yukinobu-Nakamura/senkyo-maps/blob/main/templates/team-sync/README.md" target="_blank" rel="noopener noreferrer">templates/team-sync の設置手順</a>)→URLと合言葉をメンバーに配布。入力し直したいときは「☁️ 同期」を<b>Shift+クリック(PC)または長押し(スマホ)</b></li>
     </ol>
     <div class="gPrep">🎬 GeoJSON共有の操作デモ動画は準備中です。</div>
   </div>
-  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイール・ダブルタップとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上の<b>「全消去」</b>をどうぞ。</div>`,
+  <div class="gNote">図形をタップすると<b>地名(丁目・字)が自動表示</b>されます。左上の<b>🔍で全国の地名検索</b>(例「池袋二丁目」)→地図がジャンプします。<b>🏠世帯数CSV</b>=自分の選挙区の世帯数一覧(名称+世帯数。緯度経度は任意・無ければ地名から自動推定)を取り込んで地図に表示できます。データはこの端末(ブラウザ)内にのみ保存されます。左上の❓でこのガイドを閉じたり再表示したりできます。<br><b>🗺️ 地図を広く使いたいとき</b>=<b>地図の何もない所をタップ</b>すると、<b>上のボタン帯も含めて</b>まとめて消え、地図が画面いっぱいになります(もう一度タップ、または画面下の「⛶ ツールを表示」で戻ります)。図形や世帯数レイヤが重なっていてタップしづらい所では<b>左上の⛶ボタン</b>をどうぞ。凡例は<b>右上の「»」</b>で<b>画面の右端へ畳めます</b>(細いタブだけが残り、押すと戻ります)。<b>🏠世帯数の凡例</b>は世帯数を表示していないときは出ず、<b>自治体を選んだ時点で開いた状態で現れます</b>。<br><b>🔍 拡大縮小</b>は<b>半段ずつ</b>動きます(＋/−ボタン・ピンチ・ホイール・ダブルタップとも)。地図の画像は決まった段階でできているので、細かく止めたぶん<b>文字が少しだけ甘く見えることがあります</b>。<b>⚙️ 表示の設定はこの端末に保存</b>されます(状態の色・世帯数で選んだ自治体・色分けの指標)。次に開いたときもそのままで、消したいときは上部の<b>「☰ ツール」</b>の中の<b>「全消去」</b>をどうぞ。<br><b>📂読込・📋管理表CSV取込・🏠世帯数CSV・💾GeoJSON書出・👤名前・☁️同期・全消去</b>は、画面がせまいときは<b>上部の「☰ ツール」の中</b>にまとまっています。</div>`,
   "postingMap");
 
 map.pm.setLang("ja");
@@ -2659,12 +2853,57 @@ function syncSetup() {
     alert("チーム同期を解除しました。");
     return null;
   }
+  /* 送信先は「チーム自身が設置した Google Apps Script」だけに限る。
+     偽のURLを貼られると、担当者名・メモを含む全データがそこへ送られ、
+     返り値で手元の図形を消させることもできる(READMEにも「これ以外のあて先を入れてはいけません」と書いた)。 */
+  if (!/^https:\/\/script\.google\.com\/(a\/macros\/[^/]+|macros)\/s\/[\w-]+\/exec$/.test(url.trim())) {
+    alert("⚠️ このURLは設定できません。\n\n" +
+      "チーム同期のあて先は、チーム自身が設置した Google Apps Script だけです。\n" +
+      "https://script.google.com/macros/s/…/exec の形のURLを貼り付けてください。\n" +
+      "(他のあて先を入れると、担当者名やメモを含むデータがその相手に送られます)");
+    return null;
+  }
   const token = prompt("② 合言葉(トークン。代表者から配られた文字列を貼り付け)", cur.token || "");
   if (token === null) return null;
   const cfg = { url: url.trim(), token: (token || "").trim() };
   saveLocal(KEY_SYNC, cfg);
   alert("チーム同期を設定しました。「☁️ 同期」を押すたびに送受信します。");
   return cfg;
+}
+
+/* 同期の応答を読む。JSON以外(Googleのログイン/エラーのHTML)が返ったときは、
+   原因の分からない「Unexpected token <」ではなく何を直せばよいかを出す。
+   ・デプロイ設定(アクセスできるユーザー=全員 / 新しいデプロイ)が最頻の原因
+   ・ここで失敗しても手元のデータは消えない(送信できていないだけ) */
+async function syncReadJson(res, where) {
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const text = await res.text();
+  const looksHtml = /^\s*(<!doctype|<html)/i.test(text) || ct.indexOf("text/html") >= 0;
+  if (looksHtml) {
+    throw new Error(
+      `${where}でGoogleから「画面(HTML)」が返ってきました。合言葉ではなく\n` +
+      "【デプロイの設定】が原因です。代表者に次を確認してもらってください。\n" +
+      "  ・[デプロイを管理]→[編集] で「アクセスできるユーザー: 全員」\n" +
+      "  ・「次のユーザーとして実行: 自分」\n" +
+      "  ・バージョンを「新バージョン」にして再デプロイ\n" +
+      "※手元のデータは消えていません(送信できなかっただけです)。");
+  }
+  if (!res.ok) {
+    throw new Error(`${where}でエラーが返りました(HTTP ${res.status})。\n` +
+      "時間をおいて再度お試しください。※手元のデータは消えていません。");
+  }
+  try { return JSON.parse(text); }
+  catch (e) {
+    throw new Error(`${where}の応答を読み取れませんでした(${ct || "形式不明"})。\n` +
+      "URLが https://script.google.com/macros/s/…/exec の形か確認してください。\n" +
+      "※手元のデータは消えていません。");
+  }
+}
+
+/* 受信用URL(旧版バックエンド向けのGETフォールバック)。
+   既にクエリが付いたURLを貼られても壊れないよう ? / & を使い分ける */
+function syncGetUrl(url, token) {
+  return url + (url.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(token);
 }
 
 let syncBusy = false;
@@ -2687,19 +2926,42 @@ async function teamSync() {
     });
     persist();
     const tombs = loadLocal(KEY_TOMB, []) || [];
+    /* 送信は小数6桁(約0.1m)に丸める。保存先スプレッドシートの1セル上限(5万文字)対策と
+       通信量削減。1本で上限を超えるルートは、そのルートだけ送らない(同期全体を落とさない) */
+    const round6 = (c) => Array.isArray(c[0]) ? c.map(round6) : [Math.round(c[0] * 1e6) / 1e6, Math.round(c[1] * 1e6) / 1e6];
+    const feats = shapesLayer.toGeoJSON().features.map(f => {
+      const g = f.geometry;
+      if (g && g.coordinates) g.coordinates = round6(g.coordinates);
+      return f;
+    });
+    const sendFeats = feats.filter(f => JSON.stringify(f).length <= 45000);
+    const tooBig = feats.length - sendFeats.length;
+    if (tooBig) {
+      alert(`⚠️ 点数の多いルートが ${tooBig} 本あり、チーム同期の保存先(Googleスプレッドシート)の1セル上限を超えます。\nこのルートは同期されません(ほかはこのまま同期します)。\n該当ルートは「💾 GeoJSON書出」でファイルとして渡してください。`);
+    }
     /* 1) 送信(text/plainでプリフライト回避) */
     const postRes = await fetch(cfg.url, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ token: cfg.token, features: shapesLayer.toGeoJSON().features, deleted: tombs }),
+      body: JSON.stringify({ token: cfg.token, features: sendFeats, deleted: tombs }),
     });
-    const pr = await postRes.json();
-    if (pr.error) throw new Error(pr.error === "unauthorized" ? "トークンが一致しません" : pr.error);
+    const pr = await syncReadJson(postRes, "送信");
+    if (pr.error) throw new Error(pr.error === "unauthorized"
+      ? "トークンが一致しません"
+      : (String(pr.error).indexOf("setup:") === 0
+        ? "倉庫の設置が未完了です。代表者に次を依頼してください。\n" + String(pr.error).replace(/^setup:\s*/, "")
+        : pr.error));
     saveLocal(KEY_TOMB, []); /* 削除記録はサーバに反映済み */
-    /* 2) 受信して統合 */
-    const getRes = await fetch(cfg.url + "?token=" + encodeURIComponent(cfg.token));
-    const gj = await getRes.json();
-    if (gj.error) throw new Error(gj.error === "unauthorized" ? "トークンが一致しません" : gj.error);
+    /* 2) 受信して統合。新しいCode.gsは送信の応答に全状態を含むのでGETは不要
+          (合言葉がURLに載らない)。旧版のCode.gsのままのチームのためにGETへ退避する */
+    let gj = pr;
+    if (!Array.isArray(pr.features)) {
+      const getRes = await fetch(syncGetUrl(cfg.url, cfg.token));
+      gj = await syncReadJson(getRes, "受信");
+      if (gj.error) throw new Error(gj.error === "unauthorized" ? "トークンが一致しません" : gj.error);
+    } else if (Array.isArray(pr.deletedList)) {
+      gj = { type: "FeatureCollection", features: pr.features, deleted: pr.deletedList };
+    }
     const r = mergeGeoJson(gj);
     /* サーバ側で削除済みの図形をローカルからも削除(削除時刻がこちらの更新より新しい場合) */
     let removed = 0;
@@ -2715,9 +2977,19 @@ async function teamSync() {
       removed = toRemove.length;
     }
     persist();
-    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件` + (r.cleaned ? `\n🧹 重複していた図形 ${r.cleaned} 件を自動整理しました(何度同期しても増えません)` : ""));
+    /* 競合の採否は「更新時刻の新しい方」なので、端末の時計がずれていると
+       その人の変更だけが常に勝つ/反映されない、という形で記録が静かに失われる。
+       サーバ側の時刻と5分以上ずれていたら警告する(エラーにはならないため) */
+    const skew = pr.serverNow && Math.abs(Number(pr.serverNow) - Date.now()) > 5 * 60 * 1000;
+    alert(`同期完了: 受信(追加 ${r.added}・更新 ${r.updated}・削除反映 ${removed}) / 送信 ${pr.upserted || 0} 件`
+      + (r.cleaned ? `\n🧹 重複していた図形 ${r.cleaned} 件を自動整理しました(何度同期しても増えません)` : "")
+      + (pr.skippedBig ? `\n⚠️ 点数が多すぎるルート ${pr.skippedBig} 本は保存先の上限を超えるため同期していません(ファイルで渡してください)` : "")
+      + (skew ? "\n\n⚠️ この端末の時計が5分以上ずれています。チーム同期は「更新時刻の新しい方」で勝ち負けを決めるため、ずれたままだと〈あなたの変更が反映されない〉か〈他の方の変更を上書きする〉ことがあります。端末の日付と時刻を「自動」に設定してから、もう一度同期してください。" : ""));
+    if (!pr.ver) {
+      showAppNotice("ℹ️ <b>チーム同期の『倉庫』が古い版です。</b>代表者に <code>templates/team-sync</code> の Code.gs を貼り直して再デプロイしてもらうと、合言葉がURLに載らなくなります(動作は今のままでも支障ありません)。", "warn");
+    }
   } catch (err) {
-    alert("同期に失敗しました: " + err.message + "\n(URL・トークン・インターネット接続を確認してください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
+    alert("同期に失敗しました: " + err.message + "\n\n(URL・合言葉・インターネット接続をご確認ください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
   } finally {
     syncBusy = false;
     btn.textContent = "☁️ 同期";
@@ -2751,11 +3023,16 @@ document.getElementById("nameBtn").onclick = () => {
 
 document.getElementById("resetBtn").onclick = () => {
   /* 表示設定(状態の色・世帯数の選択と色分け)も端末に保存するようになったので、
-     ここで一緒に消す。端末を人に貸すときなどに「全部消した」が本当に全部になる */
-  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択と色分け)を消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください)")) return;
+     ここで一緒に消す。端末を人に貸すときなどに「全部消した」が本当に全部になる。
+     ガイドは「共用端末では全消去を」と案内しているので、👤名前(実名)と
+     ☁️同期の設定(URL・合言葉)も必ず一緒に消す。消し漏れがあると案内が虚偽になる。 */
+  if (!confirm("すべての図形・管理表データ・表示設定(状態の色、世帯数の選択と色分け)に加えて、\n👤 名前と ☁️ 同期の設定(URL・合言葉)も消去します。よろしいですか?\n(必要ならまず「GeoJSON書出」でバックアップしてください。同期は再設定が必要になります)")) return;
   shapesLayer.clearLayers();
   localStorage.removeItem(KEY_SHAPES);
   localStorage.removeItem(KEY_TOMB);
+  /* 共用端末に実名と同期トークンが残らないようにする */
+  localStorage.removeItem(KEY_NAME);
+  localStorage.removeItem(KEY_SYNC);
   manageRows = [];
   manageLayer.clearLayers();
   localStorage.removeItem(KEY_MANAGE);
@@ -3081,6 +3358,16 @@ onFileSelected(document.getElementById("usIn"), async (text) => {
    openReqModal() はポスターマップと共通のため assets/common.js にある。
    フォームに切り替える場合も common.js の REQ_FORM_URL を変えるだけ。 */
 document.getElementById("reqOpen").onclick = (ev) => { ev.preventDefault(); openReqModal(); };
+
+/* ☰ ツールの開閉。狭い画面では閉じた状態で始める(ヘッダが何段にも積み上がると
+   #map が潰れ、左の編集ツール・一覧・⛶ が画面の外へ落ちて操作できなくなる)。
+   開閉でヘッダの高さが変わるので、そのたびに地図のサイズを再計算させる。 */
+(function () {
+  const tw = document.getElementById("toolWrap");
+  if (!tw) return;
+  if (window.matchMedia("(max-width: 1024px)").matches) tw.removeAttribute("open");
+  tw.addEventListener("toggle", () => map.invalidateSize());
+})();
 
 /* 起動 */
 const saved = loadLocal(KEY_SHAPES, null);

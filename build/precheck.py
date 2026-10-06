@@ -91,7 +91,9 @@ def norm_date(s: str) -> str:
 
 def g1(cid):
     found = {}
-    for p in SRC_HTML:
+    # assets も見る: 免責バー(common.js)が基準日を持つため、ここが取り残されると
+    # 「HTMLだけ直してマップ側は旧日付」という片側だけの修正を見逃す
+    for p in SRC_HTML + ASSETS:
         t = read(p)
         for pat, label in DATE_PATS:
             for m in re.finditer(pat, t):
@@ -121,6 +123,12 @@ def g2(cid):
     total = 0
     for p in targets:
         t = read(p)
+        if p == "LICENSE":
+            # PolyForm の原文(Notices 条項の説明文と「Yoyodyne」の例示)は上流のライセンス本文で
+            # 1字も変えられない。検査するのは自作部分(PolyForm 本文より前)だけにする。
+            # ここを広げると、原文の例示を直さないかぎり永久にNGが出続け、検査が信用されなくなる。
+            head = t.split("# PolyForm Noncommercial License 1.0.0")[0]
+            t = head if head != t else t
         for m in re.finditer(r"Required Notice:[^\n<`]*", t):
             total += 1
             s = m.group(0).strip().rstrip("`").strip()
