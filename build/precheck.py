@@ -391,18 +391,52 @@ def g19(cid):
         ok(cid, "『⭕』はすべて条件つきで書かれている")
 
 
-# ───────────────── G-21 ワークスペース側の控えとの一致 ─────────────────
+# ───────────────── G-21 控え(スナップショット)との一致 ─────────────────
+# 歩き方の正本は公開URLだけ。控えのHTMLが公開版と食い違うと、古い誤りが
+# そのままメンバーに渡る。控えが置かれうる場所を全部見て、中身を突き合わせる。
+PUB_BASE = "https://yukinobu-nakamura.github.io/senkyo-maps"
+
+
+def _normalize_snapshot(text):
+    """Drive 用スナップショットは相対リンクを絶対URL化してあるので、戻してから比べる。"""
+    for rel in ("", "gaisen/", "poster/", "posting/"):
+        text = text.replace(f'href="{PUB_BASE}/{rel}"', f'href="../{rel}"')
+    return text
+
+
 def g21(cid):
-    mirror = Path.home() / "projects/nakamura-ws/20_Seimu/senkyo_arukikata/公開前保管/arukikata_公開前保管_C1.html"
-    if not mirror.exists():
-        ok(cid, "ワークスペース側の旧版控えは存在しない(一本化済み)")
-        return
-    a = (ROOT / "arukikata/index.html").read_text(encoding="utf-8")
-    b = mirror.read_text(encoding="utf-8")
-    if a == b:
-        ok(cid, "控えは公開版と一致")
+    live = (ROOT / "arukikata/index.html").read_text(encoding="utf-8")
+    mirrors = [
+        # 旧: ワークスペース側の公開前保管(2026-10-06に廃止。再出現したら落とす)
+        Path.home() / "projects/nakamura-ws/20_Seimu/senkyo_arukikata/公開前保管/arukikata_公開前保管_C1.html",
+        Path.home() / "projects/nakamura-ws/20_Seimu/senkyo_arukikata/選挙と政治活動の歩き方_draft.html",
+        # OneDrive 上の閲覧用コピー(2026-07-18版が古いまま残っていた実例)
+        Path("/mnt/c/Users/ghhrt/OneDrive/政治活動/選挙・活動資料/選挙と政治活動の歩き方_draft.html"),
+    ]
+    # 現: Google Drive の日付つきスナップショット
+    drive_dir = Path.home() / "gdrive/Nakamura-Workspace/20_Seimu/senkyo_arukikata"
+    if drive_dir.is_dir():
+        mirrors += sorted(drive_dir.glob("選挙と政治活動の歩き方_公開版_*.html"))
+
+    found, bad = [], []
+    for m in mirrors:
+        try:
+            if not m.exists():
+                continue
+            body = _normalize_snapshot(m.read_text(encoding="utf-8"))
+        except OSError:
+            continue  # Drive 未マウント等は検査不能として飛ばす
+        found.append(m)
+        if body != live:
+            bad.append(str(m))
+
+    if bad:
+        ng(cid, "公開版と異なる控えHTMLが残っている(古い誤りがメンバーへ渡る)\n      "
+                + "\n      ".join(bad))
+    elif found:
+        ok(cid, f"控え{len(found)}件はいずれも公開版と一致")
     else:
-        ng(cid, f"ワークスペース側に公開版と異なる旧版HTMLが残っている(古い誤りがメンバーへ渡る)\n      {mirror}")
+        ok(cid, "控えのHTMLは存在しない(公開URLに一本化済み)")
 
 
 CHECKS = [
