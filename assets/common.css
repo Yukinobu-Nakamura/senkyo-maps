@@ -1,5 +1,10 @@
 :root{
-  --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff; --accent:#8b5cf6;
+  /* --accent は白文字との対比が WCAG 2.2 AA(4.5:1)を満たす値にする。
+     旧 #8b5cf6 は白文字で 4.23:1、ヘッダ内リンク #ede9fe で 3.57:1、
+     ツールバーの白18%重ねボタンで 3.19:1 と、いずれも 4.5:1 を下回っていた
+     (2026-10-12 是正。#7c3aed で 5.70 / 4.80 / 7.59:1)。
+     ★ここを変えたら build/precheck.py ではなく、下の contrast メモの3値を必ず測り直す。 */
+  --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff; --accent:#7c3aed;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html,body{height:100%;}
@@ -9,10 +14,12 @@ header.appbar h1{font-size:15px; font-weight:bold; flex:1; min-width:180px;}
 header.appbar a{color:#ede9fe; font-size:12px; text-decoration:none;}
 header.appbar a:hover{text-decoration:underline;}
 .toolbar{display:flex; gap:6px; flex-wrap:wrap;}
-.toolbar button, .toolbar label.filebtn{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; background:rgba(255,255,255,.18); color:#fff;}
-.toolbar button:hover, .toolbar label.filebtn:hover{background:rgba(255,255,255,.32);}
-.toolbar a.dlbtn{font-size:12px; font-weight:bold; border-radius:8px; padding:6px 10px; background:rgba(255,255,255,.18); color:#fff !important; text-decoration:none;}
-.toolbar a.dlbtn:hover{background:rgba(255,255,255,.32); text-decoration:none;}
+/* ボタンの地色は白を重ねて明るくするのではなく、黒を重ねて暗くする。
+   白を重ねると背景が明るくなって白文字との対比が落ちる(旧実装は 3.19:1)。 */
+.toolbar button, .toolbar label.filebtn{font-family:inherit; font-size:12px; font-weight:bold; border:none; border-radius:8px; padding:6px 10px; cursor:pointer; background:rgba(0,0,0,.18); color:#fff;}
+.toolbar button:hover, .toolbar label.filebtn:hover{background:rgba(0,0,0,.28);}
+.toolbar a.dlbtn{font-size:12px; font-weight:bold; border-radius:8px; padding:6px 10px; background:rgba(0,0,0,.18); color:#fff !important; text-decoration:none;}
+.toolbar a.dlbtn:hover{background:rgba(0,0,0,.28); text-decoration:none;}
 .toolbar input[type=file]{display:none;}
 #map{flex:1; min-height:0;}
 .samplebar{background:#fffbeb; border-bottom:1.5px solid #f59e0b; color:#92400e; font-size:12px; padding:5px 12px; text-align:center;}

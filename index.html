@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="origin-id" content="SENKYO-MAPS-ORIGIN-2609-XK47">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>選挙・政治活動マップツール</title>
+<title>選挙・政治活動 スタートキット</title>
 <style>
-  :root{ --ink:#1f2937; --muted:#6b7280; --accent:#8b5cf6; }
+  /* --accent は assets/common.css と同じ値に揃える(白文字で 4.5:1 を満たす #7c3aed)。
+     旧 #8b5cf6 は白地の見出し・リンクでも 4.5:1 に届いていなかった(2026-10-12 是正)。 */
+  :root{ --ink:#1f2937; --muted:#6b7280; --accent:#7c3aed; }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{font-family:"Yu Gothic UI","Hiragino Sans","Meiryo",sans-serif; color:var(--ink); background:#f6f7fb; line-height:1.8; padding:40px 18px;}
   .wrap{max-width:760px; margin:0 auto;}
@@ -23,12 +25,12 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🗺️ 選挙・政治活動 スタートキット</h1>
+  <h1>🧰 選挙・政治活動 スタートキット</h1>
   <p class="lead">これから政治活動・選挙を考える方と、その活動を支える方のための、ルールの道案内と現場ツール。ブラウザだけで動き、サーバ登録は不要です。</p>
 
   <a class="card" href="arukikata/">
     <h2>🧭 選挙と政治活動の歩き方</h2>
-    <p>政治活動と選挙運動の違い、寄附とお金のルール、ポスター・のぼりの掲示ルール、立候補〜選挙後までの流れを、すごろく形式でやさしく解説。公職選挙法・政治資金のつまずきどころを一望できます(2025〜2026年の法改正対応・主要条文は一次照合済み)。</p>
+    <p>政治活動と選挙運動の違い、寄附とお金のルール、ポスター・のぼりの掲示ルール、立候補〜選挙後までの流れを、すごろく形式でやさしく解説。公職選挙法・政治資金のつまずきどころを一望できます(2025〜2026年の法改正対応・主要条文はe-Gov法令検索の現行条文を参照)。</p>
   </a>
 
   <a class="card" href="poster/">
@@ -46,7 +48,7 @@
     <p>街宣車ルートづくりの下ごしらえ。🔇音声配慮地点(幼稚園・保育園・学校・病院・医療福祉・予備校/塾を赤ふちで強調)と、📢人が滞留する街宣好適地点(駅前・商店街・公園など公共空間)を地図にまとめて共有。CSVで一括読込・書出できます。<b>駅構内・改札前など「鉄道地内」では選挙運動のための演説・連呼ができない</b>など、場所ごとの注意もピンに表示します(配布版HTMLはありません。URLを共有してお使いください)。</p>
   </a>
 
-  <div class="note">⚠️ <b>使い方の注意:</b> データはブラウザ(端末)ごとの保存です。端末をまたいで共有するときは「書出」したファイルを渡して相手が「読込」してください。ポスターの掲示場データはお住まいの選挙管理委員会が公表する一覧をCSV化して読み込んでください(同梱データはダミーです)。</div>
+  <div class="note">⚠️ <b>使い方の注意:</b> データはブラウザ(端末)ごとの保存です。端末をまたいで共有するときは「書出」したファイルを渡して相手が「読込」してください。ポスターの掲示場データはお住まいの選挙管理委員会が公表する一覧をCSV化して読み込んでください(同梱データは動作確認用のサンプルで、選管公表の掲示場一覧ではありません。実在の町名・座標をもとにしていますが、掲示場の位置を示すものではありません)。</div>
 
   <div class="note" style="background:#eef2ff; border-color:#6366f1;">📄 <b>自分の環境に持ち帰って使う:</b> <b>ポスターマップとポスティングマップ</b>は、1つのHTMLファイルとしてダウンロードできます(各マップ画面の上部ツールバー「☰ ツール」の中にある「⬇️ アプリを保存」)。保存したファイルはダブルクリックで開け、メール・LINE等でメンバーにそのまま配布できます(動作にはインターネット接続が必要)。<b>街宣マップは配布版を用意していないので、URLをそのまま共有してください。</b><br>
     <b>※iPhone・iPadでは、保存したファイルを開いても地図が表示されません(iOSの仕様)。お手数ですが、このページのURLをそのままお使いください。</b><br>
@@ -59,7 +61,7 @@
     ※本ツールを用いた政治活動・選挙運動が関係法令(公職選挙法等)に適合するかの確認は、利用者ご自身の責任で行ってください。</div>
 
   <footer>
-    チームみらい(安野たかひろ陣営)公開の <a href="https://github.com/team-mirai-volunteer/poster-map" target="_blank" rel="noopener noreferrer">poster-map</a> の仕組みを参考にした独自実装です(コードは書き下ろし)。
+    チームみらい(安野たかひろ陣営)公開の <a href="https://github.com/team-mirai-volunteer/poster-map" target="_blank" rel="noopener noreferrer">poster-map</a> の仕組みを参考にした独自実装です(コードは書き下ろし。同団体・同陣営とは関係がなく、推薦・提携・監修は受けていません。参照元はGPL-3.0、本実装はPolyForm Noncommercial License 1.0.0で非互換です)。
     ソースコード: <a href="https://github.com/Yukinobu-Nakamura/senkyo-maps" target="_blank" rel="noopener noreferrer">GitHub</a> / 地図: 国土地理院・OpenStreetMap
   </footer>
 </div>
