@@ -10,8 +10,6 @@ Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukino
 - 地図タイル(国土地理院 / OpenStreetMap contributors)
 - `data/setai_*.geojson` の原データ(政府統計の総合窓口(e-Stat) 国勢調査(2020年)小地域境界データ。
   政府標準利用規約(第2.0版)に準拠＝商用利用可・加工可。出典表示必須、加工時は加工した旨の明記が必要)
-- `data/suginami_gaisen.csv` の原データ(杉並区ほかの公表資料。座標は国土地理院 住所検索APIで付与し、
-  加工して作成。取得時点は種別ごとに異なる)
 - 国土地理院API(逆ジオコーダ・住所検索)
 
 The scope of "the software" under these terms is limited to the code and content authored by the licensor.
@@ -23,6 +21,28 @@ governed by their own terms.
 This repository was licensed under the MIT License until 2026-09-12 (last MIT commit: `3e4efeb`).
 Copies obtained under the MIT License remain governed by it.
 Versions from 2026-09-12 onward are governed by the PolyForm Noncommercial License 1.0.0.
+
+## 責任の範囲についての付記 / Addendum on liability
+
+本リポジトリの成果物の日本語の案内（同意ゲートの「① 自己責任でのご利用について」および
+各ツールの免責表示）は、責任の範囲について次のとおり定めています。
+この定めは、下記 PolyForm Noncommercial License 1.0.0 の "No Liability" 条項に**優先**します。
+
+  作成者に故意または重大な過失があるときは、責任を制限しません。
+  作成者の過失が軽微なときは、法令上許される範囲で、通常生ずべき損害の範囲で責任を負うものとし、
+  特別の事情から生じた損害・逸失利益・データの消失・第三者との間の紛争に起因する損害については
+  責任を負いません。
+
+For liability, the Japanese notice shipped with this work (the consent gate item (1) and the
+in-app disclaimer) **prevails over** the "No Liability" section of the PolyForm Noncommercial
+License 1.0.0 below. The licensor does not limit liability for its own intent or gross negligence.
+
+理由: PolyForm の "No Liability" は過失の軽重を問わない全部免除であり、日本法の下で
+消費者契約法8条1項1号・3号に触れる場面では条項自体が無効と評価される余地がある
+(2026-10-12 の法務レビュー)。日本語側で「故意・重過失は制限しない／軽過失のみ範囲を限る」と
+明確化しているので、そちらを優先させる。PolyForm 本文は1字も改変しない。
+
+---
 
 # PolyForm Noncommercial License 1.0.0
 

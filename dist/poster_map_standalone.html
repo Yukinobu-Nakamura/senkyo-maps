@@ -394,7 +394,7 @@ body.uiHidden .noticebar{ display:none !important; }
 <div class="samplebar" style="background:#eef2ff; border-bottom-color:#6366f1; color:#3730a3;">📄 これは配布用ファイル版です。このHTMLファイルを渡せば誰でも使えます(動作にはインターネット接続が必要)。原本・最新版: <a href="https://yukinobu-nakamura.github.io/senkyo-maps/">https://yukinobu-nakamura.github.io/senkyo-maps/</a></div>
 <noscript><div class="samplebar" style="background:#fef2f2; border-bottom:2px solid #dc2626; color:#7f1d1d; font-weight:700;">⚠️ このページは JavaScript が無効だと地図を表示できません。ブラウザの設定で JavaScript を有効にしてください。ルールの解説(読みもの)は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/">📖 選挙と政治活動の歩き方</a> でご覧いただけます。</div></noscript>
 <details class="warnbar" id="warnBar" open><summary>⚠️ <b>他の候補者のポスターは剥がさない・上に貼らない・触らない</b>(4年以下の拘禁刑)。<span style="font-weight:400">貼れる場所と、塀をお借りするときの承諾のルールはここをタップ</span></summary><div class="wbBody">① 「ずれていたから直した」「落ちていたから貼り直した」も含めて、<b>他の候補者のポスターには触らない</b>でください(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_16-At_225" target="_blank" rel="noopener noreferrer">公選法225条2号</a>の選挙の自由妨害罪。<b>4年以下の拘禁刑または100万円以下の罰金</b>で、このツール群で扱う中で最も重い罰則です)。<br>② <b>貼れるのは公営掲示場の自分の候補者の区画だけ。</b>選挙運動用ポスターを貼れるのは<b>告示日の届出が受理されてから</b>で、ポスター掲示場が設けられる選挙(都市部はほぼ全て)では<b>自分の候補者に割り当てられた区画だけ</b>です。<br>③ <b>民家・店舗の塀をお借りするときは、先に住んでいる人の承諾を。</b>掲示場を設けない選挙では、他人の工作物に貼るときに<b>居住者等(いなければ管理者・所有者)の承諾が必要</b>です(<a href="https://laws.e-gov.go.jp/law/325AC1000000100#Mp-Ch_13-At_145" target="_blank" rel="noopener noreferrer">公選法145条2項</a>。違反は1年以下の拘禁刑または30万円以下の罰金＝244条1項3号。承諾なく貼られたものは居住者等が撤去できます＝同3項)。平時の政治活動用ポスター(2連等)は145条の対象外ですが、無承諾で他人の工作物に貼れば別の法令に触れえます。<b>必ず承諾を取り、誰にいつもらったかを記録に残してください。</b><br>ルールの全体は <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer">📖 選挙と政治活動の歩き方</a> へ。</div></details>
-<div class="samplebar" id="sampleBar">⚠️ 表示中はサンプル(ダミー)データです。実際の掲示場一覧は選挙管理委員会の公表資料からCSVで読み込んでください。</div>
+<div class="samplebar" id="sampleBar">⚠️ 表示中は<b>動作確認用のサンプル</b>です(実在の町名・座標をもとにしていますが、実際の掲示場の位置ではありません)。実際の掲示場一覧は選挙管理委員会の公表資料からCSVで読み込んでください。</div>
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1280,7 +1280,7 @@ function gpxToGeoJSON(text) {
    ★③の書き方には条件がある(2026-10-12 是正)。
      消費者契約法8条1項1号・3号は、損害賠償責任の「全部」を免除する条項を無効とする。
      同条3項は、責任を一部免除する条項のうち「重大な過失を除く過失による行為にのみ
-     適用されることを明らかにしていないもの」を同条1項2号・4号の条項とみなす。
+     適用されることを明らかにしていないもの」を★無効とする(「みなす」ではない)。
      (2026-10-12 に e-Gov 法令検索の現行条文で逐語確認。法令ID 412AC0000000061)
      旧文面「故意または重大な過失による場合を除き責任を負いません」は、軽過失について
      全部免除になるため、作成者が「事業者」と評価されると条項自体が効かなくなる。
@@ -1298,8 +1298,8 @@ function gpxToGeoJSON(text) {
     bar.innerHTML =
       '<details class="noticeDetails" open>' +
       '<summary>⚠️ <b>ご利用にあたって</b>(タップで全文の開閉) — <b>作成者(中村幸信)</b>が個人として無償・<b>現状のまま(as is)</b>提供／<b>一般的な情報のご案内で法律上の助言ではありません</b>／<b>責任の範囲を限っています(軽い過失のときは通常生ずべき損害の範囲まで。故意・重大な過失は制限しません)</b>／<b>非商用ライセンス(PolyForm Noncommercial License 1.0.0)</b>／内容は<b>最終更新日(2026年10月12日)時点</b></summary>' +
-      '<div class="noticeBody">本ツールは<b>作成者(中村幸信)が個人として無償で提供する</b>ものです。現状のまま(as is)提供し、不具合の修補や動作・内容の保証は行いません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>本ツールを用いた政治活動・選挙運動が関係法令(公職選挙法等)に適合するかの確認は、利用者ご自身の責任で行ってください</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。ご利用に関連して生じた損害について、<b>作成者に故意または重大な過失があるときは、責任を制限しません</b>。作成者の過失が軽微なときは、<b>法令上許される範囲で</b>、<b>通常生ずべき損害</b>の範囲で責任を負うものとし、特別の事情から生じた損害・逸失利益・データの消失・第三者との間の紛争に起因する損害については責任を負いません。​‌‌​​​‌​‌‌​‌<b>本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。</b>' +
-      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で<b>利用・複製・改変・再配布</b>できます(再配布・改変配布の際は、<b>ライセンス全文またはそのURLと下記の Required Notice の添付が必要</b>)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a>)に従います / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>' +
+      '<div class="noticeBody">本ツールは<b>作成者(中村幸信)が個人として無償で提供する</b>ものです。現状のまま(as is)提供し、不具合の修補や動作・内容の保証は行いません。内容は<b>一般的な情報のご案内</b>であり、法律上の助言ではありません。<b>本ツールを用いた政治活動・選挙運動が関係法令(公職選挙法等)に適合するかの確認は、利用者ご自身の責任で行ってください</b>。個別の判断は、<b>各自治体の選挙管理委員会や弁護士等の専門家に必ずご確認ください</b>。本ツールにはアクセス制限機能はなく、URLを知っている方は誰でも閲覧できます。ページURL・配布ファイル・入力データの共有範囲の管理は、ご利用チームの責任で行ってください(第三者の個人情報を入力される場合の取扱いを含みます)。ご利用に関連して生じた損害(<b>債務不履行によるものか不法行為によるものかを問いません</b>)について、<b>作成者に故意または重大な過失があるときは、責任を制限しません</b>。作成者の過失が軽微なときは、<b>法令上許される範囲で</b>、<b>通常生ずべき損害</b>の範囲で責任を負うものとし、特別の事情から生じた損害・逸失利益・データの消失・第三者との間の紛争に起因する損害については責任を負いません。​‌‌​​​‌​‌‌​‌<b>本項の一部が法令により無効とされる場合も、その他の部分の効力は妨げられません。</b>' +
+      '<br><span class="noticeLic">🟢 非商用の目的であれば誰でも無償で<b>利用・複製・改変・再配布</b>できます(再配布・改変配布の際は、<b>ライセンス全文またはそのURLと下記の Required Notice の添付が必要</b>)。<b>営利目的での利用・販売・複製・再配布は許可していません</b>。違反を確認した場合は、本ライセンスの定めに従い通知のうえ、是正されないときは<b>法的措置を含め厳正に対処します</b>。正式な利用条件はライセンス(<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer">PolyForm Noncommercial License 1.0.0</a>)に従います(<b>責任の範囲については上記の定めがライセンスの "No Liability" 条項に優先します</b>) / Required Notice: Copyright (c) 2026 Yukinobu Nakamura (https://github.com/Yukinobu-Nakamura/senkyo-maps)</span></div>' +
       '</details>' +
       '<button class="noticeClose" title="閉じる" aria-label="免責表示を閉じる">✕</button>';
     header.insertAdjacentElement("afterend", bar);
@@ -2249,7 +2249,7 @@ function openReqModal() {
  {
   "id": "D001",
   "name": "池袋本町 1",
-  "address": "豊島区池袋本町(ダミー)",
+  "address": "豊島区池袋本町(サンプル)",
   "lat": 35.738831,
   "long": 139.711909,
   "status": 0,
@@ -2258,7 +2258,7 @@ function openReqModal() {
  {
   "id": "D002",
   "name": "池袋本町 2",
-  "address": "豊島区池袋本町(ダミー)",
+  "address": "豊島区池袋本町(サンプル)",
   "lat": 35.740946,
   "long": 139.713662,
   "status": 0,
@@ -2267,7 +2267,7 @@ function openReqModal() {
  {
   "id": "D003",
   "name": "池袋本町 3",
-  "address": "豊島区池袋本町(ダミー)",
+  "address": "豊島区池袋本町(サンプル)",
   "lat": 35.743623,
   "long": 139.70895,
   "status": 0,
@@ -2276,7 +2276,7 @@ function openReqModal() {
  {
   "id": "D004",
   "name": "池袋 1",
-  "address": "豊島区池袋(ダミー)",
+  "address": "豊島区池袋(サンプル)",
   "lat": 35.732546,
   "long": 139.711173,
   "status": 0,
@@ -2285,7 +2285,7 @@ function openReqModal() {
  {
   "id": "D005",
   "name": "池袋 2",
-  "address": "豊島区池袋(ダミー)",
+  "address": "豊島区池袋(サンプル)",
   "lat": 35.732461,
   "long": 139.712717,
   "status": 0,
@@ -2294,7 +2294,7 @@ function openReqModal() {
  {
   "id": "D006",
   "name": "池袋 3",
-  "address": "豊島区池袋(ダミー)",
+  "address": "豊島区池袋(サンプル)",
   "lat": 35.72909,
   "long": 139.712075,
   "status": 0,
@@ -2303,7 +2303,7 @@ function openReqModal() {
  {
   "id": "D007",
   "name": "東池袋 1",
-  "address": "豊島区東池袋(ダミー)",
+  "address": "豊島区東池袋(サンプル)",
   "lat": 35.73049,
   "long": 139.724811,
   "status": 0,
@@ -2312,7 +2312,7 @@ function openReqModal() {
  {
   "id": "D008",
   "name": "東池袋 2",
-  "address": "豊島区東池袋(ダミー)",
+  "address": "豊島区東池袋(サンプル)",
   "lat": 35.727716,
   "long": 139.720401,
   "status": 0,
@@ -2321,7 +2321,7 @@ function openReqModal() {
  {
   "id": "D009",
   "name": "南池袋 1",
-  "address": "豊島区南池袋(ダミー)",
+  "address": "豊島区南池袋(サンプル)",
   "lat": 35.721795,
   "long": 139.711458,
   "status": 0,
@@ -2330,7 +2330,7 @@ function openReqModal() {
  {
   "id": "D010",
   "name": "南池袋 2",
-  "address": "豊島区南池袋(ダミー)",
+  "address": "豊島区南池袋(サンプル)",
   "lat": 35.721782,
   "long": 139.710969,
   "status": 0,
@@ -2339,7 +2339,7 @@ function openReqModal() {
  {
   "id": "D011",
   "name": "西池袋 1",
-  "address": "豊島区西池袋(ダミー)",
+  "address": "豊島区西池袋(サンプル)",
   "lat": 35.726431,
   "long": 139.701693,
   "status": 0,
@@ -2348,7 +2348,7 @@ function openReqModal() {
  {
   "id": "D012",
   "name": "西池袋 2",
-  "address": "豊島区西池袋(ダミー)",
+  "address": "豊島区西池袋(サンプル)",
   "lat": 35.728703,
   "long": 139.702687,
   "status": 0,
@@ -2357,7 +2357,7 @@ function openReqModal() {
  {
   "id": "D013",
   "name": "上池袋 1",
-  "address": "豊島区上池袋(ダミー)",
+  "address": "豊島区上池袋(サンプル)",
   "lat": 35.738819,
   "long": 139.723818,
   "status": 0,
@@ -2366,7 +2366,7 @@ function openReqModal() {
  {
   "id": "D014",
   "name": "上池袋 2",
-  "address": "豊島区上池袋(ダミー)",
+  "address": "豊島区上池袋(サンプル)",
   "lat": 35.737323,
   "long": 139.722473,
   "status": 0,
@@ -2375,7 +2375,7 @@ function openReqModal() {
  {
   "id": "D015",
   "name": "上池袋 3",
-  "address": "豊島区上池袋(ダミー)",
+  "address": "豊島区上池袋(サンプル)",
   "lat": 35.737442,
   "long": 139.718049,
   "status": 0,
@@ -2384,7 +2384,7 @@ function openReqModal() {
  {
   "id": "D016",
   "name": "目白 1",
-  "address": "豊島区目白(ダミー)",
+  "address": "豊島区目白(サンプル)",
   "lat": 35.723727,
   "long": 139.702623,
   "status": 0,
@@ -2393,7 +2393,7 @@ function openReqModal() {
  {
   "id": "D017",
   "name": "目白 2",
-  "address": "豊島区目白(ダミー)",
+  "address": "豊島区目白(サンプル)",
   "lat": 35.718434,
   "long": 139.703822,
   "status": 0,
@@ -2402,7 +2402,7 @@ function openReqModal() {
  {
   "id": "D018",
   "name": "目白 3",
-  "address": "豊島区目白(ダミー)",
+  "address": "豊島区目白(サンプル)",
   "lat": 35.722074,
   "long": 139.708818,
   "status": 0,
@@ -2411,7 +2411,7 @@ function openReqModal() {
  {
   "id": "D019",
   "name": "雑司が谷 1",
-  "address": "豊島区雑司が谷(ダミー)",
+  "address": "豊島区雑司が谷(サンプル)",
   "lat": 35.716597,
   "long": 139.71963,
   "status": 0,
@@ -2420,7 +2420,7 @@ function openReqModal() {
  {
   "id": "D020",
   "name": "雑司が谷 2",
-  "address": "豊島区雑司が谷(ダミー)",
+  "address": "豊島区雑司が谷(サンプル)",
   "lat": 35.716441,
   "long": 139.71906,
   "status": 0,
@@ -2429,7 +2429,7 @@ function openReqModal() {
  {
   "id": "D021",
   "name": "雑司が谷 3",
-  "address": "豊島区雑司が谷(ダミー)",
+  "address": "豊島区雑司が谷(サンプル)",
   "lat": 35.720843,
   "long": 139.715139,
   "status": 0,
@@ -2438,7 +2438,7 @@ function openReqModal() {
  {
   "id": "D022",
   "name": "高田 1",
-  "address": "豊島区高田(ダミー)",
+  "address": "豊島区高田(サンプル)",
   "lat": 35.711829,
   "long": 139.710908,
   "status": 0,
@@ -2447,7 +2447,7 @@ function openReqModal() {
  {
   "id": "D023",
   "name": "高田 2",
-  "address": "豊島区高田(ダミー)",
+  "address": "豊島区高田(サンプル)",
   "lat": 35.714358,
   "long": 139.706565,
   "status": 0,
@@ -2456,7 +2456,7 @@ function openReqModal() {
  {
   "id": "D024",
   "name": "高田 3",
-  "address": "豊島区高田(ダミー)",
+  "address": "豊島区高田(サンプル)",
   "lat": 35.710969,
   "long": 139.705339,
   "status": 0,
@@ -2465,7 +2465,7 @@ function openReqModal() {
  {
   "id": "D025",
   "name": "巣鴨 1",
-  "address": "豊島区巣鴨(ダミー)",
+  "address": "豊島区巣鴨(サンプル)",
   "lat": 35.735134,
   "long": 139.739301,
   "status": 0,
@@ -2474,7 +2474,7 @@ function openReqModal() {
  {
   "id": "D026",
   "name": "巣鴨 2",
-  "address": "豊島区巣鴨(ダミー)",
+  "address": "豊島区巣鴨(サンプル)",
   "lat": 35.734981,
   "long": 139.742488,
   "status": 0,
@@ -2483,7 +2483,7 @@ function openReqModal() {
  {
   "id": "D027",
   "name": "巣鴨 3",
-  "address": "豊島区巣鴨(ダミー)",
+  "address": "豊島区巣鴨(サンプル)",
   "lat": 35.736915,
   "long": 139.740413,
   "status": 0,
@@ -2492,7 +2492,7 @@ function openReqModal() {
  {
   "id": "D028",
   "name": "北大塚 1",
-  "address": "豊島区北大塚(ダミー)",
+  "address": "豊島区北大塚(サンプル)",
   "lat": 35.73115,
   "long": 139.729016,
   "status": 0,
@@ -2501,7 +2501,7 @@ function openReqModal() {
  {
   "id": "D029",
   "name": "北大塚 2",
-  "address": "豊島区北大塚(ダミー)",
+  "address": "豊島区北大塚(サンプル)",
   "lat": 35.732143,
   "long": 139.727365,
   "status": 0,
@@ -2510,7 +2510,7 @@ function openReqModal() {
  {
   "id": "D030",
   "name": "南大塚 1",
-  "address": "豊島区南大塚(ダミー)",
+  "address": "豊島区南大塚(サンプル)",
   "lat": 35.723596,
   "long": 139.727029,
   "status": 0,
@@ -2519,7 +2519,7 @@ function openReqModal() {
  {
   "id": "D031",
   "name": "南大塚 2",
-  "address": "豊島区南大塚(ダミー)",
+  "address": "豊島区南大塚(サンプル)",
   "lat": 35.727334,
   "long": 139.730267,
   "status": 0,
@@ -2528,7 +2528,7 @@ function openReqModal() {
  {
   "id": "D032",
   "name": "駒込 1",
-  "address": "豊島区駒込(ダミー)",
+  "address": "豊島区駒込(サンプル)",
   "lat": 35.737543,
   "long": 139.744167,
   "status": 0,
@@ -2537,7 +2537,7 @@ function openReqModal() {
  {
   "id": "D033",
   "name": "駒込 2",
-  "address": "豊島区駒込(ダミー)",
+  "address": "豊島区駒込(サンプル)",
   "lat": 35.733784,
   "long": 139.747753,
   "status": 0,
@@ -2546,7 +2546,7 @@ function openReqModal() {
  {
   "id": "D034",
   "name": "長崎 1",
-  "address": "豊島区長崎(ダミー)",
+  "address": "豊島区長崎(サンプル)",
   "lat": 35.724771,
   "long": 139.68351,
   "status": 0,
@@ -2555,7 +2555,7 @@ function openReqModal() {
  {
   "id": "D035",
   "name": "長崎 2",
-  "address": "豊島区長崎(ダミー)",
+  "address": "豊島区長崎(サンプル)",
   "lat": 35.72367,
   "long": 139.690214,
   "status": 0,
@@ -2564,7 +2564,7 @@ function openReqModal() {
  {
   "id": "D036",
   "name": "長崎 3",
-  "address": "豊島区長崎(ダミー)",
+  "address": "豊島区長崎(サンプル)",
   "lat": 35.723376,
   "long": 139.69034,
   "status": 0,
@@ -2573,7 +2573,7 @@ function openReqModal() {
  {
   "id": "D037",
   "name": "千早 1",
-  "address": "豊島区千早(ダミー)",
+  "address": "豊島区千早(サンプル)",
   "lat": 35.728697,
   "long": 139.683367,
   "status": 0,
@@ -2582,7 +2582,7 @@ function openReqModal() {
  {
   "id": "D038",
   "name": "千早 2",
-  "address": "豊島区千早(ダミー)",
+  "address": "豊島区千早(サンプル)",
   "lat": 35.728475,
   "long": 139.680969,
   "status": 0,
@@ -2591,7 +2591,7 @@ function openReqModal() {
  {
   "id": "D039",
   "name": "要町 1",
-  "address": "豊島区要町(ダミー)",
+  "address": "豊島区要町(サンプル)",
   "lat": 35.733442,
   "long": 139.693595,
   "status": 0,
@@ -2600,7 +2600,7 @@ function openReqModal() {
  {
   "id": "D040",
   "name": "要町 2",
-  "address": "豊島区要町(ダミー)",
+  "address": "豊島区要町(サンプル)",
   "lat": 35.730073,
   "long": 139.693346,
   "status": 0,
@@ -2609,7 +2609,7 @@ function openReqModal() {
  {
   "id": "D041",
   "name": "要町 3",
-  "address": "豊島区要町(ダミー)",
+  "address": "豊島区要町(サンプル)",
   "lat": 35.732078,
   "long": 139.692732,
   "status": 0,
@@ -2618,7 +2618,7 @@ function openReqModal() {
  {
   "id": "D042",
   "name": "高松 1",
-  "address": "豊島区高松(ダミー)",
+  "address": "豊島区高松(サンプル)",
   "lat": 35.731597,
   "long": 139.690992,
   "status": 0,
@@ -2627,7 +2627,7 @@ function openReqModal() {
  {
   "id": "D043",
   "name": "高松 2",
-  "address": "豊島区高松(ダミー)",
+  "address": "豊島区高松(サンプル)",
   "lat": 35.73151,
   "long": 139.689438,
   "status": 0,
@@ -2636,7 +2636,7 @@ function openReqModal() {
  {
   "id": "D044",
   "name": "千川 1",
-  "address": "豊島区千川(ダミー)",
+  "address": "豊島区千川(サンプル)",
   "lat": 35.734626,
   "long": 139.684958,
   "status": 0,
@@ -2645,7 +2645,7 @@ function openReqModal() {
  {
   "id": "D045",
   "name": "千川 2",
-  "address": "豊島区千川(ダミー)",
+  "address": "豊島区千川(サンプル)",
   "lat": 35.73552,
   "long": 139.690217,
   "status": 0,
@@ -2654,7 +2654,7 @@ function openReqModal() {
  {
   "id": "D046",
   "name": "南長崎 1",
-  "address": "豊島区南長崎(ダミー)",
+  "address": "豊島区南長崎(サンプル)",
   "lat": 35.717289,
   "long": 139.680411,
   "status": 0,
@@ -2663,7 +2663,7 @@ function openReqModal() {
  {
   "id": "D047",
   "name": "南長崎 2",
-  "address": "豊島区南長崎(ダミー)",
+  "address": "豊島区南長崎(サンプル)",
   "lat": 35.722398,
   "long": 139.682133,
   "status": 0,
@@ -2672,7 +2672,7 @@ function openReqModal() {
  {
   "id": "D048",
   "name": "南長崎 3",
-  "address": "豊島区南長崎(ダミー)",
+  "address": "豊島区南長崎(サンプル)",
   "lat": 35.718025,
   "long": 139.677704,
   "status": 0,
@@ -2681,7 +2681,7 @@ function openReqModal() {
  {
   "id": "D049",
   "name": "西巣鴨 1",
-  "address": "豊島区西巣鴨(ダミー)",
+  "address": "豊島区西巣鴨(サンプル)",
   "lat": 35.742239,
   "long": 139.725198,
   "status": 0,
@@ -2690,7 +2690,7 @@ function openReqModal() {
  {
   "id": "D050",
   "name": "西巣鴨 2",
-  "address": "豊島区西巣鴨(ダミー)",
+  "address": "豊島区西巣鴨(サンプル)",
   "lat": 35.74221,
   "long": 139.729493,
   "status": 0,
@@ -2735,7 +2735,7 @@ const setaiCtl = addSetaiLayers(map, { sessionKey: "posterMap" });
 rememberMapSession(map, "posterMap", { baseLayers, overlays: statusLayers });
 addGuideControl(map, "🗺️ ポスターマップの使い方",
   `<ol>
-    <li><b>掲示場データを読み込む</b> — 画面上の<b>「☰ ツール」</b>を開いて「📂 CSV読込」から、選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示はダミーのサンプル)</li>
+    <li><b>掲示場データを読み込む</b> — 画面上の<b>「☰ ツール」</b>を開いて「📂 CSV読込」から、選管公表の掲示場一覧CSVを読込(緯度・経度列が必要。今の表示は動作確認用のサンプルで、実際の掲示場の位置ではありません)</li>
     <li><b>ピンをタップ</b> — ステータス(未/完了/予約/要確認/異常)とメモを保存。色が変わり右上の完了率も更新されます</li>
     <li><b>表示を絞る</b> — 右上のレイヤボタンでステータス別に表示切替、左の📍で現在地表示</li>
     <li><b>🏠 世帯数を重ねる</b> — 右上の<b>🏠ボタン</b>から<b>世帯数レイヤ</b>(国勢調査2020・町丁目ごとの世帯数)を重ねられます。<b>自治体にチェックで配下の区が全部ON</b>、区ごとの選び直しは「▸」を開いて全選択/全クリア/個別に(この選択と色分けはこの端末に保存され、次に開いたときもそのままです)。未収録の自治体は「➕ 自治体の追加をリクエスト」から</li>

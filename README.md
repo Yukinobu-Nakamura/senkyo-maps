@@ -30,7 +30,7 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 ## 設計方針(チームみらい poster-map との違い)
 
 [team-mirai-volunteer/poster-map](https://github.com/team-mirai-volunteer/poster-map)(GPL-3.0)
-— 2024年都知事選の安野たかひろ陣営が運用したシステム — の**仕組みを参考にした独自実装**です。
+— チームみらいのボランティア有志(`team-mirai-volunteer`)が公開しているシステム — の**仕組みを参考にした独自実装**です。
 コードは流用せず書き下ろしています(GPL の継承を避けるため)。
 
 > **注**: 本実装はチームみらい・安野たかひろ氏及び同陣営とは関係がなく、推薦・提携・監修を受けたものでもありません。参照元(team-mirai-volunteer/poster-map)は GPL-3.0、本実装は PolyForm Noncommercial License 1.0.0 で、両ライセンスは非互換です。コードは流用していません(独自に書き下ろし)。以降「チームみらい版」と表記する箇所もすべて同じ前提です。

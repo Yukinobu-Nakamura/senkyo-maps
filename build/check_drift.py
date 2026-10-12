@@ -58,7 +58,7 @@ def norm(text: str) -> str:
 # 法的にもっとも重要な「軽過失/故意重過失/特別損害/一部無効」の核心部分を
 # 正規表現で切り出し、言及箇所すべてで逐語一致するかを見る。
 DISCLAIMER_CORE = re.compile(
-    r"ご利用に関連して生じた損害について.{0,400}?その他の部分の効力は妨げられません。",
+    r"ご利用に関連して生じた損害.{0,80}?について.{0,400}?その他の部分の効力は妨げられません。",
     re.S,
 )
 DISCLAIMER_FILES = ["assets/common.js", "arukikata/index.html"]
