@@ -1149,7 +1149,14 @@ function addSetaiLayers(map, opts) {
   /* 手描き図形より下のペインに描くため、描画・クリック操作の邪魔をしない */
   map.createPane("setaiPane");
   map.getPane("setaiPane").style.zIndex = 350; /* overlayPane(400)より下 */
-  const renderer = L.svg({ pane: "setaiPane", padding: 1 }); /* クリップ防止(map本体と同じ理由) */
+  /* Canvas 描画(2026-10 軽量化)。SVG だと町丁目ポリゴンが1枚ずつ DOM ノードになり、
+     横浜全区クラス(数千図形)でズーム・パンのたびに全パス再計算+再描画が重かった。
+     Canvas は1枚のビットマップに描くので図形数が増えても DOM が増えない。
+     クリック(ポップアップ)はそのまま動く。注意:
+     - SVG 用 CSS(.leaflet-setai-pane path の stroke-width)は効かない
+       → 枠線の太さは zoomRefresh が setStyle({weight}) で一括更新する(Canvas は再描画1回に集約される)
+     - tolerance はタップのヒット余白 */
+  const renderer = L.canvas({ pane: "setaiPane", padding: 0.5, tolerance: 3 });
 
   let cities = [];    /* data/setai_index.json の cities。取得できるまで空 */
   let indexState = "loading";  /* loading | ready | error */
@@ -1264,8 +1271,11 @@ function addSetaiLayers(map, opts) {
     if (p.units > 1) html += `<br>` + gray(`※国勢調査の集計単位${p.units}区分を合算(同一町名)`);
     return html + `<br>` + gray("2020年国勢調査時点。" + SETAI_CREDIT);
   }
+  /* 枠線の太さ。Canvas 化により CSS 変数(--setaiSw)では変えられないため、
+     zoomRefresh がズーム段の変化時に setStyle({weight}) で一括更新する */
+  let curWeight = 2;
   function styleOf(p) {
-    return { color: "#0f172a", weight: 2, opacity: 0.85,     /* 区画の境界をはっきり見せる */
+    return { color: "#0f172a", weight: curWeight, opacity: 0.85,  /* 区画の境界をはっきり見せる */
              fillColor: setaiBinColor(curBins, metricVal(p)), fillOpacity: 0.45 };
   }
   /* ===== 描き直しの軽量化(2026-09-21) =====
@@ -1339,6 +1349,7 @@ function addSetaiLayers(map, opts) {
       },
     }).eachLayer(l => ent.grp.addLayer(l));
     ent.gen = styleGen;   /* 現在のビンで塗った、の印 */
+    ent.w = curWeight;    /* 現在のズーム段の枠線で塗った、の印 */
   }
 
   /* desired の中身を地図に反映する。未読込のものは取得してから載せる */
@@ -1351,6 +1362,10 @@ function addSetaiLayers(map, opts) {
           if (!map.hasLayer(ent.grp)) {
             map.addLayer(ent.grp);
             if (ent.gen !== styleGen) restyleEnt(ent);  /* 非表示中に指標が変わっていた分を追いつかせる */
+            if (ent.w !== curWeight) {                  /* 非表示中にズーム段が変わっていた分(Canvas枠線) */
+              ent.w = curWeight;
+              ent.grp.eachLayer(l => { if (l.setStyle) l.setStyle({ weight: curWeight }); });
+            }
           }
           return;
         }
@@ -1685,7 +1700,24 @@ function addSetaiLayers(map, opts) {
     const z = Math.min(Math.round(map.getZoom()), 18);
     const cs = map.getContainer().style;
     cs.setProperty("--setaiFs", (SETAI_FONT_BY_ZOOM[z] || 5.5) + "px");
-    cs.setProperty("--setaiSw", (SETAI_STROKE_BY_ZOOM[z] || 0.9) + "px");
+    /* 俯瞰(z12以下)はラベルが5.5px=判読不能のまま数千個重なって地図を黒くし、
+       描画も重くするだけなので出さない(軽量化+視認性。2026-10)。
+       戻すには common.css の .setaiFar ルールを外すだけ */
+    map.getContainer().classList.toggle("setaiFar", z <= 12);
+    /* Canvas は CSS で枠線を変えられない → ズーム段が変わったときだけ weight を一括更新
+       (Canvas の setStyle は再描画1回に集約されるので、SVG時代の懸念だった
+        「数千件の setStyle が重い」は起きない)。非表示レイヤは ent.w で再表示時に追いつかせる */
+    const w = SETAI_STROKE_BY_ZOOM[z] || 0.9;
+    if (w !== curWeight) {
+      curWeight = w;
+      Object.keys(wards).forEach(code => {
+        const ent = wards[code];
+        if (ent.loaded && map.hasLayer(ent.grp)) {
+          ent.w = w;
+          ent.grp.eachLayer(l => { if (l.setStyle) l.setStyle({ weight: w }); });
+        }
+      });
+    }
   }
   map.on("zoomend", zoomRefresh);
   zoomRefresh();
