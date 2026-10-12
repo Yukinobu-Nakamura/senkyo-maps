@@ -148,28 +148,56 @@ NGITEM_PAIR = re.compile(
 
 
 def check_kantan_kuwashiku_ngitem() -> list[str]:
-    t = read("arukikata/index.html")
-    bad = []
-    for m in NGITEM_PAIR.finditer(t):
-        simple_tokens = set(ART.findall(strip_tags(m.group(1))))
-        detail_tokens = set(ART.findall(strip_tags(m.group(2))))
-        if not simple_tokens or not detail_tokens:
-            continue  # かんたん文に条文番号が無ければ比較材料が無いので対象外
-        overlap = any(a in b or b in a for a in simple_tokens for b in detail_tokens)
-        if not overlap:
-            bad.append(
-                f"ngItem: かんたん文の条文{sorted(simple_tokens)}とくわしくの条文"
-                f"{sorted(detail_tokens)}が1つも重ならない(片方だけ直った疑い): "
-                f"「{strip_tags(m.group(1))[:40]}」"
-            )
-    return bad
+    """かんたん版が「罰則あり」と言った項目は、くわしく側に罰条が書いてあるか。
 
+    ★2026-10-12 に2度作り直した経緯を残す(同じ罠に戻らないため)。
+      1度目: .ngItem の条文番号を突き合わせる設計だったが、正規表現が本文と合わず
+             **実比較が0組**で永久に何も検出しなかった(critical-reviewer M-4)。
+      2度目: かんたん版の見出し語がくわしく側に出てくるかを見る設計にしたが、
+             見出し語が長文で逐語一致せず**偽陽性が8件**出た。公開を止める検査で
+             偽陽性を出すと検査自体が信用されなくなるので採らなかった。
+      3度目(現行): 層のルール「かんたん版＝結論＋罰則の有無のみ／条文と刑量はくわしく」
+             を不変条件として検査する。**かんたん版が「罰則あり」と書いた項目があるのに、
+             同じカードのくわしく側に罰条(条番号＋刑量)が1つも無い**状態だけを落とす。
+             これは必ず直すべき食い違いで、偽陽性が出にくい。
+      ※かんたん版に罰則の記載が無い項目については何も要求しない。
+        「チラシお断りのポストへ入れる(苦情・トラブルの最大の原因)」のように、
+        罰則を主張していない書き分けは正しい設計なので検査対象にしない。
+    """
+    t = read("arukikata/index.html")
+    cards = re.findall(r'<details class="helpCard".*?</details>', t, re.S)
+    if not cards:
+        return ["支援者ガイドのカードが1枚も見つからない(構造が変わった可能性)"]
+    PENALTY = re.compile(r"(?:\d+年以下の拘禁刑|\d+万円以下の罰金|拘禁刑|科料|拘留)")
+    ARTICLE = re.compile(r"\d+条")
+    bad, checked = [], 0
+    for ci, card in enumerate(cards, 1):
+        ng = re.search(r'<ul class="hcList hcNG">(.*?)</ul>', card, re.S)
+        det = re.search(r'<div class="hcDetail[^"]*">(.*?)</div>\s*</details>', card, re.S) \
+            or re.search(r'<div class="hcDetail[^"]*">(.*?)$', card, re.S)
+        if not ng or not det:
+            continue
+        claims = [norm(li) for li in re.findall(r"<li>(.*?)</li>", ng.group(1), re.S)
+                  if "罰則" in norm(li)]
+        if not claims:
+            continue
+        checked += 1
+        d = norm(det.group(1))
+        if not (PENALTY.search(d) and ARTICLE.search(d)):
+            bad.append(f'カード{ci}: かんたん版が「罰則あり」と書いているのに'
+                       f'くわしく側に罰条(条番号＋刑量)が無い — 例「{claims[0][:40]}」')
+    if checked == 0:
+        return ["かんたん版に「罰則あり」と書いた項目が1つも無い"
+                "(層のルールが崩れた可能性。結論＋罰則の有無はかんたん版に置く約束)"]
+    if bad:
+        return [f"かんたん版の罰則の主張にくわしく側の裏づけが無いカードが{len(bad)}件"
+                f"\n      " + "\n      ".join(bad)]
+    return []
 
 # ───────────── 5. 支援者ガイドと各タブの条文言及(整合性) ─────────────
 # 過去に「支援者ガイドだけ直し忘れる」事故が2回(201条の15の件・住居侵入罪の
 # 断定の件)起きている。支援者ガイド(id="sHelp")の中だけに出てくる条文番号は、
 # 他タブとの整合を取り忘れている可能性があるので洗い出す。
-#
 # allowlist: 以下は実際に確認済みで、支援者ガイド固有の脚注的な言及であり、
 # 他タブに対応箇所が無いことが「ドリフト」ではないと判断したもの。
 #   - "102条"(国家公務員法。地位利用の服務規程の例として注記されているだけ)

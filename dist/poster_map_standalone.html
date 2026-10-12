@@ -12,7 +12,11 @@
      旧 #8b5cf6 は白文字で 4.23:1、ヘッダ内リンク #ede9fe で 3.57:1、
      ツールバーの白18%重ねボタンで 3.19:1 と、いずれも 4.5:1 を下回っていた
      (2026-10-12 是正。#7c3aed で 5.70 / 4.80 / 7.59:1)。
-     ★ここを変えたら build/precheck.py ではなく、下の contrast メモの3値を必ず測り直す。 */
+     ★ここを変えたら、①下の contrast メモの3値を必ず測り直す
+       ②`grep -rn "8b5cf6\|7c3aed"` でハードコードされている箇所も一緒に揃える。
+       2026-10-12 に .reqBtn.main と .setaiCtl .stLoad が旧色のまま取り残された。
+       なお poster/posting の状態色「完了=#8b5cf6」は地図のマーカー色で、
+       メンバーの要望で選んだ色なので変えない(文字の背景ではないため対比の問題も出ない)。 */
   --ink:#1f2937; --muted:#6b7280; --bg:#f6f7fb; --card:#fff; --accent:#7c3aed;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
@@ -110,7 +114,7 @@ body.uiHidden .noticebar{ display:none !important; }
 /* 世帯数レイヤの選択パネル(自治体 > 区の2階層) */
 .setaiCtl{ background:none; border:none; box-shadow:none; }
 .setaiCtl .stToggle{ width:34px; height:34px; border:2px solid rgba(0,0,0,.25); background:#fff; border-radius:6px; cursor:pointer; font-size:17px; display:block; }
-.setaiCtl .stToggle.on{ background:#ede9fe; border-color:var(--accent, #8b5cf6); }
+.setaiCtl .stToggle.on{ background:#ede9fe; border-color:var(--accent, #7c3aed); }
 .setaiCtl .stPanel{ margin-top:4px; width:min(268px, calc(100vw - 24px)); max-height:min(70vh, 460px); overflow-y:auto; background:rgba(255,255,255,.97); border:1.5px solid var(--accent, #8b5cf6); border-radius:12px; box-shadow:0 4px 18px rgba(0,0,0,.25); font-size:12.5px; }
 .setaiCtl .stHead{ position:sticky; top:0; background:#f5f3ff; border-bottom:1px solid #ddd6fe; border-radius:11px 11px 0 0; padding:7px 10px; font-weight:700; }
 .setaiCtl .stClose{ float:right; border:1px solid #d1d5db; background:#fff; border-radius:6px; width:22px; height:22px; cursor:pointer; line-height:1; }
@@ -150,7 +154,8 @@ body.uiHidden .noticebar{ display:none !important; }
 .setaiCtl .stWardBtns{ display:flex; gap:5px; margin:2px 0 4px; }
 .setaiCtl .stWardBtns button{ border:1px solid #d1d5db; background:#f9fafb; border-radius:6px; padding:2px 8px; cursor:pointer; font-size:11px; }
 .setaiCtl .stWard{ display:flex; align-items:center; gap:5px; padding:1.5px 0; cursor:pointer; }
-.setaiCtl .stLoad{ font-size:10px; color:#8b5cf6; }
+/* 旧 #8b5cf6 は白地で 4.23:1 しかなく 10px の文字では AA を割る(2026-10-12 是正) */
+.setaiCtl .stLoad{ font-size:10px; color:var(--accent); }
 .setaiCtl .stExtra{ border-top:1px solid #e5e7eb; margin-top:6px; padding-top:5px; }
 .setaiCtl .stLoadBar{ margin-top:6px; font-size:11px; color:#5b21b6; background:#f5f3ff; border-radius:6px; padding:4px 6px; }
 .setaiCtl .stReq{ margin-top:7px; border-top:1px solid #e5e7eb; padding-top:5px; font-size:11px; }
@@ -165,7 +170,8 @@ body.uiHidden .noticebar{ display:none !important; }
 .reqCaution{ color:#b45309; font-size:12.5px; }
 .reqBtns{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
 .reqBtn{ display:block; text-align:center; padding:9px 12px; border-radius:9px; border:1.5px solid #d1d5db; background:#f9fafb; color:#111; text-decoration:none; cursor:pointer; font-size:13.5px; }
-.reqBtn.main{ background:#8b5cf6; border-color:#8b5cf6; color:#fff; font-weight:700; }
+/* 旧 #8b5cf6 のままだと白文字が 4.23:1 で AA 未達だった(2026-10-12 是正) */
+.reqBtn.main{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700; }
 .locateBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer;}
 .guideBtn{background:#fff; border:2px solid rgba(0,0,0,.25); border-radius:6px; width:34px; height:34px; font-size:17px; cursor:pointer; font-weight:bold; color:var(--accent);}
 .guideBtn.on{background:var(--accent); color:#fff;}

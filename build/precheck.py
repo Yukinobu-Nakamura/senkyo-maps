@@ -23,7 +23,7 @@
 終了コード: 0=問題なし / 1=NGあり
 """
 from __future__ import annotations
-import re, sys, os, json, subprocess, tempfile, shutil, filecmp
+import re, sys, os, json, subprocess, tempfile, shutil, filecmp, hashlib
 from pathlib import Path
 
 try:
@@ -86,6 +86,10 @@ DATE_PATS = [
     (r"(20\d\d年\d{1,2}月)時点の e-Gov", "③フッタの参照時点"),
     (r"最終更新日:\s*(20\d\d-\d{2}-\d{2})", "④フッタの最終更新日"),
     (r'GATE_VER\s*=\s*"(20\d\d-\d{2}-\d{2})"', "⑤同意ゲートの版"),
+    # ★⑥⑦は利用者が最初に読む表示なのに検査から漏れていた(2026-10-12 critical M-5)。
+    #   ⑥は同意ゲートの要点5行、⑦は常時表示の免責の summary。
+    (r"(20\d\d年\d{1,2}月\d{1,2}日)時点の情報です", "⑥ゲート要点の基準日"),
+    (r"内容は<b>(20\d\d年\d{1,2}月\d{1,2}日)時点</b>", "⑦常時表示の免責の基準日"),
 ]
 
 
@@ -160,10 +164,25 @@ def g3(cid):
             vs.setdefault(m.group(1), []).append(p)
     if not vs:
         ng(cid, "?v= が見つからない")
-    elif len(vs) > 1:
+        return
+    if len(vs) > 1:
         ng(cid, "?v= が不一致: " + " / ".join(f"v={k}:{sorted(set(v))}" for k, v in vs.items()))
+        return
+    cur = list(vs)[0]
+    # ★内容ハッシュと一致しているかも見る(2026-10-12 critical M-7)。
+    #   これが無いと build/stamp_assets.mjs を回し忘れたときに誰も止められず、
+    #   既存の利用者のブラウザに旧 common.js がキャッシュで残り、
+    #   是正した免責文が届かないまま公開されてしまう。
+    #   ハッシュの作り方は build/stamp_assets.mjs と必ず同じにすること
+    #   (sha256(common.css の中身 + common.js の中身) の先頭8桁)。
+    h = hashlib.sha256(
+        (ROOT / "assets/common.css").read_bytes() + (ROOT / "assets/common.js").read_bytes()
+    ).hexdigest()[:8]
+    if cur != h:
+        ng(cid, f"?v={cur} が assets の内容ハッシュ {h} と違う"
+                f"(node build/stamp_assets.mjs を実行してコミットすること)")
     else:
-        ok(cid, f"3ページとも ?v={list(vs)[0]}")
+        ok(cid, f"3ページとも ?v={cur} で、assets の内容ハッシュと一致")
 
 
 # ───────────────────────── G-4 dist が原本と同期しているか ─────────────────────────
@@ -546,8 +565,15 @@ def g21(cid):
                 + "\n      ".join(bad))
     elif found:
         ok(cid, f"控え{len(found)}件はいずれも公開版と一致")
-    else:
+    elif any(Path(m).parent.is_dir() for m in map(str, mirrors)):
         ok(cid, "控えのHTMLは存在しない(公開URLに一本化済み)")
+    else:
+        # ★控えの置き場所そのものが見えない環境(CIのランナー・Drive未マウント)。
+        #   これを OK にすると「控えが古いまま」をCIが永久に見逃す(フェイルオープン)。
+        #   検査不能は SKIP として明示し、ローカルで通した記録がないと公開しない運用にする。
+        SKIP.append(cid)
+        print(f"  ⏭  [{cid}] 控えの置き場所が見えないため検査不能"
+              f"(CI・Drive未マウント)。★公開前にローカルで G21 を通すこと")
 
 
 CHECKS = [
