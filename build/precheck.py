@@ -26,6 +26,14 @@ from __future__ import annotations
 import re, sys, os, json, subprocess, tempfile, shutil, filecmp
 from pathlib import Path
 
+try:
+    import yaml  # type: ignore
+except ImportError:  # pragma: no cover
+    yaml = None
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import check_drift  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 V = "-v" in sys.argv or "--verbose" in sys.argv
 ONLY = None
@@ -146,7 +154,9 @@ def g2(cid):
 def g3(cid):
     vs = {}
     for p in PAGES:
-        for m in re.finditer(r"assets/common\.(?:css|js)\?v=(\d+)", read(p)):
+        # v39→v=63e3989f のように build/stamp_assets.mjs が内容ハッシュへ移行したため、
+        # 数字だけでなく16進ハッシュ(英数字)も許容する。
+        for m in re.finditer(r"assets/common\.(?:css|js)\?v=([0-9a-zA-Z]+)", read(p)):
             vs.setdefault(m.group(1), []).append(p)
     if not vs:
         ng(cid, "?v= が見つからない")
@@ -391,6 +401,107 @@ def g19(cid):
         ok(cid, "『⭕』はすべて条件つきで書かれている")
 
 
+# ───────────────────── G-17 罰条の対応表との突合 ─────────────────────
+# 「違反は○年以下の拘禁刑またはX万円以下の罰金＝○条○項○号」を、記憶で書いて
+# 間違える／片方の箇所だけ直す事故が起きている。build/batsujo.yml を正として、
+# ① 対応表に載っている箇所に、載っているはずの刑量・罰条が実際にあるか
+# ② 対応表自身が同じ罰条に違う刑量を割り当てていないか
+# ③ 本文に、対応表のどの罰条とも一致しない罰条の記載が出てきていないか
+# を見る。
+PENALTY_SCAN = re.compile(
+    r"(?P<term>\d+年以下の拘禁刑(?:または\d+万円以下の罰金)?|\d+万円以下の罰金)"
+    r"(?:\s*[＝=]\s*(?P<code>[0-9]+条[^\)\s、。]*)"
+    r"|[^。\n]{0,40}?[（(][^（）()\n]{0,60}?(?P<code2>[0-9]+条[^）)\n]*)[）)])"
+)
+
+
+def strip_tags(text: str) -> str:
+    return re.sub(r"<[^>]+>", "", text)
+
+
+def g17(cid):
+    if yaml is None:
+        ng(cid, "pyyaml が無くて build/batsujo.yml を読めない(pip install pyyaml)")
+        return
+    path = ROOT / "build/batsujo.yml"
+    if not path.exists():
+        ng(cid, "build/batsujo.yml が無い")
+        return
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    rules = doc.get("rules", [])
+    if not rules:
+        ng(cid, "build/batsujo.yml に rules が1件も無い")
+        return
+    target_file = doc.get("file", "arukikata/index.html")
+    plain = strip_tags(read(target_file))
+    if not plain:
+        ng(cid, f"{target_file} が空/見つからない")
+        return
+
+    bad = []
+    canon: set[str] = set()
+    rule_code_text: dict[str, set[str]] = {}  # 対応表自身の整合性チェック用
+    for r in rules:
+        rid = r.get("id", "?")
+        default_term = r["penalty_text"]
+        default_codes = r.get("penalty_article") or []
+        for c in default_codes:
+            canon.add(c)
+            rule_code_text.setdefault(c, set()).add(default_term)
+        for occ in r.get("occurrences", []):
+            anchor = occ["anchor"]
+            term = occ.get("term", default_term)
+            codes = occ.get("penalty_article", default_codes)
+            allow_dup = bool(occ.get("all", False))
+            before = int(occ.get("before", 150))
+            after = int(occ.get("after", 150))
+            matches = list(re.finditer(re.escape(anchor), plain))
+            if not matches:
+                bad.append(f"[{rid}] anchor が本文に見つからない(言い換え/削除の可能性): 「{anchor[:40]}」")
+                continue
+            if not allow_dup and len(matches) > 1:
+                bad.append(f"[{rid}] anchor が{len(matches)}箇所に出現(想定は1箇所。occurrences に all:true が必要かも): 「{anchor[:40]}」")
+                matches = matches[:1]
+            for m in matches:
+                ctx = plain[max(0, m.start() - before): m.end() + after]
+                if term not in ctx:
+                    bad.append(f"[{rid}] 「{anchor[:30]}」近傍に刑量「{term}」が見つからない: …{ctx[-100:]}")
+                if codes and not any(c in ctx for c in codes):
+                    bad.append(f"[{rid}] 「{anchor[:30]}」近傍に罰条{codes}が見つからない(別の罰条に書き換わった疑い): …{ctx[-100:]}")
+
+    for code, terms in rule_code_text.items():
+        if len(terms) > 1:
+            bad.append(f"対応表そのものが矛盾: 罰条「{code}」に複数の刑量が割り当てられている: {sorted(terms)}")
+
+    unknown = []
+    for m in PENALTY_SCAN.finditer(plain):
+        code = m.group("code") or m.group("code2")
+        if not code:
+            continue
+        if not any(c in code or code in c for c in canon):
+            unknown.append(f"{m.group('term')}…{code[:40]}")
+    if unknown:
+        bad.append(f"対応表に無い罰条の記載が{len(unknown)}件(新しい誤り、または対応表の更新漏れ): " + " / ".join(unknown[:5]))
+
+    if bad:
+        ng(cid, f"罰条の対応に{len(bad)}件の不整合\n      " + "\n      ".join(bad[:15]))
+    else:
+        total_occ = sum(len(r.get("occurrences", [])) for r in rules)
+        ok(cid, f"罰条{len(rules)}件・言及{total_occ}箇所すべて対応表と整合")
+
+
+# ───────────────────── G-20 ドリフト検査 ─────────────────────
+# 本体は build/check_drift.py。「同じ論点が複数箇所にあるのに片方だけ直った」
+# 状態(免責文・ライセンス表記・チーム同期の呼称・支援者ガイドと各タブの不整合)
+# を検出する。罰条そのものは G17 が別途見る。
+def g20(cid):
+    problems = check_drift.run_checks()
+    if problems:
+        ng(cid, f"ドリフト(同一論点の不一致)が{len(problems)}件\n      " + "\n      ".join(problems[:15]))
+    else:
+        ok(cid, f"ドリフト検査{len(check_drift.CHECKS)}グループすべてOK")
+
+
 # ───────────────── G-21 控え(スナップショット)との一致 ─────────────────
 # 歩き方の正本は公開URLだけ。控えのHTMLが公開版と食い違うと、古い誤りが
 # そのままメンバーに渡る。控えが置かれうる場所を全部見て、中身を突き合わせる。
@@ -452,8 +563,10 @@ CHECKS = [
     ("G12", "数の表記と項目数", g12),
     ("G15", "誘導名とボタン名", g15),
     ("G16", "モード切替の到達性", g16),
+    ("G17", "罰条の対応表との突合", g17),
     ("G18", "既知の誤りの再発", g18),
     ("G19", "無条件の⭕", g19),
+    ("G20", "ドリフト検査(同一論点の不一致)", g20),
     ("G21", "ワークスペース控えとの一致", g21),
 ]
 

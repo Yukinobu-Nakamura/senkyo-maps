@@ -1,0 +1,34 @@
+name: precheck
+
+# 公開前の機械チェック(build/precheck.py)を push・pull_request で毎回走らせる。
+# public リポジトリなので GitHub-hosted runner は無料枠内(課金は発生しない)。
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  precheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ローカルの検証環境(3.14)とバージョンを揃える。
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # G4(distの再生成一致)・stamp_assets.mjs の動作に node が要る。
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # G17 が build/batsujo.yml を読むのに使う。他は標準ライブラリのみ。
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Run precheck
+        run: python3 build/precheck.py -v

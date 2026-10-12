@@ -1,0 +1,300 @@
+# build/batsujo.yml — 罰条の対応表(正)
+#
+# なぜあるか
+# ----------
+# arukikata/index.html には「違反は○年以下の拘禁刑またはX万円以下の罰金＝○条○項○号」
+# という罰則の記載が40箇所前後ある。同じ禁止行為・同じ罰条が複数箇所に書かれているため、
+# レビューで1箇所だけ直して別の箇所が古いまま残る事故が起きる(過去に201条の15・住居侵入罪で実例あり)。
+# このファイルを正として、build/precheck.py の G17 がページ内の記載と突き合わせる。
+#
+# 構造
+# ----
+# rules[].id             : 禁止行為の識別子(スネークケース)
+# rules[].desc           : 人間向けの説明
+# rules[].base_article   : 禁止行為の根拠条(禁止そのものを定める条文)
+# rules[].penalty_article: 罰条(違反したときに適用される条文)。1つの行為に複数の号が
+#                          関係する場合はリストで複数持つ(例: 243条1項4号と5号の2)。
+# rules[].penalty_text   : 刑量の文字列(ページの表記に合わせる)
+# rules[].occurrences[]  : ページ内でこの罰条に言及している箇所。行番号は動くので持たない。
+#   .anchor   : 近傍の固有な文字列(タグを除去した本文に対して検索する)。罰条の数字そのものは
+#               書き換えられうるので、anchor にはできるだけ数字を含めない(例外あり)。
+#   .before/.after: anchor の前後何文字を「同じ言及のまとまり」として見るか(既定150)。
+#               本文側で刑量が条文番号より先に出てくる場合は before を大きくする。
+#   .term     : その occurrence で期待する刑量文字列。省略時は rules[].penalty_text を使う。
+#   .penalty_article: その occurrence で期待する罰条。省略時は rules[].penalty_article を使う。
+#               空リスト[]を指定すると、その箇所は罰条の数字までは書かれていない(「罰則あり」
+#               等の要約表現)とみなし、刑量(term)の一致だけを見る。
+#   .all      : true の場合、anchor に一致する箇所をすべて検査する(同一文面が複数タブに
+#               重複して存在するケース)。false(既定)のときは anchor が複数回出現したら
+#               「想定外の重複」としてエラーにする(本文の構造が変わった合図)。
+#
+# 運用
+# ----
+#   - 本文に新しい禁止行為・罰則の記載を追加/修正したら、ここも追記/修正すること。
+#   - build/precheck.py --only G17 -v で、この対応表と本文の整合を単体確認できる。
+
+file: arukikata/index.html
+rules:
+- id: koubetsu_homon
+  desc: 戸別訪問の禁止
+  base_article: 公選法138条1項
+  penalty_article:
+  - 239条1項3号
+  penalty_text: 1年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: 家や会社を戸別に訪ね歩くことは時期を問わず禁止
+  - anchor: 家や会社を1軒ずつ訪ね歩いて投票をお願いする
+    after: 300
+- id: aisatsu_yuryo_koukoku
+  desc: あいさつ目的の有料広告禁止
+  base_article: 公選法152条
+  penalty_article:
+  - 235条の6第1項
+  penalty_text: 50万円以下の罰金
+  occurrences:
+  - anchor: あいさつを主な目的とする広告
+  - anchor: あいさつを目的とする有料広告(年賀
+    penalty_article: []
+- id: nobori_shimei_keiji
+  desc: のぼり・看板の氏名入り掲示禁止
+  base_article: 公選法143条16項
+  penalty_article:
+  - 243条1項4号
+  - 243条1項5号の2
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 143条16項違反は同条1項違反とみなされ
+    before: 60
+- id: dai14sho3_100man_bakkin
+  desc: 政治活動の規制(公選法第14章の3)違反(確認団体・政党機関紙関連)
+  base_article: 公選法201条の6/201条の8/201条の9/201条の13/201条の15
+  penalty_article:
+  - 252条の3第1項
+  penalty_text: 100万円以下の罰金
+  occurrences:
+  - anchor: 衆院総選挙(201条の5)。違反は
+  - anchor: 201条の13第1項2号が同じ内容を全ての選挙について禁止)。違反は
+  - anchor: 構成員として違反行為をした者に
+  - anchor: 当日まで続きます(201条の13第1項)。違反は
+  - anchor: 「通常の方法」)を外れると
+- id: jukyo_shinnyuu
+  desc: 立入禁止区域への侵入(住居侵入罪)
+  base_article: 刑法130条
+  penalty_article:
+  - 130条
+  penalty_text: 3年以下の拘禁刑か10万円以下の罰金
+  occurrences:
+  - anchor: 入る — 住居侵入罪(刑法130条
+  - anchor: 建物・オートロック内への立入は住居侵入罪(刑法130条
+- id: senkyosha_renko
+  desc: 選挙運動用自動車・拡声機での連呼(時間制限)
+  base_article: 公選法140条の2第1項
+  penalty_article:
+  - 243条1項1号の2
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 限られ、③は午前8時〜午後8時のみ
+- id: kisei_wo_haru
+  desc: 気勢を張る行為の禁止
+  base_article: 公選法140条
+  penalty_article:
+  - 244条1項1号
+  penalty_text: 1年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: 隊伍を組んで往来するなどして気勢を張ることは禁止
+  - anchor: 気勢＝140条
+    before: 10
+    after: 40
+- id: senkyosha_jouin_wanshou
+  desc: 選挙運動用自動車の乗車人員・腕章着用義務
+  base_article: 公選法141条の2第1項・2項
+  penalty_article:
+  - 243条1項2号の2
+  - 8号の6
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 除いて4人以内で、乗る人は選管交付の腕章が必要
+  - anchor: 着けずに従事すると2年以下の拘禁刑または50万円以下の罰金
+- id: yuryo_net_koukoku
+  desc: 選挙運動のための有料ネット広告の禁止
+  base_article: 公選法142条の6
+  penalty_article:
+  - 243条1項3号の3
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 候補者個人・後援会は出せません。違反は
+  - anchor: 候補者名・政党名を出した選挙運動の有料広告は時期を問わず禁止
+    penalty_article: []
+- id: ensetsu_kinshi_basho
+  desc: 演説・連呼ができない場所
+  base_article: 公選法166条
+  penalty_article:
+  - 243条1項10号
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 選挙運動のための演説と連呼ができません(公選法166条
+- id: toubyou_kasanari_300m
+  desc: 投票日当日・投票所300m規制
+  base_article: 公選法165条の2
+  penalty_article:
+  - 243条1項9号
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 投票所の入口から300メートル以内
+- id: shutsunou_gai_shishutsu
+  desc: 出納責任者以外の者による選挙運動費用の支出
+  base_article: 公選法187条1項
+  penalty_article:
+  - 246条1項4号
+  penalty_text: 3年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 承諾なしに支出すると、払った本人が
+  - anchor: 立候補準備費用と電話・インターネット等を利用する方法による選挙運動の費用は対象外)。違反は
+- id: keijiba_poster_eiri_koukoku
+  desc: 公営掲示場ポスターの営利目的広告禁止
+  base_article: 公選法144条の4の2第2項
+  penalty_article:
+  - 235条の3第2項
+  penalty_text: 100万円以下の罰金
+  occurrences:
+  - anchor: 特定の商品の広告その他営業に関する宣伝」をした者だけが
+- id: poster_kiki_jiyuusogai
+  desc: 他候補ポスターの毀棄(選挙の自由妨害罪)
+  base_article: 公選法225条2号
+  penalty_article:
+  - 225条2号
+  penalty_text: 4年以下の拘禁刑または100万円以下の罰金
+  occurrences:
+  - anchor: 他の候補者のポスターを剥がす・上に貼る・汚す
+    penalty_article: []
+    after: 100
+  - anchor: 他候補のポスターを毀棄すると選挙の自由妨害罪＝
+- id: poster_mushoudaku_keiji
+  desc: 他人の工作物への無承諾ポスター掲示
+  base_article: 公選法145条2項
+  penalty_article:
+  - 244条1項3号
+  penalty_text: 1年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: 居住者等(いなければ管理者・所有者)の承諾が必須で
+- id: jizen_undou
+  desc: 事前運動の禁止
+  base_article: 公選法129条
+  penalty_article:
+  - 239条1項1号
+  penalty_text: 1年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: ただし告示前は事前運動(公選法129条
+- id: meigi_kifu_kanyuu
+  desc: 候補者等名義の寄附・勧誘要求の禁止
+  base_article: 公選法199条の2第2項
+  penalty_article:
+  - 249条の2第4項
+  penalty_text: 50万円以下の罰金
+  occurrences:
+  - anchor: 候補者等以外の者はしてはならない。
+- id: kaishuu
+  desc: 買収
+  base_article: 公選法221条
+  penalty_article:
+  - 221条
+  penalty_text: 3年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 買収＝公選法221条
+    after: 40
+- id: inshoku_teikyou
+  desc: 飲食物の提供禁止
+  base_article: 公選法139条
+  penalty_article:
+  - 243条1項1号
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 飲食物＝公選法139条
+    after: 40
+- id: kigyou_dantai_kenkin_seigen
+  desc: 企業・団体献金の受け皿制限(21条1項)
+  base_article: 規正法21条1項
+  penalty_article:
+  - 21条1項
+  penalty_text: 1年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 後援会・政治家個人は受けられません(
+    after: 60
+  - anchor: 受けられないのは
+    after: 80
+    all: true
+- id: shuushi_houkoku_ihan
+  desc: 収支報告書の不提出・記載義務違反・虚偽記載
+  base_article: 規正法25条1項
+  penalty_article:
+  - 25条1項
+  - 25条
+  penalty_text: 5年以下の拘禁刑または100万円以下の罰金
+  occurrences:
+  - anchor: 記載すべき事項を書かない／虚偽を書く
+  - anchor: 会計責任者を頼まれた方へ
+    after: 120
+- id: daihyousha_kantoku_okotari
+  desc: 団体代表者の会計責任者選任監督義務違反
+  base_article: 規正法25条2項
+  penalty_article: []
+  penalty_text: 50万円以下の罰金
+  occurrences:
+  - anchor: 団体の代表者が会計責任者の選任・監督を怠った
+- id: kousenken_teishi_seijishikin
+  desc: 政治資金規正法違反による公民権停止
+  base_article: 規正法28条
+  penalty_article: []
+  penalty_text: 5年間
+  occurrences:
+  - anchor: 規正法28条1項
+    before: 120
+    after: 10
+- id: kousenken_teishi_kousenhou
+  desc: 公選法違反による公民権停止
+  base_article: 公選法252条
+  penalty_article:
+  - 252条1項
+  penalty_text: 5年間
+  occurrences:
+  - anchor: 罰金刑を受けただけで、判決確定の日から5年間、選挙権と被選挙権を失います
+  - anchor: 判決確定の日から原則5年間、選挙権と被選挙権を失います
+- id: shikaku_wanshou_teiji_kyohi
+  desc: 標旗の提示拒否
+  base_article: 公選法164条の5第4項
+  penalty_article:
+  - 244条1項5号の2
+  penalty_text: 1年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: 拒むと1年以下の拘禁刑または30万円以下の罰金＝244条1項5号の2
+    before: 10
+    after: 10
+- id: hyouki_nashi_gaitou_ensetsu
+  desc: 標旗なしでの街頭演説
+  base_article: 公選法164条の5第1項1号
+  penalty_article:
+  - 243条1項8号の4
+  penalty_text: 2年以下の拘禁刑または50万円以下の罰金
+  occurrences:
+  - anchor: 始めることはできません(違反は2年以下の拘禁刑または50万円以下の罰金＝243条1項8号の4
+    before: 10
+    after: 10
+- id: koumuin_koenkai_kessei_kanyo
+  desc: 公務員等の地位利用による後援団体の結成・勧誘の禁止
+  base_article: 公選法136条の2第2項3号
+  penalty_article:
+  - 239条の2第2項
+  penalty_text: 2年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: 構成員となることの勧誘は同2項3号で明文禁止
+    after: 40
+- id: gaitou_ensetsu_jikan_seigen
+  desc: 街頭演説の時間制限(8時〜20時)
+  base_article: 公選法164条の6第1項
+  penalty_article:
+  - 244条1項6号
+  penalty_text: 1年以下の拘禁刑または30万円以下の罰金
+  occurrences:
+  - anchor: での間はできない」と定めています。違反は1年以下の拘禁刑または30万円以下の罰金＝244条1項6号
+    before: 10
+    after: 10
