@@ -782,6 +782,44 @@ async function syncReadJson(res, where) {
   }
 }
 
+/* 「Failed to fetch」の原因の切り分け。
+   Apps Script の公開設定が「全員」になっていないと、Google はログイン画面へ転送する。
+   ログイン画面は他サイトからの読み取りを許可しないため、ブラウザには HTML ではなく
+   「Failed to fetch」としか見えない(syncReadJson の HTML 判定まで届かない)。
+   そこで、読み取りを求めない送り方(no-cors)で同じURLに届くかだけ確かめる:
+     届く   → 通信はできている。Google 側が応答を渡していない=デプロイ設定が原因
+     届かない → 端末・回線・ブラウザ側で止まっている
+   この確認には合言葉を付けない(合言葉がURLに載らない) */
+async function syncDiagnose(url) {
+  let reachable = false;
+  try {
+    await fetch(url, { mode: "no-cors", cache: "no-store", credentials: "omit" });
+    reachable = true;
+  } catch (e) { reachable = false; }
+  if (reachable) {
+    const ws = /\/a\/macros\//.test(url)
+      ? "\n  ・URLに「/a/macros/」が入っています。会社・団体のGoogleアカウント(Google Workspace)で設置すると、管理者の制限で「全員」を選べず、ログインを求められることがあります。個人のGoogleアカウント(@gmail.com)で設置し直してください"
+      : "";
+    return "Googleまで通信は届いていますが、Googleが応答を返してくれません。\n" +
+      "合言葉やネット接続ではなく、代表者側の【倉庫(Apps Script)のデプロイ設定】が原因です。代表者に次を確認してもらってください。\n" +
+      "  ・[デプロイ]→[デプロイを管理]→鉛筆(編集)で「アクセスできるユーザー: 全員」\n" +
+      "    (「Google アカウントを持つ全員」「自分のみ」では動きません)\n" +
+      "  ・「次のユーザーとして実行: 自分」\n" +
+      "  ・初回デプロイ時の「アクセスを承認」を最後まで済ませている\n" +
+      "  ・バージョンを「新バージョン」にして[デプロイ]を押した" + ws +
+      "\n※手元のデータは消えていません(送信できなかっただけです)。";
+  }
+  const local = !/^https?:$/.test(location.protocol);
+  return "Googleの倉庫まで通信が届きませんでした(Failed to fetch)。\n" +
+    "  ・電波の良い場所で、Wi-Fi⇔モバイル回線を切り替えて再度お試しください\n" +
+    "  ・会社・学校などのWi-Fiや、広告ブロック・セキュリティアプリが script.google.com を止めていることがあります\n" +
+    "  ・別のブラウザでも試してください\n" +
+    (local
+      ? "  ・いまは保存したHTMLファイルから開いています。公開版 https://yukinobu-nakamura.github.io/senkyo-maps/posting/ で同じURLと合言葉を設定して試してください(ファイル版とはデータの保存場所が別なので、先に「💾 GeoJSON書出」→公開版で「📂 読込」してデータを移します)\n"
+      : "") +
+    "※手元のデータは消えていません。";
+}
+
 /* 受信用URL(旧版バックエンド向けのGETフォールバック)。
    既にクエリが付いたURLを貼られても壊れないよう ? / & を使い分ける */
 function syncGetUrl(url, token) {
@@ -871,7 +909,10 @@ async function teamSync() {
       showAppNotice("ℹ️ <b>チーム同期の『倉庫』が古い版です。</b>代表者に <code>templates/team-sync</code> の Code.gs を貼り直して再デプロイしてもらうと、合言葉がURLに載らなくなります(動作は今のままでも支障ありません)。", "warn");
     }
   } catch (err) {
-    alert("同期に失敗しました: " + err.message + "\n\n(URL・合言葉・インターネット接続をご確認ください。設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
+    /* 「Failed to fetch」(TypeError)は応答を読む前に通信が止められた状態。
+       ブラウザはこの理由を画面に出さないので、原因を自動で切り分けて具体的に示す */
+    const detail = (err instanceof TypeError) ? await syncDiagnose(cfg.url) : err.message;
+    alert("同期に失敗しました: " + detail + "\n\n(設定変更は「☁️ 同期」をShift+クリックまたは長押し)");
   } finally {
     syncBusy = false;
     btn.textContent = "☁️ 同期";
