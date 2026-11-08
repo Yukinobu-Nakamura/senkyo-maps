@@ -123,7 +123,7 @@ const FAQ_HTML = `
 <li><b>地図の画像</b> — 国土地理院／OpenStreetMap。見ている範囲の画像を取り寄せます</li>
 <li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
 <li class="needsSetai"><b>世帯数などの公開データ</b> — このサイト自身</li>
-<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>を送ります</li>
+<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>から取り寄せます</li>
 <li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
 <li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
 <li class="teamSync"><b>☁️ 同期(設定したときだけ)</b> — <b>チーム自身が用意したGoogleスプレッドシート</b>。区域・ルートの座標と<b>担当・メモ・登録者名</b>を送ります。設定しなければ通信しません</li>
@@ -910,35 +910,145 @@ function gpxToGeoJSON(text) {
 
 /* ---- 国土地理院API(無料・キー不要): 地名の逆引き・住所検索 ----
    試験公開APIのため将来仕様変更の可能性あり。失敗時は静かに諦める設計にすること。 */
-function gsiPlaceName(lat, lng) {
+/* 逆ジオコーダ: 緯度経度 → {code: 市区町村コード5桁, name: 町丁目名}。該当なしは空文字 */
+function gsiReverse(lat, lng) {
   return fetch(`https://mreversegeocoder.gsi.go.jp/reverse-geocoder/LonLatToAddress?lat=${lat}&lon=${lng}`)
     .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
     .then(j => {
-      const nm = j && j.results && j.results.lv01Nm;
-      return (nm && nm !== "－") ? nm : "";
+      const rs = (j && j.results) || {};
+      const nm = rs.lv01Nm;
+      return { code: rs.muniCd || "", name: (nm && nm !== "－") ? nm : "" };
     });
 }
+function gsiPlaceName(lat, lng) {
+  return gsiReverse(lat, lng).then(r => r.name);
+}
 
-/* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。 */
+/* ---- 検索した町丁目を枠で囲む(Googleマップで住所を検索したときの赤い点線のイメージ) ----
+   検索で選んだ地点 → 逆ジオコーダで市区町村コードと町丁目名を得る → その自治体が
+   世帯数レイヤに収録済みなら data/setai_<code>.geojson(国勢調査の小地域境界)から
+   該当の町丁目を探して破線の枠で囲む。
+   ・単位は「丁目」(丁目の無い町は町全体)まで。番地(○番)の境界は公開データが無いので
+     番地まで入力したときは枠(丁目)+地点マーカーの両方を出す
+   ・丁目を省いて「池袋」と探したときは、その町の全丁目をまとめて囲む
+   ・未収録の自治体・取得失敗のときは従来どおり地点マーカーだけ(静かに諦める) */
+const PS_CHOME_RE = /[一二三四五六七八九十]+丁目$/;
+const _psGeoCache = new Map();   /* code → Promise<GeoJSON>。同じ自治体を何度探しても1回しか取らない */
+let _psCodesPromise = null;
+function psCityCodes() {
+  if (!_psCodesPromise) {
+    _psCodesPromise = fetchSetaiIndex()
+      .then(cs => { const s = new Set(); cs.forEach(c => c.wards.forEach(w => s.add(w.code))); return s; })
+      .catch(() => new Set());
+  }
+  return _psCodesPromise;
+}
+function psGeo(code) {
+  if (!_psGeoCache.has(code)) {
+    const p = fetch("../data/setai_" + code + ".geojson")
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .catch(err => { _psGeoCache.delete(code); throw err; });
+    _psGeoCache.set(code, p);
+  }
+  return _psGeoCache.get(code);
+}
+/* 点が多角形(外周リング)の内側か(ray casting)。座標は [lng, lat] */
+function psPointInRing(ring, x, y) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function psContains(geom, lng, lat) {
+  if (!geom) return false;
+  const polys = geom.type === "Polygon" ? [geom.coordinates] : geom.type === "MultiPolygon" ? geom.coordinates : [];
+  return polys.some(p => psPointInRing(p[0], lng, lat) && !p.slice(1).some(h => psPointInRing(h, lng, lat)));
+}
+/* 囲む町丁目を選ぶ。title=検索候補の表示名(例: 東京都豊島区池袋二丁目３番)、lv01=逆ジオコーダの町丁目名
+   戻り値 {feats, exact}: exact=true なら検索語そのものが町丁目/町(マーカー不要)、false なら番地等の地点 */
+function psPickFeatures(gj, title, lv01, lng, lat) {
+  const fs = (gj && gj.features) || [];
+  const nameOf = f => (f.properties && f.properties.name) || "";
+  /* ① 候補名に町丁目名が含まれる → その町丁目1つ */
+  if (lv01 && title.indexOf(lv01) >= 0) {
+    const f = fs.filter(x => nameOf(x) === lv01);
+    if (f.length) return { feats: f, exact: title.endsWith(lv01) };
+  }
+  /* ② 丁目を省いた町名(「池袋」) → その町の全丁目 */
+  const stem = lv01 ? lv01.replace(PS_CHOME_RE, "") : "";
+  if (stem && stem !== lv01 && title.endsWith(stem)) {
+    const f = fs.filter(x => nameOf(x).replace(PS_CHOME_RE, "") === stem);
+    if (f.length) return { feats: f, exact: true };
+  }
+  /* ③ 表記が合わない(大字・字など) → 地点を含む区画 */
+  const f = fs.filter(x => psContains(x.geometry, lng, lat));
+  return { feats: f, exact: f.length === 1 && title.endsWith(nameOf(f[0])) };
+}
+
+/* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。
+   収録自治体では検索した町丁目を枠で囲む(上の psPickFeatures) */
 function addPlaceSearchControl(map) {
   const ctl = L.control({ position: "topleft" });
-  let hitMarker = null;
+  let hitMarker = null, hitArea = null, seq = 0;
   ctl.onAdd = () => {
     const div = L.DomUtil.create("div", "placeSearch");
     div.innerHTML =
       '<button class="psBtn" type="button" title="地名検索(全国)">🔍</button>' +
       '<span class="psBody" style="display:none">' +
       '<input class="psIn" type="text" placeholder="地名・住所(例: 池袋二丁目)">' +
-      '<button class="psGo" type="button">検索</button><div class="psList"></div></span>';
+      '<button class="psGo" type="button">検索</button>' +
+      '<button class="psClear" type="button" style="display:none" title="検索結果の枠・マーカーを消す">枠を消す</button>' +
+      '<div class="psList"></div></span>';
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
     const btn = div.querySelector(".psBtn"), body = div.querySelector(".psBody");
     const input = div.querySelector(".psIn"), list = div.querySelector(".psList");
+    const clearBtn = div.querySelector(".psClear");
     btn.onclick = () => {
       const open = body.style.display === "none";
       body.style.display = open ? "inline-flex" : "none";
       if (open) input.focus();
     };
+    function clearHit() {
+      if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+      if (hitArea) { map.removeLayer(hitArea); hitArea = null; }
+      clearBtn.style.display = "none";
+    }
+    clearBtn.onclick = clearHit;
+    function showArea(feats) {
+      if (hitArea) map.removeLayer(hitArea);
+      hitArea = L.geoJSON({ type: "FeatureCollection", features: feats }, {
+        interactive: false,   /* 下の図形の描画・タップを邪魔しない */
+        style: () => ({ color: "#dc2626", weight: 3, dashArray: "8 6", fillColor: "#dc2626", fillOpacity: 0.08 }),
+        onEachFeature: (f, lyr) => {
+          const p = f.properties || {};
+          const label = (p.name || "") + (p.setai ? ` ${Number(p.setai).toLocaleString()}世帯` : "");
+          if (label) lyr.bindTooltip(label, { permanent: true, direction: "center", className: "psAreaLabel" });
+        }
+      }).addTo(map);
+      map.fitBounds(hitArea.getBounds(), { padding: [24, 24], maxZoom: 17 });
+    }
+    async function pick(title, lat, lng) {
+      const my = ++seq;
+      clearHit();
+      /* まず地点へ飛んでマーカー(境界の取得を待たせない) */
+      hitMarker = L.circleMarker([lat, lng], { radius: 10, color: "#dc2626", weight: 3, fillOpacity: 0 }).addTo(map);
+      clearBtn.style.display = "";
+      map.setView([lat, lng], Math.max(map.getZoom(), 15));
+      try {
+        const [codes, rg] = await Promise.all([psCityCodes(), gsiReverse(lat, lng).catch(() => null)]);
+        if (my !== seq) return;
+        if (!rg || !rg.code || !codes.has(rg.code)) return;       /* 未収録の自治体 → マーカーのみ */
+        const gj = await psGeo(rg.code);
+        if (my !== seq) return;
+        const r = psPickFeatures(gj, title, rg.name, lng, lat);
+        if (!r.feats.length) return;
+        showArea(r.feats);
+        if (r.exact && hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+      } catch (_) { /* 境界が取れなければマーカーだけ残す */ }
+    }
     async function run() {
       const q = input.value.trim();
       if (!q) return;
@@ -955,10 +1065,8 @@ function addPlaceSearchControl(map) {
           item.className = "psItem";
           item.textContent = (a.properties && a.properties.title) || q;
           item.onclick = () => {
-            if (hitMarker) map.removeLayer(hitMarker);
-            hitMarker = L.circleMarker([co[1], co[0]], { radius: 10, color: "#dc2626", weight: 3, fillOpacity: 0 }).addTo(map);
-            map.setView([co[1], co[0]], Math.max(map.getZoom(), 15));
             list.innerHTML = "";
+            pick(item.textContent, co[1], co[0]);
           };
           list.appendChild(item);
         });
