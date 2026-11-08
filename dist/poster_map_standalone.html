@@ -1494,10 +1494,19 @@ async function muniFileFor(title, code) {
   if (w.cityFile && title.endsWith(w.city) && mi.cityFiles.has(w.cityFile)) return { file: w.cityFile, name: w.city };
   return null;
 }
-/* 点を含む街区を1つ返す(無ければ null)。title の番号と街区符号が食い違っても地点優先(住居表示と調査区のずれ吸収) */
-function kbPick(gj, lng, lat) {
+/* 囲む街区を1つ返す(無ければ null)。
+   ① 地点の町丁目(lv01=逆ジオコーダ)の中で街区符号が検索した番号(wantNum)と一致するもの
+      — 国土地理院の「○番」の代表点は街区の縁(道路中心線で引いた調査区の境)をまたいで隣に落ちることがあるため、
+        番号の一致を点包含より優先する(実例: 鶴見中央一丁目1番の点が2番の調査区に入る)
+   ② 無ければ地点を含む街区(住居表示と調査区番号がずれている地域)。ラベルは実データの番号 */
+function kbPick(gj, lng, lat, lv01, wantNum) {
   const fs = (gj && gj.features) || [];
-  const f = fs.find(x => psContains(x.geometry, lng, lat));
+  let f = null;
+  if (lv01 && isFinite(wantNum)) {
+    const same = fs.filter(x => x.properties && x.properties.n === lv01 && parseInt(x.properties.b, 10) === wantNum);
+    if (same.length === 1) f = same[0];
+  }
+  if (!f) f = fs.find(x => psContains(x.geometry, lng, lat));
   if (!f) return null;
   const p = f.properties || {};
   const num = parseInt(p.b, 10);
@@ -1605,10 +1614,12 @@ function addPlaceSearchControl(map, opts) {
           return;   /* 外周が取れなくても丁目には落とさない(マーカーのみ) */
         }
         /* 番地(○番)まで入力 → その街区だけを囲む(丁目は囲まない・マーカーも消す) */
-        if (PS_BLOCK_RE.test(title)) {
+        const bm = title.match(PS_BLOCK_RE);
+        if (bm) {
+          const wantNum = parseInt(bm[1].replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)), 10);
           const kb = await kbGeo(rg.code);
           if (my !== seq) return;
-          const bf = kb && kbPick(kb, lng, lat);
+          const bf = kb && kbPick(kb, lng, lat, rg.name, wantNum);
           if (bf) {
             showArea([bf]);
             if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
