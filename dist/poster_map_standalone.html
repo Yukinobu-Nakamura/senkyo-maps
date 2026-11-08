@@ -286,9 +286,9 @@ body.uiHidden .noticebar{ display:none !important; }
 .placeSearch .psItem:hover{ background:#eef2ff; }
 .placeSearch .psClear{ border:1px solid #fca5a5; background:#fef2f2; color:#991b1b; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
 .placeSearch .psAdopt{ border:1px solid #7c3aed; background:#7c3aed; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; font-weight:600; }
-/* 検索した町丁目の枠に載せる名前+世帯数ラベル(Leafletツールチップの吹き出し矢印は出さない) */
-.leaflet-tooltip.psAreaLabel{ background:rgba(255,255,255,.92); border:1px solid #dc2626; color:#991b1b; font-weight:700; font-size:12px; padding:2px 6px; border-radius:4px; box-shadow:none; white-space:nowrap; }
-.leaflet-tooltip.psAreaLabel::before{ display:none; }
+/* 検索した町丁目・街区の枠に載せる名前+世帯数ラベル(divIcon マーカー。中心に置くため内側で -50% ずらす) */
+.psAreaLabelWrap{ background:none; border:none; }
+.psAreaLabel{ position:absolute; left:0; top:0; transform:translate(-50%,-50%); background:rgba(255,255,255,.92); border:1px solid #dc2626; color:#991b1b; font-weight:700; font-size:12px; padding:2px 6px; border-radius:4px; white-space:nowrap; pointer-events:none; }
 .noticebar .noticeLic{ font-size:11px; color:#374151; }
 .noticebar .noticeLic a{ color:#166534; }
 /* 免責バーが画面を占領して地図が数十pxしか残らない問題の対策
@@ -535,7 +535,7 @@ const FAQ_HTML = `
 <li><b>地図の画像</b> — 国土地理院／OpenStreetMap。見ている範囲の画像を取り寄せます</li>
 <li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
 <li class="needsSetai"><b>世帯数などの公開データ</b> — このサイト自身</li>
-<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>から取り寄せます</li>
+<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目・街区(○番)を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>(作成者の公開データ置き場 senkyo-maps-data を含む)から取り寄せます。※街区の枠は国勢調査の調査区(道路の中心線)に基づくため、実際の街区より道路の半分ほど外側に膨らみます</li>
 <li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
 <li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
 <li class="teamSync"><b>☁️ 同期(設定したときだけ)</b> — <b>チーム自身が用意したGoogleスプレッドシート</b>。区域・ルートの座標と<b>担当・メモ・登録者名</b>を送ります。設定しなければ通信しません</li>
@@ -1399,8 +1399,61 @@ function psPickFeatures(gj, title, lv01, lng, lat) {
   return { feats: f, exact: f.length === 1 && title.endsWith(nameOf(f[0])) };
 }
 
+/* ---- 街区(○番)の枠: 国勢調査 基本単位区境界を街区単位に統合した kb_<code>.geojson.gz ----
+   置き場は別リポジトリ senkyo-maps-data(同じ github.io 配下。本体リポジトリの Pages 容量上限のため分離)。
+   作り方は build/make_kihon_tanniku.py。gzip のまま置き、ブラウザの DecompressionStream で展開する
+   (非対応ブラウザでは街区モードを諦めて丁目枠+マーカーに戻る)。
+   候補名が「○番」(「番地」ではない=住居表示の街区符号)のときだけ使う。 */
+const KB_BASE = (typeof window !== "undefined" && window.SENKYO_KB_BASE) || "https://yukinobu-nakamura.github.io/senkyo-maps-data/kb/";
+const PS_BLOCK_RE = /([0-9０-９]+)番(?!地)/;
+const _kbCache = new Map();   /* code → Promise<GeoJSON|null> */
+let _kbCodesPromise = null;
+/* 収録コード一覧(kb_index.json)。未収録の自治体に 404 を投げないために先に見る。取れなければ空=街区モード無し */
+function kbCodes() {
+  if (!_kbCodesPromise) {
+    _kbCodesPromise = fetch(KB_BASE + "kb_index.json")
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(j => new Set(Array.isArray(j.codes) ? j.codes : []))
+      .catch(() => { _kbCodesPromise = null; return new Set(); });
+  }
+  return _kbCodesPromise;
+}
+function kbGeo(code) {
+  if (typeof DecompressionStream === "undefined") return Promise.resolve(null);
+  if (!_kbCache.has(code)) {
+    const p = kbCodes()
+      .then(codes => codes.has(code) ? fetch(KB_BASE + "kb_" + code + ".geojson.gz") : null)
+      .then(r => { if (!r || !r.ok) return null; return r.arrayBuffer(); })
+      .then(async buf => {
+        if (!buf) return null;
+        const u8 = new Uint8Array(buf);
+        let text;
+        if (u8[0] === 0x1f && u8[1] === 0x8b) {   /* gzip magic。配信側で展開済みなら素通し */
+          const ds = new DecompressionStream("gzip");
+          text = await new Response(new Blob([u8]).stream().pipeThrough(ds)).text();
+        } else {
+          text = new TextDecoder().decode(u8);
+        }
+        return JSON.parse(text);
+      })
+      .catch(() => { _kbCache.delete(code); return null; });
+    _kbCache.set(code, p);
+  }
+  return _kbCache.get(code);
+}
+/* 点を含む街区を1つ返す(無ければ null)。title の番号と街区符号が食い違っても地点優先(住居表示と調査区のずれ吸収) */
+function kbPick(gj, lng, lat) {
+  const fs = (gj && gj.features) || [];
+  const f = fs.find(x => psContains(x.geometry, lng, lat));
+  if (!f) return null;
+  const p = f.properties || {};
+  const num = parseInt(p.b, 10);
+  return { type: "Feature", geometry: f.geometry,
+           properties: { name: (p.n || "") + (isFinite(num) ? ` ${num}番` : ""), setai: p.s, block: true } };
+}
+
 /* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。
-   収録自治体では検索した町丁目を枠で囲む(上の psPickFeatures) */
+   収録自治体では検索した町丁目を枠で囲む(上の psPickFeatures)。番地まで入れたときはその街区だけ(kbPick) */
 function addPlaceSearchControl(map, opts) {
   opts = opts || {};
   /* opts.onAdopt(features, label): 囲んだ区画をそのページの図形として登録する関数(ポスティングが渡す)。
@@ -1427,9 +1480,14 @@ function addPlaceSearchControl(map, opts) {
       body.style.display = open ? "inline-flex" : "none";
       if (open) input.focus();
     };
+    function removeArea() {
+      if (!hitArea) return;
+      map.removeLayer(hitArea);
+      hitArea = null;
+    }
     function clearHit() {
       if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
-      if (hitArea) { map.removeLayer(hitArea); hitArea = null; }
+      removeArea();
       hitFeats = [];
       clearBtn.style.display = "none";
       if (adoptBtn) adoptBtn.style.display = "none";
@@ -1443,19 +1501,31 @@ function addPlaceSearchControl(map, opts) {
       opts.onAdopt(copies);
     };
     function showArea(feats) {
-      if (hitArea) map.removeLayer(hitArea);
+      removeArea();
       hitFeats = feats;
       if (adoptBtn) adoptBtn.style.display = "";
       hitArea = L.geoJSON({ type: "FeatureCollection", features: feats }, {
         interactive: false,   /* 下の図形の描画・タップを邪魔しない */
         style: () => ({ color: "#dc2626", weight: 3, dashArray: "8 6", fillColor: "#dc2626", fillOpacity: 0.08 }),
-        onEachFeature: (f, lyr) => {
-          const p = f.properties || {};
-          const label = (p.name || "") + (p.setai ? ` ${Number(p.setai).toLocaleString()}世帯` : "");
-          if (label) lyr.bindTooltip(label, { permanent: true, direction: "center", className: "psAreaLabel" });
-        }
       }).addTo(map);
-      map.fitBounds(hitArea.getBounds(), { padding: [24, 24], maxZoom: 17 });
+      /* ラベルは Leaflet のツールチップではなく divIcon のマーカーで置く。
+         常時表示ツールチップはズームアニメーション中の付け外しで取り残されることがあり、
+         マーカーなら removeLayer で確実に消える */
+      hitArea.eachLayer(lyr => {
+        const p = (lyr.feature && lyr.feature.properties) || {};
+        const label = (p.name || "") + (p.setai ? ` ${Number(p.setai).toLocaleString()}世帯` : "");
+        if (!label) return;
+        const c = lyr.getCenter ? lyr.getCenter() : lyr.getBounds().getCenter();
+        const esc = s => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+        hitArea.addLayer(L.marker(c, {
+          icon: L.divIcon({ className: "psAreaLabelWrap", html: `<div class="psAreaLabel">${esc(label)}</div>`, iconSize: null }),
+          interactive: false, keyboard: false
+        }));
+      });
+      /* ズームアニメーション中の fitBounds は Leaflet に無視される(_tryAnimatedZoom が true を返して終わる)ので、終わってから寄せる */
+      const b = hitArea.getBounds();
+      const fit = () => map.fitBounds(b, { padding: [24, 24], maxZoom: 17 });
+      if (map._animatingZoom) map.once("zoomend", fit); else fit();
     }
     async function pick(title, lat, lng) {
       const my = ++seq;
@@ -1467,7 +1537,20 @@ function addPlaceSearchControl(map, opts) {
       try {
         const [codes, rg] = await Promise.all([psCityCodes(), gsiReverse(lat, lng).catch(() => null)]);
         if (my !== seq) return;
-        if (!rg || !rg.code || !codes.has(rg.code)) return;       /* 未収録の自治体 → マーカーのみ */
+        if (!rg || !rg.code) return;
+        /* 番地(○番)まで入力 → その街区だけを囲む(丁目は囲まない・マーカーも消す) */
+        if (PS_BLOCK_RE.test(title)) {
+          const kb = await kbGeo(rg.code);
+          if (my !== seq) return;
+          const bf = kb && kbPick(kb, lng, lat);
+          if (bf) {
+            showArea([bf]);
+            if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+            return;
+          }
+          /* 街区データが無い(未収録・地番地域・非対応ブラウザ) → 従来の丁目枠+マーカーへ */
+        }
+        if (!codes.has(rg.code)) return;       /* 未収録の自治体 → マーカーのみ */
         const gj = await psGeo(rg.code);
         if (my !== seq) return;
         const r = psPickFeatures(gj, title, rg.name, lng, lat);
