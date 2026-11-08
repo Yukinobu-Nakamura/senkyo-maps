@@ -935,14 +935,28 @@ function gsiPlaceName(lat, lng) {
 const PS_CHOME_RE = /[一二三四五六七八九十]+丁目$/;
 const _psGeoCache = new Map();   /* code → Promise<GeoJSON>。同じ自治体を何度探しても1回しか取らない */
 let _psCodesPromise = null;
-function psCityCodes() {
+/* 収録自治体の一覧 → {codes:Set, byCode:{code→{name, city, pref, cityFile}}}
+   cityFile は「市 > 区」構成(政令市など)の市全体ファイル名(city_<最小区コード>)。make_muni_outline.py と同じ規則 */
+function psCityIndex() {
   if (!_psCodesPromise) {
     _psCodesPromise = fetchSetaiIndex()
-      .then(cs => { const s = new Set(); cs.forEach(c => c.wards.forEach(w => s.add(w.code))); return s; })
-      .catch(() => new Set());
+      .then(cs => {
+        const codes = new Set(), byCode = {};
+        cs.forEach(c => {
+          const sub = setaiHasSub(c);
+          const minCode = c.wards.map(w => w.code).sort()[0];
+          c.wards.forEach(w => {
+            codes.add(w.code);
+            byCode[w.code] = { name: w.name, city: c.city, pref: c.pref, cityFile: sub ? "city_" + minCode + ".geojson.gz" : null };
+          });
+        });
+        return { codes, byCode };
+      })
+      .catch(() => ({ codes: new Set(), byCode: {} }));
   }
   return _psCodesPromise;
 }
+function psCityCodes() { return psCityIndex().then(ix => ix.codes); }
 function psGeo(code) {
   if (!_psGeoCache.has(code)) {
     const p = fetch("../data/setai_" + code + ".geojson")
@@ -1006,28 +1020,67 @@ function kbCodes() {
   }
   return _kbCodesPromise;
 }
-function kbGeo(code) {
+/* gzip の JSON を取って展開して返す。無い/失敗は null */
+function fetchGzJson(url) {
   if (typeof DecompressionStream === "undefined") return Promise.resolve(null);
+  return fetch(url)
+    .then(r => { if (!r || !r.ok) return null; return r.arrayBuffer(); })
+    .then(async buf => {
+      if (!buf) return null;
+      const u8 = new Uint8Array(buf);
+      let text;
+      if (u8[0] === 0x1f && u8[1] === 0x8b) {   /* gzip magic。配信側で展開済みなら素通し */
+        const ds = new DecompressionStream("gzip");
+        text = await new Response(new Blob([u8]).stream().pipeThrough(ds)).text();
+      } else {
+        text = new TextDecoder().decode(u8);
+      }
+      return JSON.parse(text);
+    })
+    .catch(() => null);
+}
+function kbGeo(code) {
   if (!_kbCache.has(code)) {
     const p = kbCodes()
-      .then(codes => codes.has(code) ? fetch(KB_BASE + "kb_" + code + ".geojson.gz") : null)
-      .then(r => { if (!r || !r.ok) return null; return r.arrayBuffer(); })
-      .then(async buf => {
-        if (!buf) return null;
-        const u8 = new Uint8Array(buf);
-        let text;
-        if (u8[0] === 0x1f && u8[1] === 0x8b) {   /* gzip magic。配信側で展開済みなら素通し */
-          const ds = new DecompressionStream("gzip");
-          text = await new Response(new Blob([u8]).stream().pipeThrough(ds)).text();
-        } else {
-          text = new TextDecoder().decode(u8);
-        }
-        return JSON.parse(text);
-      })
-      .catch(() => { _kbCache.delete(code); return null; });
+      .then(codes => codes.has(code) ? fetchGzJson(KB_BASE + "kb_" + code + ".geojson.gz") : null)
+      .then(gj => { if (!gj) _kbCache.delete(code); return gj; });
     _kbCache.set(code, p);
   }
   return _kbCache.get(code);
+}
+
+/* ---- 市区町村の外周(「豊島区」「横浜市」で検索したとき全体を囲む) ----
+   senkyo-maps-data の muni/ に、町丁目を統合した外周(muni_<code>)と政令市全体(city_<最小区コード>)を置く。
+   作り方は build/make_muni_outline.py。水面調査区(海・湖)は含まないので海側は陸で閉じる */
+const MUNI_BASE = KB_BASE.replace(/kb\/$/, "muni/");
+const _muniCache = new Map();
+let _muniIndexPromise = null;
+function muniIndex() {
+  if (!_muniIndexPromise) {
+    _muniIndexPromise = fetch(MUNI_BASE + "muni_index.json")
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(j => ({ codes: new Set(j.codes || []), cityFiles: new Set((j.cities || []).map(c => c.file)) }))
+      .catch(() => { _muniIndexPromise = null; return { codes: new Set(), cityFiles: new Set() }; });
+  }
+  return _muniIndexPromise;
+}
+function muniGeo(file) {
+  if (!_muniCache.has(file)) {
+    const p = fetchGzJson(MUNI_BASE + file).then(f => { if (!f) _muniCache.delete(file); return f; });
+    _muniCache.set(file, p);
+  }
+  return _muniCache.get(file);
+}
+/* 候補名が自治体そのもの(末尾が区名/市名)なら、描くべき外周ファイル名を返す。違えば null
+   例: 「東京都豊島区」→ muni_13116 ／「神奈川県横浜市」→ city_14101 ／「神奈川県横浜市鶴見区」→ muni_14101 */
+async function muniFileFor(title, code) {
+  const ix = await psCityIndex();
+  const w = ix.byCode[code];
+  if (!w) return null;
+  const mi = await muniIndex();
+  if (title.endsWith(w.name) && mi.codes.has(code)) return { file: "muni_" + code + ".geojson.gz", name: w.name };
+  if (w.cityFile && title.endsWith(w.city) && mi.cityFiles.has(w.cityFile)) return { file: w.cityFile, name: w.city };
+  return null;
 }
 /* 点を含む街区を1つ返す(無ければ null)。title の番号と街区符号が食い違っても地点優先(住居表示と調査区のずれ吸収) */
 function kbPick(gj, lng, lat) {
@@ -1094,7 +1147,7 @@ function addPlaceSearchControl(map, opts) {
       if (adoptBtn) adoptBtn.style.display = "";
       hitArea = L.geoJSON({ type: "FeatureCollection", features: feats }, {
         interactive: false,   /* 下の図形の描画・タップを邪魔しない */
-        style: () => ({ color: "#dc2626", weight: 3, dashArray: "8 6", fillColor: "#dc2626", fillOpacity: 0.08 }),
+        style: () => ({ color: "#dc2626", weight: 3, dashArray: "8 6", fillColor: "#dc2626", fillOpacity: 0.08, className: "psAreaPath" }),
       }).addTo(map);
       /* ラベルは Leaflet のツールチップではなく divIcon のマーカーで置く。
          常時表示ツールチップはズームアニメーション中の付け外しで取り残されることがあり、
@@ -1119,13 +1172,26 @@ function addPlaceSearchControl(map, opts) {
       const my = ++seq;
       clearHit();
       /* まず地点へ飛んでマーカー(境界の取得を待たせない) */
-      hitMarker = L.circleMarker([lat, lng], { radius: 10, color: "#dc2626", weight: 3, fillOpacity: 0 }).addTo(map);
+      hitMarker = L.circleMarker([lat, lng], { radius: 10, color: "#dc2626", weight: 3, fillOpacity: 0, className: "psHitMarker" }).addTo(map);
       clearBtn.style.display = "";
       map.setView([lat, lng], Math.max(map.getZoom(), 15));
       try {
         const [codes, rg] = await Promise.all([psCityCodes(), gsiReverse(lat, lng).catch(() => null)]);
         if (my !== seq) return;
         if (!rg || !rg.code) return;
+        /* 自治体そのもの(「豊島区」「横浜市」) → 外周全体を囲む。地点の丁目を囲んではいけない */
+        const mf = await muniFileFor(title, rg.code);
+        if (my !== seq) return;
+        if (mf) {
+          const f = await muniGeo(mf.file);
+          if (my !== seq) return;
+          if (f && f.geometry) {
+            const p = f.properties || {};
+            showArea([{ type: "Feature", geometry: f.geometry, properties: { name: mf.name, setai: p.s, muni: true } }]);
+            if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+          }
+          return;   /* 外周が取れなくても丁目には落とさない(マーカーのみ) */
+        }
         /* 番地(○番)まで入力 → その街区だけを囲む(丁目は囲まない・マーカーも消す) */
         if (PS_BLOCK_RE.test(title)) {
           const kb = await kbGeo(rg.code);
