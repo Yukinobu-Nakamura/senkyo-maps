@@ -989,9 +989,12 @@ function psPickFeatures(gj, title, lv01, lng, lat) {
 
 /* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。
    収録自治体では検索した町丁目を枠で囲む(上の psPickFeatures) */
-function addPlaceSearchControl(map) {
+function addPlaceSearchControl(map, opts) {
+  opts = opts || {};
+  /* opts.onAdopt(features, label): 囲んだ区画をそのページの図形として登録する関数(ポスティングが渡す)。
+     渡されたページだけ「➕ この区域を登録」ボタンが出る。features は GeoJSON Feature の配列(丁目ごと) */
   const ctl = L.control({ position: "topleft" });
-  let hitMarker = null, hitArea = null, seq = 0;
+  let hitMarker = null, hitArea = null, hitFeats = [], seq = 0;
   ctl.onAdd = () => {
     const div = L.DomUtil.create("div", "placeSearch");
     div.innerHTML =
@@ -1000,12 +1003,13 @@ function addPlaceSearchControl(map) {
       '<input class="psIn" type="text" placeholder="地名・住所(例: 池袋二丁目)">' +
       '<button class="psGo" type="button">検索</button>' +
       '<button class="psClear" type="button" style="display:none" title="検索結果の枠・マーカーを消す">枠を消す</button>' +
+      (opts.onAdopt ? '<button class="psAdopt" type="button" style="display:none" title="赤い枠の区域をそのまま図形として登録し、状態(予定/配布中/済)などを設定します">➕ この区域を登録</button>' : "") +
       '<div class="psList"></div></span>';
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
     const btn = div.querySelector(".psBtn"), body = div.querySelector(".psBody");
     const input = div.querySelector(".psIn"), list = div.querySelector(".psList");
-    const clearBtn = div.querySelector(".psClear");
+    const clearBtn = div.querySelector(".psClear"), adoptBtn = div.querySelector(".psAdopt");
     btn.onclick = () => {
       const open = body.style.display === "none";
       body.style.display = open ? "inline-flex" : "none";
@@ -1014,11 +1018,22 @@ function addPlaceSearchControl(map) {
     function clearHit() {
       if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
       if (hitArea) { map.removeLayer(hitArea); hitArea = null; }
+      hitFeats = [];
       clearBtn.style.display = "none";
+      if (adoptBtn) adoptBtn.style.display = "none";
     }
     clearBtn.onclick = clearHit;
+    if (adoptBtn) adoptBtn.onclick = () => {
+      if (!hitFeats.length) return;
+      /* 境界データの元オブジェクトを図形に流用しないようコピーを渡す(図形側で編集されるため) */
+      const copies = hitFeats.map(f => ({ type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: (f.properties && f.properties.name) || "" } }));
+      clearHit();
+      opts.onAdopt(copies);
+    };
     function showArea(feats) {
       if (hitArea) map.removeLayer(hitArea);
+      hitFeats = feats;
+      if (adoptBtn) adoptBtn.style.display = "";
       hitArea = L.geoJSON({ type: "FeatureCollection", features: feats }, {
         interactive: false,   /* 下の図形の描画・タップを邪魔しない */
         style: () => ({ color: "#dc2626", weight: 3, dashArray: "8 6", fillColor: "#dc2626", fillOpacity: 0.08 }),

@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=efd33426">
+<link rel="stylesheet" href="../assets/common.css?v=24b3906f">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -103,7 +103,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=efd33426"></script>
+<script src="../assets/common.js?v=24b3906f"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -173,7 +173,24 @@ const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 const layersCtl = L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
 addLocateControl(map);
-addPlaceSearchControl(map);
+/* 🔍で囲んだ町丁目を、そのまま配布区域の図形として登録する(状態は「予定」で開始しポップアップで変更) */
+addPlaceSearchControl(map, {
+  onAdopt: (feats) => {
+    let last = null;
+    feats.forEach(f => {
+      const nm = f.properties && f.properties.name;
+      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: { status: "plan", place: nm || undefined } });
+      if (!lyr) return;
+      stampFeature(lyr.feature.properties);
+      last = lyr;
+    });
+    if (!last) return;
+    persist();
+    renderStats();
+    if (feats.length === 1) last.openPopup();
+    else showMapToast(map.getContainer(), `${feats.length}件の区域を「予定」で登録しました。各図形をタップして状態・担当を設定できます`, 5000);
+  },
+});
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
   `<div class="gTabs">
