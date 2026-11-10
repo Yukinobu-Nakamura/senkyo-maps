@@ -382,6 +382,10 @@ body.uiHidden .noticebar{ display:none !important; }
   .cSwPick.sel{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.15); }
   .sPlace{ font-weight:700; color:#1e3a5f; margin-bottom:2px; min-height:1em; }
   .sOwner{ font-size:11px; color:#6b7280; margin-bottom:2px; }
+  /* 世帯数レイヤのポップアップ先頭(町丁目名の下)の「担当登録」欄 */
+  .pmAssign{ margin:4px 0 6px; padding:6px 8px; border:1px solid #c7d2fe; border-radius:8px; background:#eef2ff; font-size:12px; }
+  .pmAssignHd{ font-weight:700; margin-bottom:3px; }
+  .pmAssign .popupSave{ width:100%; }
   /* オブジェクト一覧パネル */
   .listBtn{ width:34px; height:34px; border:2px solid rgba(0,0,0,.2); background:#fff; border-radius:6px; cursor:pointer; font-size:16px; }
   .listBtn.on{ background:#ede9fe; }
@@ -1602,7 +1606,7 @@ function addPlaceSearchControl(map, opts) {
     if (adoptBtn) adoptBtn.onclick = () => {
       if (!hitFeats.length) return;
       /* 境界データの元オブジェクトを図形に流用しないようコピーを渡す(図形側で編集されるため) */
-      const copies = hitFeats.map(f => ({ type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: (f.properties && f.properties.name) || "" } }));
+      const copies = hitFeats.map(f => ({ type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: (f.properties && f.properties.name) || "", key: (f.properties && f.properties.key) || "" } }));
       clearHit();
       opts.onAdopt(copies);
     };
@@ -1990,14 +1994,17 @@ function addSetaiLayers(map, opts) {
     const unit = v == null ? "" : (mu === "%" ? "" : mu);
     return `<span class="setaiNm">${setaiName(p)}</span><br>${setaiFmt(v, mu)}<span class="setaiUnit">${unit}</span>`;
   }
-  function popupHtml(p) {
+  /* top = 町丁目名のすぐ下に差し込む操作欄(ポスティングの担当登録)。
+     下の統計表は長く、小さいスマホでは地図より背が高くなって末尾が画面外に出るため、
+     操作欄は先頭に置く(2026-11-10 iPhone SE 幅で実測) */
+  function popupHtml(p, top) {
     const tt = setaiTT(p);
     const gray = (t) => `<span style="font-size:10.5px;color:#888">${t}</span>`;
     const row = (label, v, unit, extra) =>
       `<tr><td style="color:#555;padding-right:8px">${label}</td><td style="text-align:right"><b>${setaiFmt(v, unit)}</b>${unit === "%" || v == null ? "" : unit}${extra || ""}</td></tr>`;
     /* 「人口」は統計表の総数(tt)を優先して男女・年齢の内訳と母数を揃える。
        ttがある(=境界のjinkoと異なる=秘匿合算の受け皿)ときは境界区域の集計も併記(C-2) */
-    let html = `<b>${setaiName(p)}</b><br><table style="border-collapse:collapse;font-size:12px">` +
+    let html = `<b>${setaiName(p)}</b>` + (top || "<br>") + `<table style="border-collapse:collapse;font-size:12px">` +
       row("世帯数", p.setai, "世帯") + row("人口", p.hi ? p.jinko : tt, "人");
     if (p.tt != null && !p.hi) {
       html += `<tr><td></td><td style="text-align:right">${gray(`(境界区域の集計 ${p.jinko.toLocaleString()}人)`)}</td></tr>`;
@@ -2111,7 +2118,17 @@ function addSetaiLayers(map, opts) {
         ly._fc = setaiBinColor(curBins, metricVal(p));
         ly._lh = html;
         /* 内訳・注記は開くたびに現在の属性で組み立てる(units>1=同一町名の集計単位合算 等) */
-        ly.bindPopup(() => popupHtml(p));
+        /* opts.popupAction = { html(p, f), wire(node, f, ly) }: ページ固有の操作欄を
+           ポップアップ末尾に足す(ポスティング=この区域の担当登録)。ポスターは渡さない */
+        const act = opts.popupAction;
+        ly.bindPopup(() => {
+          /* 地図より背が高いポップアップは中をスクロールさせる(開くたびに今の地図の高さで決める。
+             Leaflet は内容の組み立て直後にこの maxHeight でレイアウトする) */
+          const pop = ly.getPopup();
+          if (pop) pop.options.maxHeight = Math.max(160, map.getSize().y - 70);
+          return popupHtml(p, act ? act.html(p, f) : "");
+        });
+        if (act) ly.on("popupopen", (e) => act.wire(e.popup.getElement(), f, ly));
       },
     }).eachLayer(l => ent.grp.addLayer(l));
     ent.gen = styleGen;   /* 現在のビンで塗った、の印 */
@@ -2658,7 +2675,8 @@ addPlaceSearchControl(map, {
     let last = null;
     feats.forEach(f => {
       const nm = f.properties && f.properties.name;
-      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: { status: "plan", place: nm || undefined } });
+      const key = f.properties && f.properties.key;
+      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: { status: "plan", place: nm || undefined, setaiKey: key || undefined } });
       if (!lyr) return;
       stampFeature(lyr.feature.properties);
       last = lyr;
@@ -2681,6 +2699,7 @@ addGuideControl(map, "📮 ポスティングマップの使い方",
     <ol>
       <li><b>区域・ルートを描く</b> — 左のツールでポリゴン/矩形(配布区域)や線(配布ルート)を描きます</li>
       <li><b>図形をタップ</b> — 状態(予定/配布中/済)・担当・メモを保存。色が変わり右上の件数も更新されます。<b>色と濃さ</b>も図形ごとに指定できます(「自動」=状態の色、8色パレット、右端の<b>カラーピッカーで完全に自由な色</b>も可。ルートを目立たせない時は濃さを「薄め/最薄」に)</li>
+      <li><b>町丁目ごとに担当を決める</b> — 右上の<b>🏠世帯数</b>で自治体を表示し、町丁目をタップ → 世帯数・人口のポップアップ上部の<b>「📮 ポスティング担当」</b>で担当名と状態を選んで<b>「この区域を担当登録」</b>。その町丁目がそのまま配布区域の図形になります(以後は図形をタップして変更)</li>
       <li><b>直す</b> — 左の編集(頂点修正)・移動・削除ツールで図形を調整、📍で現在地表示</li>
       <li><b>探す</b> — 左上の<b>📃で図形の一覧</b>を表示。行をタップするとその図形へジャンプします(取り込んだデータがどこにあるか分からない時に)</li>
       <li><b>状態の色を変える</b> — 右下の凡例<b>「🎨 状態の色」の色見本をタップ</b>すると、予定/配布中/済それぞれの色を好きな色に変えられます。<b>すでに描いた図形も一緒に塗り替わり</b>(色を「自動」にしているもの)、この端末に保存されるので次に開いたときもそのままです。もどしたいときは同じ凡例に出る「色をもどす」</li>
@@ -3609,9 +3628,75 @@ let usRows = loadLocal(KEY_USETAI, []) || [];
    選んだ自治体と色分けの指標は、この端末に保存され次に開いたときも残る
    (メンバー要望 2026-10-06「再表示するたびに消えてしまう」)。
    消すのは「全消去」→ setaiCtl.clearSelection()。 */
+/* 町丁目をタップしたポップアップから、その区域をそのまま配布区域の図形として
+   「担当」付きで登録する(中村さん依頼 2026-11-10)。
+   登録した図形には setaiKey(町丁字コード)を持たせ、同じ区域の二重登録を防ぐ。
+   登録後は図形(上のペイン)が町丁目に重なるので、次のタップは図形側のポップアップ
+   (状態・色・担当・メモ)が開く。図形の一部しか重なっていない所をタップした場合に
+   備え、登録済みなら「登録内容を変更」で図形のポップアップへ渡す。 */
+function findShapeBySetaiKey(key) {
+  if (!key) return null;
+  let hit = null;
+  shapesLayer.eachLayer(l => {
+    const q = l.feature && l.feature.properties;
+    if (!hit && q && q.setaiKey === key) hit = l;
+  });
+  return hit;
+}
+const setaiAssignAction = {
+  html: (p) => {
+    const head = `<div class="pmAssign"><div class="pmAssignHd">📮 ポスティング担当</div>`;
+    const ex = findShapeBySetaiKey(p.key);
+    if (ex) {
+      const q = ex.feature.properties;
+      return head + `登録済み: <b>${mgEsc(statusOf(q.status).label)}</b> ・ 担当 ` +
+        (q.who ? `<b>${mgEsc(q.who)}</b>` : "未設定") +
+        `<button type="button" class="popupSave" id="pmOpen">✏️ 登録内容を変更</button></div>`;
+    }
+    /* 担当の入力候補 = すでに図形に付いている担当名(打ち間違いで別人扱いになるのを減らす) */
+    const whos = new Set();
+    shapesLayer.eachLayer(l => { const w = l.feature && l.feature.properties && l.feature.properties.who; if (w) whos.add(w); });
+    const opts = SHAPE_STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+    return head +
+      `担当:<input type="text" id="pmWho" list="pmWhoList" maxlength="20" placeholder="例)佐藤" autocomplete="off">` +
+      `<datalist id="pmWhoList">${[...whos].map(w => `<option value="${escHtmlAttr(w)}">`).join("")}</datalist>` +
+      `状態:<select id="pmStatus">${opts}</select>` +
+      `<button type="button" class="popupSave" id="pmAdd">この区域を担当登録</button></div>`;
+  },
+  wire: (node, f) => {
+    const openBtn = node.querySelector("#pmOpen");
+    if (openBtn) openBtn.onclick = () => {
+      const ex = findShapeBySetaiKey(f.properties.key);
+      map.closePopup();
+      if (ex) ex.openPopup();
+    };
+    const addBtn = node.querySelector("#pmAdd");
+    if (!addBtn) return;
+    const whoIn = node.querySelector("#pmWho");
+    const doAdd = () => {
+      if (findShapeBySetaiKey(f.properties.key)) { map.closePopup(); return; }  /* 二度押し対策 */
+      const who = whoIn.value.trim();
+      const nm = f.properties.name || "";
+      /* 境界データの元オブジェクトは世帯数レイヤが使い続けるので、図形にはコピーを渡す */
+      const lyr = addFeatureLayer({ type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)),
+        properties: { status: node.querySelector("#pmStatus").value, who: who || undefined,
+                      place: nm || undefined, setaiKey: f.properties.key || undefined } });
+      if (!lyr) return;
+      stampFeature(lyr.feature.properties);
+      persist();
+      renderStats();
+      map.closePopup();
+      showMapToast(map.getContainer(),
+        `「${nm || "この区域"}」を${who ? `担当 ${who} で` : ""}登録しました。区域をタップすると状態・担当・メモを変更できます`, 4000);
+    };
+    addBtn.onclick = doAdd;
+    whoIn.onkeydown = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); doAdd(); } };
+  },
+};
 const setaiCtl = addSetaiLayers(map, {
   sessionKey: "postingMap",
   extra: { layer: usLayer, label: "取込CSV(自分で読み込んだ世帯数)" },
+  popupAction: setaiAssignAction,
 });
 const setaiLegendRefresh = setaiCtl.refreshLegend;
 /* ベースマップと地図の位置は、意図して「タブを開いている間だけ」のまま残す。

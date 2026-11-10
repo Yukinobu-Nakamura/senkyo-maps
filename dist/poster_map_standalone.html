@@ -1558,7 +1558,7 @@ function addPlaceSearchControl(map, opts) {
     if (adoptBtn) adoptBtn.onclick = () => {
       if (!hitFeats.length) return;
       /* 境界データの元オブジェクトを図形に流用しないようコピーを渡す(図形側で編集されるため) */
-      const copies = hitFeats.map(f => ({ type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: (f.properties && f.properties.name) || "" } }));
+      const copies = hitFeats.map(f => ({ type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: (f.properties && f.properties.name) || "", key: (f.properties && f.properties.key) || "" } }));
       clearHit();
       opts.onAdopt(copies);
     };
@@ -1946,14 +1946,17 @@ function addSetaiLayers(map, opts) {
     const unit = v == null ? "" : (mu === "%" ? "" : mu);
     return `<span class="setaiNm">${setaiName(p)}</span><br>${setaiFmt(v, mu)}<span class="setaiUnit">${unit}</span>`;
   }
-  function popupHtml(p) {
+  /* top = 町丁目名のすぐ下に差し込む操作欄(ポスティングの担当登録)。
+     下の統計表は長く、小さいスマホでは地図より背が高くなって末尾が画面外に出るため、
+     操作欄は先頭に置く(2026-11-10 iPhone SE 幅で実測) */
+  function popupHtml(p, top) {
     const tt = setaiTT(p);
     const gray = (t) => `<span style="font-size:10.5px;color:#888">${t}</span>`;
     const row = (label, v, unit, extra) =>
       `<tr><td style="color:#555;padding-right:8px">${label}</td><td style="text-align:right"><b>${setaiFmt(v, unit)}</b>${unit === "%" || v == null ? "" : unit}${extra || ""}</td></tr>`;
     /* 「人口」は統計表の総数(tt)を優先して男女・年齢の内訳と母数を揃える。
        ttがある(=境界のjinkoと異なる=秘匿合算の受け皿)ときは境界区域の集計も併記(C-2) */
-    let html = `<b>${setaiName(p)}</b><br><table style="border-collapse:collapse;font-size:12px">` +
+    let html = `<b>${setaiName(p)}</b>` + (top || "<br>") + `<table style="border-collapse:collapse;font-size:12px">` +
       row("世帯数", p.setai, "世帯") + row("人口", p.hi ? p.jinko : tt, "人");
     if (p.tt != null && !p.hi) {
       html += `<tr><td></td><td style="text-align:right">${gray(`(境界区域の集計 ${p.jinko.toLocaleString()}人)`)}</td></tr>`;
@@ -2067,7 +2070,17 @@ function addSetaiLayers(map, opts) {
         ly._fc = setaiBinColor(curBins, metricVal(p));
         ly._lh = html;
         /* 内訳・注記は開くたびに現在の属性で組み立てる(units>1=同一町名の集計単位合算 等) */
-        ly.bindPopup(() => popupHtml(p));
+        /* opts.popupAction = { html(p, f), wire(node, f, ly) }: ページ固有の操作欄を
+           ポップアップ末尾に足す(ポスティング=この区域の担当登録)。ポスターは渡さない */
+        const act = opts.popupAction;
+        ly.bindPopup(() => {
+          /* 地図より背が高いポップアップは中をスクロールさせる(開くたびに今の地図の高さで決める。
+             Leaflet は内容の組み立て直後にこの maxHeight でレイアウトする) */
+          const pop = ly.getPopup();
+          if (pop) pop.options.maxHeight = Math.max(160, map.getSize().y - 70);
+          return popupHtml(p, act ? act.html(p, f) : "");
+        });
+        if (act) ly.on("popupopen", (e) => act.wire(e.popup.getElement(), f, ly));
       },
     }).eachLayer(l => ent.grp.addLayer(l));
     ent.gen = styleGen;   /* 現在のビンで塗った、の印 */
