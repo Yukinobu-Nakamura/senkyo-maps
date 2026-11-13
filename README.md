@@ -23,6 +23,7 @@ GitHub Pages でホスティングしており、URL を開くだけで誰でも
 | `poster/index.html` | 選挙運動用ポスター掲示場の貼付け進捗管理(未/予約/完了/要確認/異常の色分けピン+完了率表示) → `/poster/` |
 | `posting/index.html` | 政治活動用ビラのポスティング区域・ルート管理(ポリゴン/線を描画、予定/配布中/済で色分け) → `/posting/` |
 | `gaisen/index.html` | 街宣の音声配慮地点・街宣好適地点の管理 → `/gaisen/` |
+| `posting-arcgis/index.html` | 🧪 **ポスティングマップ ArcGIS版(試作)** → `/posting-arcgis/`。地図エンジンに Esri の ArcGIS Maps SDK for JavaScript(CDN・APIキー不使用・背景は国土地理院タイル)を使った別バージョン。描画(SketchViewModel)・状態/色/担当/メモ・🔍検索と枠・📍タップで選ぶ・➕登録・GeoJSON読込/書出(Leaflet版と同形式、保存箱は `postingArcgis.shapes` で別)。管理表CSV・世帯数レイヤ・同期・配布用HTMLは未対応。トップ・歩き方からはリンクしない(URL直指定) |
 | `poster.html` / `posting.html` / `gaisen.html` / `arukikata.html` | 旧URL用のリダイレクトページ(新URLへ転送。`?`クエリ・`#`ハッシュも引き継ぐ) |
 | `assets/` | 共通CSS/JS |
 | `data/boards.sample.json` | 動作確認用のサンプル掲示場データ(選挙管理委員会が公表する掲示場一覧ではありません。豊島区内の実在の町名・座標をもとにしていますが、実際の掲示場の位置を示すものではありません。利用時は選管公表の掲示場一覧CSVを読み込んでください) |
@@ -118,7 +119,9 @@ LICENSE は 2026-09-12 に MIT License から PolyForm Noncommercial License 1.0
 本ライセンスの対象は、本リポジトリのうち作成者が作成したコード・コンテンツです。以下は各提供元の利用規約・ライセンスに従い、原典からの取得・利用が本ライセンスによって制限されることはありません。
 
 - Leaflet / Leaflet-Geoman 等の外部ライブラリ(CDN参照・非同梱)
-- 地図タイル(国土地理院・OpenStreetMap)
+- ArcGIS Maps SDK for JavaScript(Esri。`posting-arcgis/` が js.arcgis.com から参照・非同梱。Esri の利用条件に従う。Esri のベースマップ・ジオコーディング等のサービスは使用していない)
+- 地図タイル(国土地理院・OpenStreetMap)・国土地理院ベクトルタイル(建物外形)
+- `senkyo-maps-data` リポジトリの街区境界(基本単位区)・市区町村外周(いずれも e-Stat 国勢調査2020 境界データの加工)
 - `data/setai_*.geojson` の原データ(政府統計の総合窓口 e-Stat 国勢調査(2020年)小地域境界データ。政府標準利用規約(第2.0版)に準拠＝商用利用可・加工可(出典表示必須、加工時は加工した旨の明記が必要))
 - 国土地理院API(逆ジオコーダ・住所検索)
 

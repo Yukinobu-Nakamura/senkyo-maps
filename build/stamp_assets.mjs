@@ -28,6 +28,7 @@ const TARGET_FILES = [
   "posting/index.html",
   "poster/index.html",
   "gaisen/index.html",
+  "posting-arcgis/index.html",
   "dist/poster_map_standalone.html",
   "dist/posting_map_standalone.html",
 ];

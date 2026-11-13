@@ -276,6 +276,9 @@ body.uiHidden .noticebar{ display:none !important; }
 .placeSearch .psItem{ padding:4px 6px; font-size:12.5px; cursor:pointer; border-radius:5px; }
 .placeSearch .psItem:hover{ background:#eef2ff; }
 .placeSearch .psClear{ border:1px solid #fca5a5; background:#fef2f2; color:#991b1b; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
+.placeSearch .psTap{ width:100%; font-size:12px; color:#374151; display:flex; align-items:center; gap:4px; }
+.placeSearch .psTapSel{ flex:1; min-width:0; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; background:#fff; }
+.leaflet-container.psTapping{ cursor:crosshair; }
 .placeSearch .psAdopt{ border:1px solid #7c3aed; background:#7c3aed; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; font-weight:600; }
 /* 検索した町丁目・街区の枠に載せる名前+世帯数ラベル(divIcon マーカー。中心に置くため内側で -50% ずらす) */
 .psAreaLabelWrap{ background:none; border:none; }

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="origin-id" content="SENKYO-MAPS-ORIGIN-2609-XK47">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>ポスティングマップ ArcGIS版(試作) — ビラ配布区域の管理</title>
+<link rel="stylesheet" href="https://js.arcgis.com/4.34/esri/themes/light/main.css">
+<link rel="stylesheet" href="../assets/common.css?v=127da9ef">
+<style>
+  /* ArcGIS Maps SDK for JavaScript 版。Leaflet 版(../posting/)と同じデータ形式(GeoJSON・localStorage)で、
+     端末内の保存箱だけ別(postingArcgis.shapes)。見た目のトークンは common.css を共用する。 */
+  html, body { height:100%; margin:0; }
+  body { display:flex; flex-direction:column; }
+  #map { flex:1; min-height:300px; position:relative; }
+  .agPanel { position:absolute; top:12px; right:12px; z-index:50; width:min(330px, calc(100% - 24px)); max-height:calc(100% - 24px); overflow-y:auto;
+    background:rgba(255,255,255,.97); border:1.5px solid var(--accent, #7c3aed); border-radius:14px; box-shadow:0 4px 18px rgba(0,0,0,.25); padding:10px 12px; font-size:12.5px; }
+  .agPanel h3 { font-size:13.5px; margin:2px 0 6px; }
+  .agPanel label { display:block; margin:4px 0 2px; color:#374151; font-size:11.5px; }
+  .agPanel input[type=text], .agPanel select { width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 6px; font-size:13px; }
+  .agPanel .row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .agPanel button { border:1px solid #d1d5db; background:#f3f4f6; border-radius:6px; padding:5px 9px; cursor:pointer; font-size:12px; }
+  .agPanel button.main { background:var(--accent, #7c3aed); border-color:var(--accent, #7c3aed); color:#fff; font-weight:600; }
+  .agPanel button.danger { background:#fef2f2; border-color:#fca5a5; color:#991b1b; }
+  .agPanel .close { float:right; width:24px; height:24px; padding:0; }
+  .agSearch { position:absolute; top:12px; left:60px; z-index:50; background:#fff; border-radius:8px; box-shadow:0 1px 5px rgba(0,0,0,.4); padding:4px 6px; font-size:12.5px; width:min(320px, calc(100% - 80px)); }
+  .agSearch .row { display:flex; gap:4px; align-items:center; }
+  .agSearch input { flex:1; min-width:0; border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; font-size:13px; }
+  .agSearch button { border:1px solid #d1d5db; background:#f3f4f6; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
+  .agSearch .psAdopt { border-color:var(--accent,#7c3aed); background:var(--accent,#7c3aed); color:#fff; font-weight:600; }
+  .agSearch .psClear { border-color:#fca5a5; background:#fef2f2; color:#991b1b; }
+  .agSearch .psItem { padding:4px 6px; cursor:pointer; border-radius:5px; }
+  .agSearch .psItem:hover { background:#eef2ff; }
+  .agSearch .psList { max-height:180px; overflow-y:auto; }
+  .agSearch .psTap { display:flex; gap:4px; align-items:center; margin-top:4px; color:#374151; font-size:12px; }
+  .agSearch .psTap select { flex:1; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; }
+  .agTools { position:absolute; top:12px; left:12px; z-index:50; display:flex; flex-direction:column; gap:4px; }
+  .agTools button { width:36px; height:36px; border:2px solid rgba(0,0,0,.2); background:#fff; border-radius:6px; cursor:pointer; font-size:16px; }
+  .agTools button.on { background:#ede9fe; border-color:var(--accent,#7c3aed); }
+  .agStats { position:absolute; left:12px; bottom:28px; z-index:50; background:rgba(255,255,255,.95); border-radius:8px; padding:6px 10px; font-size:12px; box-shadow:0 1px 5px rgba(0,0,0,.3); }
+  .agLegend i { display:inline-block; width:12px; height:12px; border-radius:3px; border:1px solid #333; vertical-align:-2px; margin-right:3px; }
+  .esri-view .esri-view-surface--touch-none:focus::after { outline:none; }
+  .protoBar { background:#fffbeb; border-bottom:2px solid #d97706; color:#78350f; padding:6px 12px; font-size:12.5px; }
+</style>
+</head>
+<body>
+<header class="appbar">
+  <h1>📮 ポスティングマップ <span style="font-size:.7em; opacity:.85">ArcGIS版(試作)</span></h1>
+  <a href="https://yukinobu-nakamura.github.io/senkyo-maps/arukikata/" target="_blank" rel="noopener noreferrer" style="align-self:center;" title="政治活動・選挙運動のルール解説(別タブで開きます)">📖 ルールを確認</a>
+  <details class="toolWrap" id="toolWrap" open><summary>☰ ツール</summary>
+  <div class="toolbar">
+    <label class="filebtn">📂 読込(GeoJSON)<input type="file" id="gjIn"></label>
+    <button id="gjOut">💾 GeoJSON書出</button>
+    <select id="baseSel" title="背景地図" style="border-radius:8px; padding:4px 6px; font-size:12px;">
+      <option value="pale">地理院 淡色</option><option value="std">地理院 標準</option><option value="seamlessphoto">地理院 写真</option>
+    </select>
+    <button id="resetBtn">全消去</button>
+    <a href="../posting/" style="align-self:center;">Leaflet版へ</a>
+    <a href="../" style="align-self:center;">← トップ</a>
+  </div>
+  </details>
+</header>
+<div class="protoBar">🧪 <b>試作版</b>: 地図エンジンに Esri の <b>ArcGIS Maps SDK for JavaScript</b> を使ったポスティングマップです。描いた内容は<b>この端末のブラウザ内</b>に保存され、作成者には送られません。GeoJSONは <a href="../posting/">Leaflet版</a> と同じ形式で、「書出」→「読込」で相互に持ち運べます(保存箱は別)。背景地図は国土地理院タイルを使い、Esriのサービス(APIキー)は使っていません。</div>
+<div id="map">
+  <div class="agTools">
+    <button id="tPoly" title="配布区域(ポリゴン)を描く">⬠</button>
+    <button id="tLine" title="配布ルート(線)を描く">〰</button>
+    <button id="tEdit" title="図形を選んで形を直す／移動">✋</button>
+    <button id="tHome" title="図形全体が入る範囲へ">⌂</button>
+  </div>
+  <div class="agSearch" id="agSearch">
+    <div class="row"><span>🔍</span><input type="text" id="psIn" placeholder="地名・住所(例: 池袋三丁目62番5号)"><button id="psGo">検索</button></div>
+    <div class="row" style="margin-top:4px">
+      <button id="psClear" class="psClear" style="display:none">枠を消す</button>
+      <button id="psAdopt" class="psAdopt" style="display:none">➕ この区域を登録</button>
+    </div>
+    <label class="psTap">📍 タップで選ぶ: <select id="psTapSel"><option value="">オフ</option><option value="chome">丁目・町</option><option value="block">街区(○番)</option><option value="bld">建物(○号)</option></select></label>
+    <div class="psList" id="psList"></div>
+  </div>
+  <div class="agPanel" id="editPanel" style="display:none">
+    <button class="close" id="epClose">✕</button>
+    <h3 id="epTitle">図形</h3>
+    <div id="epPlace" style="font-weight:700; color:#1e3a5f; min-height:1em"></div>
+    <label>状態</label><select id="epStatus"></select>
+    <label>色(空欄=状態の色)</label><div class="row"><input type="color" id="epColor" value="#2563eb" style="width:48px; height:28px; padding:0; border:1px solid #d1d5db; border-radius:6px"><button id="epColorAuto">自動に戻す</button></div>
+    <label>担当</label><input type="text" id="epWho" maxlength="20" placeholder="例)佐藤">
+    <label>メモ</label><input type="text" id="epMemo" maxlength="100" placeholder="例)7/20 午前に配布予定">
+    <div class="row" style="margin-top:8px"><button class="main" id="epSave">保存</button><button class="danger" id="epDel">削除</button></div>
+  </div>
+  <div class="agStats" id="stats"></div>
+</div>
+
+<script src="../assets/common.js?v=127da9ef"></script>
+<script src="https://js.arcgis.com/4.34/"></script>
+<script>
+"use strict";
+/* ---- 状態・保存(Leaflet版と同じ属性: status/color/who/memo/place/fid/owner/mtime) ---- */
+const KEY_SHAPES = "postingArcgis.shapes";
+const SHAPE_STATUSES = [
+  { id: "plan",  label: "予定",   color: "#2563eb" },
+  { id: "doing", label: "配布中", color: "#eab308" },
+  { id: "done",  label: "済",     color: "#8b5cf6" },
+];
+const statusOf = id => SHAPE_STATUSES.find(s => s.id === id) || SHAPE_STATUSES[0];
+const newFid = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+let features = [];   /* GeoJSON Feature の配列 = 正本。描画はここから作り直す */
+function load() { try { const gj = JSON.parse(localStorage.getItem(KEY_SHAPES) || "null"); features = (gj && gj.features) || []; } catch (_) { features = []; } }
+function persist() {
+  try { localStorage.setItem(KEY_SHAPES, JSON.stringify({ type: "FeatureCollection", features })); }
+  catch (e) { showAppNotice("保存できませんでした(容量不足の可能性)。GeoJSON書出で退避してください: " + e.message, "warn"); }
+}
+function hexToRgb(h) { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h || ""); return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [37, 99, 235]; }
+
+require([
+  "esri/Map", "esri/views/MapView", "esri/Basemap", "esri/layers/WebTileLayer", "esri/layers/GraphicsLayer", "esri/Graphic",
+  "esri/geometry/Polygon", "esri/geometry/Polyline", "esri/geometry/Point", "esri/geometry/geometryEngine", "esri/geometry/support/webMercatorUtils",
+  "esri/widgets/Sketch/SketchViewModel", "esri/widgets/ScaleBar", "esri/core/reactiveUtils"
+], (Map, MapView, Basemap, WebTileLayer, GraphicsLayer, Graphic, Polygon, Polyline, Point, geometryEngine, wmUtils, SketchViewModel, ScaleBar, reactiveUtils) => {
+
+  /* ---- 背景地図: 国土地理院タイル(APIキー不要)。出典表示は必須 ---- */
+  const GSI = {
+    pale: "https://cyberjapandata.gsi.go.jp/xyz/pale/{level}/{col}/{row}.png",
+    std: "https://cyberjapandata.gsi.go.jp/xyz/std/{level}/{col}/{row}.png",
+    seamlessphoto: "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{level}/{col}/{row}.jpg",
+  };
+  const gsiBase = key => new Basemap({ baseLayers: [new WebTileLayer({ urlTemplate: GSI[key], copyright: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">国土地理院</a>', maxScale: 0 })], title: key });
+  const shapesLayer = new GraphicsLayer({ title: "shapes" });
+  const hlLayer = new GraphicsLayer({ title: "highlight" });
+  const map = new Map({ basemap: gsiBase("pale"), layers: [shapesLayer, hlLayer] });
+  const view = new MapView({ container: "map", map, center: [139.7109, 35.7295], zoom: 15, constraints: { maxZoom: 18, snapToZoom: false },
+    popup: { autoOpenEnabled: false }, ui: { components: ["attribution", "zoom"] } });
+  view.ui.move("zoom", "bottom-right");
+  view.ui.add(new ScaleBar({ view, unit: "metric" }), "bottom-left");
+  document.getElementById("baseSel").onchange = e => { map.basemap = gsiBase(e.target.value); };
+
+  /* ---- GeoJSON ⇄ ArcGIS ジオメトリ ---- */
+  const SR = { wkid: 4326 };
+  function toEsri(geom) {
+    if (!geom) return null;
+    if (geom.type === "Polygon") return geometryEngine.simplify(new Polygon({ rings: geom.coordinates, spatialReference: SR }));
+    if (geom.type === "MultiPolygon") return geometryEngine.simplify(new Polygon({ rings: geom.coordinates.flat(), spatialReference: SR }));
+    if (geom.type === "LineString") return new Polyline({ paths: [geom.coordinates], spatialReference: SR });
+    if (geom.type === "MultiLineString") return new Polyline({ paths: geom.coordinates, spatialReference: SR });
+    if (geom.type === "Point") return new Point({ longitude: geom.coordinates[0], latitude: geom.coordinates[1], spatialReference: SR });
+    return null;
+  }
+  const r6 = v => Math.round(v * 1e6) / 1e6;
+  function toGeo(g) {
+    const geo = g.spatialReference && g.spatialReference.isWebMercator ? wmUtils.webMercatorToGeographic(g) : g;
+    if (geo.type === "polygon") {
+      const rings = geo.rings.map(r => r.map(([x, y]) => [r6(x), r6(y)]));
+      return rings.length === 1 ? { type: "Polygon", coordinates: rings } : { type: "Polygon", coordinates: rings }; /* 穴付き・複数外周も rings のまま保持 */
+    }
+    if (geo.type === "polyline") { const p = geo.paths.map(r => r.map(([x, y]) => [r6(x), r6(y)])); return p.length === 1 ? { type: "LineString", coordinates: p[0] } : { type: "MultiLineString", coordinates: p }; }
+    if (geo.type === "point") return { type: "Point", coordinates: [r6(geo.longitude), r6(geo.latitude)] };
+    return null;
+  }
+  function symbolFor(f) {
+    const p = f.properties || {};
+    const color = p.color || statusOf(p.status).color;
+    const [r, g, b] = hexToRgb(color);
+    const op = (p.opacity == null || p.opacity === "") ? 1 : Number(p.opacity);
+    if (f.geometry.type === "LineString" || f.geometry.type === "MultiLineString")
+      return { type: "simple-line", color: [r, g, b, op], width: 4 };
+    return { type: "simple-fill", color: [r, g, b, 0.25 * op], outline: { color: [r, g, b, op], width: 3 } };
+  }
+  function render() {
+    shapesLayer.removeAll();
+    features.forEach(f => {
+      const geom = toEsri(f.geometry);
+      if (!geom) return;
+      shapesLayer.add(new Graphic({ geometry: geom, symbol: symbolFor(f), attributes: { fid: f.properties.fid } }));
+    });
+    renderStats();
+  }
+  function renderStats() {
+    const c = { plan: 0, doing: 0, done: 0 };
+    features.forEach(f => { c[(f.properties || {}).status] = (c[(f.properties || {}).status] || 0) + 1; });
+    document.getElementById("stats").innerHTML = '<span class="agLegend">' +
+      SHAPE_STATUSES.map(s => `<i style="background:${s.color}"></i>${s.label} ${c[s.id] || 0}`).join("　") + `</span>　計 ${features.length}`;
+  }
+
+  /* ---- 図形の追加・編集パネル ---- */
+  function addFeature(geom, props) {
+    const f = { type: "Feature", geometry: geom, properties: Object.assign({ status: "plan" }, props || {}) };
+    if (!f.properties.fid) f.properties.fid = newFid();
+    f.properties.mtime = Date.now();
+    features.push(f); persist(); render();
+    return f;
+  }
+  const ep = {
+    panel: document.getElementById("editPanel"), title: document.getElementById("epTitle"), place: document.getElementById("epPlace"),
+    status: document.getElementById("epStatus"), color: document.getElementById("epColor"), who: document.getElementById("epWho"), memo: document.getElementById("epMemo"),
+  };
+  ep.status.innerHTML = SHAPE_STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+  let editing = null;   /* 編集中の Feature */
+  function openEditor(f) {
+    editing = f; const p = f.properties;
+    ep.title.textContent = f.geometry.type.indexOf("Line") >= 0 ? "配布ルート" : "配布区域";
+    ep.status.value = p.status || "plan";
+    ep.color.value = p.color || statusOf(p.status).color;
+    ep.color.dataset.auto = p.color ? "" : "1";
+    ep.who.value = p.who || ""; ep.memo.value = p.memo || "";
+    ep.panel.style.display = "";
+    if (p.place) ep.place.textContent = "📍 " + p.place;
+    else {
+      ep.place.textContent = "📍 地名を取得中…";
+      const g = toEsri(f.geometry); const c = g.extent ? g.extent.center : g;
+      gsiPlaceName(c.latitude, c.longitude).then(nm => { if (nm) { p.place = nm; persist(); } if (editing === f) ep.place.textContent = nm ? "📍 " + nm : ""; }).catch(() => { ep.place.textContent = ""; });
+    }
+  }
+  ep.color.oninput = () => { ep.color.dataset.auto = ""; };
+  document.getElementById("epColorAuto").onclick = () => { ep.color.dataset.auto = "1"; ep.color.value = statusOf(ep.status.value).color; };
+  ep.status.onchange = () => { if (ep.color.dataset.auto) ep.color.value = statusOf(ep.status.value).color; };
+  document.getElementById("epSave").onclick = () => {
+    if (!editing) return; const p = editing.properties;
+    p.status = ep.status.value;
+    if (ep.color.dataset.auto) delete p.color; else p.color = ep.color.value;
+    p.who = ep.who.value.trim(); p.memo = ep.memo.value.trim(); p.mtime = Date.now();
+    persist(); render(); ep.panel.style.display = "none"; editing = null;
+  };
+  document.getElementById("epDel").onclick = () => {
+    if (!editing) return; if (!confirm("この図形を削除しますか?")) return;
+    features = features.filter(x => x !== editing); persist(); render(); ep.panel.style.display = "none"; editing = null;
+  };
+  document.getElementById("epClose").onclick = () => { ep.panel.style.display = "none"; editing = null; };
+
+  /* ---- 描画(SketchViewModel) ---- */
+  const sketch = new SketchViewModel({ view, layer: shapesLayer, updateOnGraphicClick: false,
+    polygonSymbol: { type: "simple-fill", color: [37, 99, 235, 0.25], outline: { color: [37, 99, 235, 1], width: 3 } },
+    polylineSymbol: { type: "simple-line", color: [37, 99, 235, 1], width: 4 } });
+  const bPoly = document.getElementById("tPoly"), bLine = document.getElementById("tLine"), bEdit = document.getElementById("tEdit");
+  let tool = null;
+  function setTool(t) {
+    tool = (tool === t) ? null : t;
+    [bPoly, bLine, bEdit].forEach(b => b.classList.remove("on"));
+    sketch.cancel();
+    if (tool === "polygon") { bPoly.classList.add("on"); sketch.create("polygon"); }
+    else if (tool === "polyline") { bLine.classList.add("on"); sketch.create("polyline"); }
+    else if (tool === "edit") { bEdit.classList.add("on"); }
+  }
+  bPoly.onclick = () => setTool("polygon"); bLine.onclick = () => setTool("polyline"); bEdit.onclick = () => setTool("edit");
+  document.getElementById("tHome").onclick = () => { if (shapesLayer.graphics.length) view.goTo(shapesLayer.graphics.toArray(), { padding: 40 }).catch(() => {}); };
+  sketch.on("create", ev => {
+    if (ev.state !== "complete") return;
+    const geom = toGeo(ev.graphic.geometry);
+    shapesLayer.remove(ev.graphic);
+    if (!geom) return;
+    const f = addFeature(geom, {});
+    openEditor(f);
+    if (tool === "polygon") sketch.create("polygon"); else if (tool === "polyline") sketch.create("polyline");
+  });
+  sketch.on("update", ev => {
+    if (ev.state !== "complete") return;
+    ev.graphics.forEach(g => {
+      const f = features.find(x => x.properties.fid === g.attributes.fid);
+      if (f) { f.geometry = toGeo(g.geometry); delete f.properties.place; f.properties.mtime = Date.now(); }
+    });
+    persist(); render();
+  });
+
+  /* ---- クリック: 図形を選んで編集 ／ タップで区画を選ぶ ---- */
+  let tapMode = null, tapBusy = false, hitFeats = [];
+  document.getElementById("psTapSel").onchange = e => { tapMode = e.target.value || null; view.container.style.cursor = tapMode ? "crosshair" : ""; };
+  view.on("click", async ev => {
+    if (tool === "polygon" || tool === "polyline") return;
+    const hit = await view.hitTest(ev, { include: shapesLayer });
+    const g = hit.results.find(r => r.graphic && r.graphic.layer === shapesLayer);
+    if (g) {
+      const f = features.find(x => x.properties.fid === g.graphic.attributes.fid);
+      if (tool === "edit") { sketch.update(g.graphic, { tool: "reshape" }); return; }
+      if (f) openEditor(f);
+      return;
+    }
+    if (!tapMode || tapBusy) return;
+    tapBusy = true;
+    try {
+      const f = await psUnitAt(tapMode, ev.mapPoint.latitude, ev.mapPoint.longitude);
+      if (!f) { showMapToast(view.container, "この地点の区画データがありません", 3000); return; }
+      const key = x => JSON.stringify(x.geometry.coordinates).slice(0, 200) + (x.properties.name || "");
+      const k = key(f), idx = hitFeats.findIndex(x => key(x) === k);
+      if (idx >= 0) hitFeats.splice(idx, 1); else hitFeats.push(f);
+      showHighlight(hitFeats, true);
+    } finally { tapBusy = false; }
+  });
+
+  /* ---- 🔍 地名検索 + 枠(common.js の純粋関数を共用) ---- */
+  const psIn = document.getElementById("psIn"), psList = document.getElementById("psList"), psClear = document.getElementById("psClear"), psAdopt = document.getElementById("psAdopt");
+  let hitMarker = null, seq = 0;
+  function clearHit() { hlLayer.removeAll(); hitFeats = []; hitMarker = null; psClear.style.display = "none"; psAdopt.style.display = "none"; }
+  psClear.onclick = clearHit;
+  function showHighlight(feats, noFit) {
+    hlLayer.removeAll();
+    hitFeats = feats;
+    if (!feats.length) { clearHit(); return; }
+    const gs = [];
+    feats.forEach(f => {
+      const geom = toEsri(f.geometry); if (!geom) return;
+      const g = new Graphic({ geometry: geom, symbol: { type: "simple-fill", color: [220, 38, 38, 0.08], outline: { color: [220, 38, 38, 1], width: 3, style: "dash" } } });
+      hlLayer.add(g); gs.push(g);
+      const p = f.properties || {};
+      const label = (p.name || "") + (p.setai ? ` ${Number(p.setai).toLocaleString()}世帯` : "");
+      if (label) hlLayer.add(new Graphic({ geometry: geom.extent ? geom.extent.center : geom,
+        symbol: { type: "text", text: label, color: "#991b1b", haloColor: "white", haloSize: 2, font: { size: 12, weight: "bold" } } }));
+    });
+    if (hitMarker) hlLayer.add(hitMarker);
+    psClear.style.display = ""; psAdopt.style.display = "";
+    if (!noFit && gs.length) view.goTo(gs, { padding: 40 }).then(() => { const bld = feats.length === 1 && feats[0].properties.building; if (view.zoom > (bld ? 18 : 17)) view.zoom = bld ? 18 : 17; }).catch(() => {});
+  }
+  psAdopt.onclick = () => {
+    if (!hitFeats.length) return;
+    const copies = hitFeats.map(f => ({ geometry: JSON.parse(JSON.stringify(f.geometry)), name: (f.properties && f.properties.name) || "" }));
+    clearHit();
+    let last = null;
+    copies.forEach(c => { last = addFeature(c.geometry, { status: "plan", place: c.name || undefined }); });
+    if (copies.length === 1 && last) openEditor(last); else showMapToast(view.container, `${copies.length}件の区域を「予定」で登録しました`, 4000);
+  };
+  async function pick(title, lat, lng) {
+    const my = ++seq;
+    clearHit();
+    hitMarker = new Graphic({ geometry: new Point({ longitude: lng, latitude: lat, spatialReference: SR }), symbol: { type: "simple-marker", style: "circle", size: 18, color: [0, 0, 0, 0], outline: { color: "#dc2626", width: 3 } } });
+    hlLayer.add(hitMarker); psClear.style.display = "";
+    view.goTo({ center: [lng, lat], zoom: Math.max(view.zoom, 15) }).catch(() => {});
+    try {
+      const [codes, rg] = await Promise.all([psCityCodes(), gsiReverse(lat, lng).catch(() => null)]);
+      if (my !== seq || !rg || !rg.code) return;
+      const mf = await muniFileFor(title, rg.code);
+      if (my !== seq) return;
+      if (mf) {
+        const f = await muniGeo(mf.file); if (my !== seq) return;
+        if (f && f.geometry) { hitMarker = null; showHighlight([{ type: "Feature", geometry: f.geometry, properties: { name: mf.name, setai: (f.properties || {}).s, muni: true } }]); }
+        return;
+      }
+      const gm = title.match(PS_GO_RE);
+      if (gm) {
+        const bld = await gsiBuildingAt(lat, lng, 15).catch(() => null); if (my !== seq) return;
+        if (bld) { hitMarker = null; showHighlight([{ type: "Feature", geometry: bld.geometry, properties: { name: (rg.name || "") + ` ${parseInt(psZen2Han(gm[1]), 10)}番${parseInt(psZen2Han(gm[2]), 10)}号`, building: true } }]); return; }
+      }
+      const bm = title.match(PS_BLOCK_RE);
+      if (bm) {
+        const kb = await kbGeo(rg.code); if (my !== seq) return;
+        const bf = kb && kbPick(kb, lng, lat, rg.name, parseInt(psZen2Han(bm[1]), 10));
+        if (bf) { if (!gm) hitMarker = null; showHighlight([bf]); return; }
+      }
+      if (!codes.has(rg.code)) return;
+      const gj = await psGeo(rg.code); if (my !== seq) return;
+      const r = psPickFeatures(gj, title, rg.name, lng, lat);
+      if (!r.feats.length) return;
+      if (r.exact) hitMarker = null;
+      showHighlight(r.feats.map(f => ({ type: "Feature", geometry: f.geometry, properties: { name: f.properties.name, setai: f.properties.setai } })));
+    } catch (_) { /* 境界が取れなければマーカーだけ */ }
+  }
+  async function runSearch() {
+    const q = psIn.value.trim(); if (!q) return;
+    psList.textContent = "検索中…";
+    try {
+      const r = await fetch("https://msearch.gsi.go.jp/address-search/AddressSearch?q=" + encodeURIComponent(q));
+      const arr = await r.json();
+      if (!Array.isArray(arr) || !arr.length) { psList.textContent = "見つかりませんでした"; return; }
+      psList.innerHTML = "";
+      arr.slice(0, 8).forEach(a => {
+        const co = a.geometry && a.geometry.coordinates; if (!co) return;
+        const item = document.createElement("div"); item.className = "psItem"; item.textContent = (a.properties && a.properties.title) || q;
+        item.onclick = () => { psList.innerHTML = ""; pick(item.textContent, co[1], co[0]); };
+        psList.appendChild(item);
+      });
+    } catch (_) { psList.textContent = "検索に失敗しました(接続を確認してください)"; }
+  }
+  document.getElementById("psGo").onclick = runSearch;
+  psIn.addEventListener("keydown", e => { if (e.key === "Enter") runSearch(); });
+
+  /* ---- 読込・書出・全消去 ---- */
+  document.getElementById("gjIn").addEventListener("change", ev => {
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+    file.text().then(text => {
+      let gj; try { gj = JSON.parse(text); } catch (_) { return alert("GeoJSONとして読み込めませんでした"); }
+      const fs = gj.type === "FeatureCollection" ? gj.features : gj.type === "Feature" ? [gj] : [];
+      let n = 0;
+      fs.forEach(f => {
+        if (!f || !f.geometry) return;
+        const p = Object.assign({}, f.properties || {});
+        if (p.fid && features.some(x => x.properties.fid === p.fid)) {        /* 同じfidは新しい方を採用 */
+          const cur = features.find(x => x.properties.fid === p.fid);
+          if ((Number(p.mtime) || 0) > (Number(cur.properties.mtime) || 0)) { cur.geometry = f.geometry; cur.properties = p; n++; }
+          return;
+        }
+        if (!p.fid) p.fid = newFid(); if (!p.status) p.status = "plan";
+        features.push({ type: "Feature", geometry: f.geometry, properties: p }); n++;
+      });
+      persist(); render();
+      if (shapesLayer.graphics.length) view.goTo(shapesLayer.graphics.toArray(), { padding: 40 }).catch(() => {});
+      showMapToast(view.container, `${n}件を取り込みました`, 3000);
+      ev.target.value = "";
+    });
+  });
+  document.getElementById("gjOut").onclick = () => {
+    features.forEach(f => { if (!f.properties.fid) f.properties.fid = newFid(); });
+    const d = new Date(), pad = n => String(n).padStart(2, "0");
+    downloadFile(`posting_areas_arcgis_${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.geojson`,
+      JSON.stringify({ type: "FeatureCollection", features }, null, 1), "application/geo+json");
+  };
+  document.getElementById("resetBtn").onclick = () => { if (!confirm("この端末に保存した図形をすべて消します。よろしいですか?(書出していないデータは戻せません)")) return; features = []; persist(); render(); };
+
+  /* ---- 起動 ---- */
+  load(); render();
+  view.when(() => {
+    if (shapesLayer.graphics.length) view.goTo(shapesLayer.graphics.toArray(), { padding: 40 }).catch(() => {});
+    window.__agReady = true;
+  });
+  /* 検証用にいくつか公開 */
+  window.__ag = { view, map, shapesLayer, hlLayer, get features() { return features; }, get hitFeats() { return hitFeats; },
+    toScreen: (lng, lat) => view.toScreen(new Point({ longitude: lng, latitude: lat, spatialReference: SR })) };
+});
+</script>
+</body>
+</html>

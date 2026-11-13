@@ -614,6 +614,7 @@ function addUiHideControl(map, opts) {
 
   /* 作図・編集・削除モード中か(leaflet-geoman。入っていないページでは常に false) */
   function busy() {
+    if (_psTapMode) return true;                 /* 🔍の「タップで選ぶ」中は地図タップで区画を選ぶ */
     if (opts.busy && opts.busy()) return true;
     const pm = map.pm;
     if (!pm) return false;
@@ -1087,6 +1088,12 @@ async function muniFileFor(title, code) {
       — 国土地理院の「○番」の代表点は街区の縁(道路中心線で引いた調査区の境)をまたいで隣に落ちることがあるため、
         番号の一致を点包含より優先する(実例: 鶴見中央一丁目1番の点が2番の調査区に入る)
    ② 無ければ地点を含む街区(住居表示と調査区番号がずれている地域)。ラベルは実データの番号 */
+function kbFeat(f) {
+  const p = f.properties || {};
+  const num = parseInt(p.b, 10);
+  return { type: "Feature", geometry: f.geometry,
+           properties: { name: (p.n || "") + (isFinite(num) ? ` ${num}番` : ""), setai: p.s, block: true } };
+}
 function kbPick(gj, lng, lat, lv01, wantNum) {
   const fs = (gj && gj.features) || [];
   let f = null;
@@ -1095,11 +1102,28 @@ function kbPick(gj, lng, lat, lv01, wantNum) {
     if (same.length === 1) f = same[0];
   }
   if (!f) f = fs.find(x => psContains(x.geometry, lng, lat));
-  if (!f) return null;
-  const p = f.properties || {};
-  const num = parseInt(p.b, 10);
-  return { type: "Feature", geometry: f.geometry,
-           properties: { name: (p.n || "") + (isFinite(num) ? ` ${num}番` : ""), setai: p.s, block: true } };
+  return f ? kbFeat(f) : null;
+}
+/* 「タップで選ぶ」モード(null=オフ / "chome" / "block" / "bld")。addUiHideControl が参照する */
+let _psTapMode = null;
+/* 地点(lat,lng)を含む区画を単位別に1つ返す。無ければ null */
+async function psUnitAt(mode, lat, lng) {
+  const rg = await gsiReverse(lat, lng).catch(() => null);
+  if (!rg || !rg.code) return null;
+  if (mode === "bld") {
+    const b = await gsiBuildingAt(lat, lng, 8).catch(() => null);
+    return b ? { type: "Feature", geometry: b.geometry, properties: { name: (rg.name || "") + " の建物", building: true } } : null;
+  }
+  if (mode === "block") {
+    const kb = await kbGeo(rg.code);
+    const f = kb && (kb.features || []).find(x => psContains(x.geometry, lng, lat));
+    return f ? kbFeat(f) : null;
+  }
+  const codes = await psCityCodes();
+  if (!codes.has(rg.code)) return null;
+  const gj = await psGeo(rg.code);
+  const f = (gj && gj.features || []).find(x => psContains(x.geometry, lng, lat));
+  return f ? { type: "Feature", geometry: f.geometry, properties: { name: f.properties.name, setai: f.properties.setai } } : null;
 }
 
 /* ---- 号(住居番号)まで入力されたとき: その建物の外形を囲む ----
@@ -1245,6 +1269,8 @@ function addPlaceSearchControl(map, opts) {
       '<button class="psGo" type="button">検索</button>' +
       '<button class="psClear" type="button" style="display:none" title="検索結果の枠・マーカーを消す">枠を消す</button>' +
       (opts.onAdopt ? '<button class="psAdopt" type="button" style="display:none" title="赤い枠の区域をそのまま図形として登録し、状態(予定/配布中/済)などを設定します">➕ この区域を登録</button>' : "") +
+      '<label class="psTap" title="地図をタップした場所の区画を選びます(続けてタップすると複数選べます)">📍 タップで選ぶ: <select class="psTapSel">' +
+      '<option value="">オフ</option><option value="chome">丁目・町</option><option value="block">街区(○番)</option><option value="bld">建物(○号)</option></select></label>' +
       '<div class="psList"></div></span>';
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
@@ -1276,7 +1302,33 @@ function addPlaceSearchControl(map, opts) {
       clearHit();
       opts.onAdopt(copies);
     };
-    function showArea(feats) {
+    /* 📍 タップで選ぶ: 地図タップ → その地点の区画(丁目/街区/建物)を選択に足す(同じ区画をもう一度タップで外す) */
+    const tapSel = div.querySelector(".psTapSel");
+    let tapBusy = false;
+    tapSel.onchange = () => {
+      _psTapMode = tapSel.value || null;
+      map.getContainer().classList.toggle("psTapping", !!_psTapMode);
+      if (_psTapMode) showMapToast(map.getContainer(), "地図をタップすると、その場所の" + tapSel.options[tapSel.selectedIndex].text + "が選ばれます", 3500);
+    };
+    map.on("click", async (e) => {
+      if (!_psTapMode || tapBusy) return;
+      if (map.pm && (map.pm.globalDrawModeEnabled() || map.pm.globalEditModeEnabled() || map.pm.globalRemovalModeEnabled())) return;
+      const t = e.originalEvent && e.originalEvent.target;
+      if (t && t.closest && t.closest(".leaflet-control, .leaflet-popup")) return;
+      tapBusy = true;
+      try {
+        const f = await psUnitAt(_psTapMode, e.latlng.lat, e.latlng.lng);
+        if (!f) { showMapToast(map.getContainer(), "この地点の区画データがありません(未収録の自治体・建物なし)", 3000); return; }
+        if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+        const key = g => JSON.stringify(g.geometry.coordinates).slice(0, 200) + (g.properties.name || "");
+        const k = key(f), idx = hitFeats.findIndex(x => key(x) === k);
+        const next = hitFeats.slice();
+        if (idx >= 0) next.splice(idx, 1); else next.push(f);
+        if (next.length) showArea(next, { noFit: true }); else clearHit();
+      } finally { tapBusy = false; }
+    });
+    function showArea(feats, o) {
+      o = o || {};
       removeArea();
       hitFeats = feats;
       if (adoptBtn) adoptBtn.style.display = "";
@@ -1302,6 +1354,7 @@ function addPlaceSearchControl(map, opts) {
       const b = hitArea.getBounds();
       const isBld = feats.length === 1 && feats[0].properties && feats[0].properties.building;
       const fit = () => map.fitBounds(b, { padding: [24, 24], maxZoom: isBld ? 18 : 17 });   /* 建物1棟は1段寄る */
+      if (o.noFit) return;                                                                   /* タップ選択中は視点を動かさない */
       if (map._animatingZoom) map.once("zoomend", fit); else fit();
     }
     async function pick(title, lat, lng) {
