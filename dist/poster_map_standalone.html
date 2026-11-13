@@ -435,12 +435,14 @@ body.uiHidden .noticebar{ display:none !important; }
 
 /* ---- ベース地図 ---- */
 function createBaseLayers() {
+  /* maxNativeZoom=タイル画像が存在する最大段(地理院18/OSM19)。maxZoom=21 まで画像を拡大表示して
+     建物1棟が画面いっぱいになる所まで寄れるようにする(2026-11-13 中村さん要望。ぼけるが位置は正確) */
   const gsiPale = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png", {
-    maxZoom: 18,
+    maxNativeZoom: 18, maxZoom: 21,
     attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
   });
   const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
+    maxNativeZoom: 19, maxZoom: 21,
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   });
   /* 全国最新写真(シームレス)は空中写真と人工衛星画像の合成レイヤで、地理院タイル一覧の
@@ -448,7 +450,7 @@ function createBaseLayers() {
      「© 国土地理院」だけでは権利者表示が欠ける。文言を増やすときは推測で書かず、
      必ず一覧 https://maps.gsi.go.jp/development/ichiran.html の備考欄を写すこと。 */
   const gsiPhoto = L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg", {
-    maxZoom: 18,
+    maxNativeZoom: 18, maxZoom: 21,
     attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener noreferrer">地理院タイル(全国最新写真シームレス)</a> / 一部にGRUS画像(&copy; Axelspace)を使用',
   });
   return { "地理院地図(淡色)": gsiPale, "OpenStreetMap": osm, "航空写真(地理院)": gsiPhoto };
@@ -1587,28 +1589,54 @@ async function jushoAddrsFor(code, geom) {
 }
 /* 建物名: OpenStreetMap(Overpass API)に、その地点から 8m 以内の name 付き建物を問い合わせる。
    無ければ ""。失敗・7秒超も ""(建物名は無くても登録できるので静かに諦める)。表示時は ODbL の帰属表示をつける */
-const OVERPASS_ENDPOINTS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];  /* 混雑時(502/504)は次へ */
-async function osmBuildingName(lat, lng) {
-  const q = `[out:json][timeout:6];way(around:8,${lat},${lng})[building][name];out tags center 5;`;
-  for (const ep of OVERPASS_ENDPOINTS) {
+/* 公開ミラーを複数同時に叩いて最初に返ったものを使う(本家は混雑で 502/タイムアウトが多い) */
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+];
+async function overpassJson(q, timeoutMs) {
+  const one = ep => new Promise((resolve, reject) => {
     const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timer = ctrl ? setTimeout(() => ctrl.abort(), 5000) : null;
-    try {
-      const r = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(q), signal: ctrl ? ctrl.signal : undefined });
-      if (!r.ok) continue;
-      const j = await r.json();
-      const els = (j.elements || []).filter(e => e.tags && e.tags.name);
-      if (!els.length) return "";
-      els.sort((a, b) => {
-        const da = a.center ? Math.hypot((a.center.lat - lat) * 110540, (a.center.lon - lng) * 91000) : 1e9;
-        const db = b.center ? Math.hypot((b.center.lat - lat) * 110540, (b.center.lon - lng) * 91000) : 1e9;
-        return da - db;
-      });
-      return String(els[0].tags.name).slice(0, 60);
-    } catch (_) { /* 次のエンドポイントへ */ }
-    finally { if (timer) clearTimeout(timer); }
-  }
-  return "";
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); reject(new Error("timeout")); }, timeoutMs || 6000);
+    fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(q), signal: ctrl ? ctrl.signal : undefined })
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(j => { clearTimeout(timer); resolve(j); })
+      .catch(e => { clearTimeout(timer); reject(e); });
+  });
+  try { return await Promise.any(OVERPASS_ENDPOINTS.map(one)); } catch (_) { return null; }
+}
+/* 建物の公開情報(OpenStreetMap): name(建物名)・building:levels(階数)・building:flats(戸数)。
+   その地点から 8m 以内の建物(way/relation)と、建物名を持つ点(node)を探し、最も近いものを採用。
+   無い/取れないときは空。※マンション名の網羅的な公開データは存在しない(OSMにあれば出る、程度) */
+async function osmBuildingInfo(lat, lng) {
+  const q = `[out:json][timeout:6];(way(around:8,${lat},${lng})[building];relation(around:8,${lat},${lng})[building];node(around:8,${lat},${lng})[name][building];);out tags center 8;`;
+  const j = await overpassJson(q, 6000);
+  if (!j) return null;
+  const els = (j.elements || []).filter(e => e.tags);
+  if (!els.length) return { name: "", levels: null, flats: null };
+  const dist = e => e.center ? Math.hypot((e.center.lat - lat) * 110540, (e.center.lon - lng) * 91000) : (e.lat != null ? Math.hypot((e.lat - lat) * 110540, (e.lon - lng) * 91000) : 1e9);
+  els.sort((a, b) => dist(a) - dist(b));
+  const named = els.find(e => e.tags.name) || els[0];
+  const t = named.tags;
+  const lv = parseInt(t["building:levels"], 10), fl = parseInt(t["building:flats"], 10);
+  return { name: t.name ? String(t.name).slice(0, 60) : "", levels: isFinite(lv) && lv > 0 ? lv : null, flats: isFinite(fl) && fl > 0 ? fl : null };
+}
+async function osmBuildingName(lat, lng) { const i = await osmBuildingInfo(lat, lng); return i ? i.name : ""; }
+/* 面の面積(㎡)。Polygon/MultiPolygon の外周の合計 */
+function polyAreaM2(gj) {
+  if (!gj) return 0;
+  const rings = gj.type === "Polygon" ? [gj.coordinates[0]] : gj.type === "MultiPolygon" ? gj.coordinates.map(p => p[0]) : [];
+  let tot = 0;
+  rings.forEach(r => {
+    if (!r || r.length < 4) return;
+    const lat0 = r[0][1] * Math.PI / 180, kx = 111320 * Math.cos(lat0), ky = 110540;
+    let a = 0;
+    for (let i = 0; i < r.length - 1; i++) a += r[i][0] * kx * r[i + 1][1] * ky - r[i + 1][0] * kx * r[i][1] * ky;
+    tot += Math.abs(a) / 2;
+  });
+  return Math.round(tot);
 }
 /* 地点(lat,lng)を含む区画を単位別に1つ返す。無ければ null */
 async function psUnitAt(mode, lat, lng) {
@@ -1941,7 +1969,11 @@ function addPlaceSearchControl(map, opts) {
           title = "(建物名は未登録)";
           p.bname = ""; p.addrs = addrs.map(a => a.addr);
           p.name = addrs.length ? addrs[0].addr + (addrs.length > 1 ? " ほか" : "") : chomeShort(p.town);
-          namePromise = osmBuildingName(e.latlng.lat, e.latlng.lng);
+          p.areaM2 = polyAreaM2(f.geometry);
+          namePromise = osmBuildingInfo(e.latlng.lat, e.latlng.lng).then(info => {
+            if (info) { if (info.levels) p.levels = info.levels; if (info.flats) p.flats = info.flats; }
+            return info ? info.name : "";
+          });
         } else if (p.block) {
           title = chomeShort(p.town) + "-" + String(p.name).replace(/^.*?(\d+)番$/, "$1");
           addrLine = p.name + (p.setai ? `　${Number(p.setai).toLocaleString()}世帯` : "");
@@ -1965,7 +1997,8 @@ function addPlaceSearchControl(map, opts) {
         const adopt = () => {
           const nin = el.querySelector(".psPopNameIn");
           if (nin && nin.value.trim()) { p.bname = nin.value.trim().slice(0, 60); p.name = p.bname + " " + (p.addrs && p.addrs.length ? p.addrs[0] + (p.addrs.length > 1 ? " ほか" : "") : chomeShort(p.town)); }
-          const copy = { type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: p.name || "", key: p.key || "", bname: p.bname || "", addrs: p.addrs || [] } };
+          const copy = { type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: p.name || "", key: p.key || "", bname: p.bname || "", addrs: p.addrs || [],
+            areaM2: p.areaM2 || 0, levels: p.levels || 0, flats: p.flats || 0, building: !!p.building } };
           map.closePopup(tapPopup); clearHit();
           return opts.onAdopt([copy]);
         };

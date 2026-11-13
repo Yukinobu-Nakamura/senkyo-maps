@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=0ddc46a7">
+<link rel="stylesheet" href="../assets/common.css?v=a2282e53">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -50,19 +50,32 @@
   .lpSub{ flex:none; font-size:11px; color:#6b7280; }
   .lpEmpty{ color:#9ca3af; padding:4px 6px; }
   .lpSection{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:11.5px; color:#374151; }
-  /* 🏢 部屋割りパネル */
-  .roomsPanel .rpTitle{ font-weight:700; color:#1e3a5f; margin-bottom:4px; }
-  .roomsPanel .rpCount{ margin-bottom:6px; }
-  .roomsPanel details.rpGen summary{ cursor:pointer; font-weight:700; font-size:12px; }
-  .roomsPanel .rpForm{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin:6px 0; font-size:12px; }
-  .roomsPanel .rpForm input[type=number]{ width:44px; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; }
-  .roomsPanel .rpForm select{ border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; }
-  .roomsPanel .rpForm textarea{ width:100%; border:1px solid #d1d5db; border-radius:6px; padding:4px; font-size:12px; }
-  .roomsPanel .roomGrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(62px, 1fr)); gap:4px; margin-top:6px; }
-  .roomsPanel .roomCell{ display:flex; align-items:center; gap:3px; border:1px solid #e5e7eb; border-radius:6px; padding:3px 5px; font-size:12px; cursor:pointer; min-height:24px; }
-  .roomsPanel .roomCell.done{ background:#ede9fe; border-color:#c4b5fd; text-decoration:line-through; color:#6b7280; }
-  .roomsPanel .rpBtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
-  .roomsPanel .rpBtns button{ min-height:26px; font-size:12px; }
+  /* 🏢 部屋割り(幅広の一覧モーダル。地図は後ろに見えたまま) */
+  .roomsModal{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:1400; width:min(640px, 96vw); max-height:86vh; overflow-y:auto;
+    background:rgba(255,255,255,.98); border:2px solid var(--accent, #7c3aed); border-radius:16px; box-shadow:0 10px 36px rgba(0,0,0,.35); padding:12px 14px 14px; font-size:13px; }
+  .roomsModal .rmHead{ display:flex; align-items:flex-start; gap:8px; }
+  .roomsModal .rmTitle{ font-size:16px; font-weight:800; color:#111827; }
+  .roomsModal .rmAddr{ font-weight:700; color:#1e3a5f; }
+  .roomsModal .rmClose{ margin-left:auto; flex:none; width:30px; height:30px; border:1px solid #d1d5db; background:#fff; border-radius:8px; cursor:pointer; font-size:14px; }
+  .roomsModal .rmCtl{ display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin:8px 0 4px; }
+  .roomsModal .rmCtlGrp{ display:inline-flex; align-items:center; gap:4px; }
+  .roomsModal .rmCtlGrp button{ width:28px; height:28px; border:1px solid #d1d5db; background:#f3f4f6; border-radius:6px; cursor:pointer; font-size:15px; line-height:1; }
+  .roomsModal .rmCtlGrp b{ min-width:26px; text-align:center; font-size:15px; }
+  .roomsModal select{ border:1px solid #d1d5db; border-radius:6px; padding:4px 6px; font-size:12.5px; }
+  .roomsModal .rmCount{ margin-left:auto; font-size:13px; }
+  .roomsModal .rpEst{ display:block; font-size:11.5px; color:#92400e; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px; padding:4px 8px; margin:4px 0; }
+  .roomsModal .rmHint{ font-size:11.5px; color:#6b7280; margin:2px 0 6px; }
+  .roomsModal .roomGrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); gap:6px; }
+  .roomsModal .roomCell{ min-height:40px; border:1.5px solid #d1d5db; border-radius:8px; background:#fff; font-size:14px; font-weight:700; color:#111827; cursor:pointer; }
+  .roomsModal .roomCell:hover{ border-color:var(--accent,#7c3aed); }
+  .roomsModal .roomCell.done{ background:var(--accent,#7c3aed); border-color:var(--accent,#7c3aed); color:#fff; }
+  .roomsModal .roomCell.done::before{ content:"✓ "; }
+  .roomsModal .rmMore{ margin-top:10px; }
+  .roomsModal .rmMore summary{ cursor:pointer; font-size:12px; color:#374151; }
+  .roomsModal .rpForm{ display:flex; gap:6px; align-items:flex-start; margin:6px 0; }
+  .roomsModal .rpForm textarea{ flex:1; border:1px solid #d1d5db; border-radius:6px; padding:4px; font-size:12px; }
+  .roomsModal .rpBtns{ display:flex; gap:6px; flex-wrap:wrap; }
+  .roomsModal .rpBtns button{ min-height:26px; font-size:12px; }
   .popupRooms{ margin-left:6px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
   /* 世帯数レイヤのラベル(.setaiLabel)と追加リクエストのモーダル(.req*)は
      ポスターマップと共通のため assets/common.css に置いている */
@@ -121,7 +134,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=0ddc46a7"></script>
+<script src="../assets/common.js?v=a2282e53"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -199,8 +212,12 @@ addPlaceSearchControl(map, {
     feats.forEach(f => {
       const fp = f.properties || {};
       const props = { status: "plan", place: fp.name || undefined, setaiKey: fp.key || undefined };
-      if (fp.bname) props.bname = fp.bname;                          /* 建物名(OpenStreetMap) */
+      if (fp.bname) props.bname = fp.bname;                          /* 建物名(OpenStreetMap or 手入力) */
       if (fp.addrs && fp.addrs.length) props.addrs = fp.addrs;        /* 住居表示住所(複数の号があれば全部) */
+      if (fp.building) props.building = true;
+      if (fp.areaM2) props.areaM2 = fp.areaM2;                       /* 建物の面積(㎡)=部屋数の推定に使う */
+      if (fp.levels) props.levels = fp.levels;                       /* OSM building:levels(階数) */
+      if (fp.flats) props.flats = fp.flats;                          /* OSM building:flats(戸数) */
       const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: props });
       if (!lyr) return;
       stampFeature(lyr.feature.properties);
@@ -235,53 +252,73 @@ function genRooms(floors, perFloor, style, startFloor) {
   }
   return list;
 }
+/* 階数・各階戸数の初期値: OSM(building:levels / building:flats)があればそれ、無ければ建物の面積から推定。
+   推定は「現地に合わせて±で直す」前提(部屋番号の公開データは存在しない) */
+function estimateRooms(props) {
+  const A = Number(props.areaM2) || 0;
+  const floors = props.levels || (A >= 600 ? 8 : A >= 350 ? 6 : A >= 180 ? 4 : A >= 90 ? 3 : 2);
+  const per = props.flats ? Math.max(1, Math.round(props.flats / floors)) : Math.max(1, Math.round(A * 0.75 / 55));
+  return { floors, per, src: props.levels || props.flats ? "osm" : "area" };
+}
 function openRoomsPanel(layer) {
   const props = layer.feature.properties;
   const rooms = roomsOf(props);
   if (!roomsPanelEl) {
     roomsPanelEl = document.createElement("div");
-    roomsPanelEl.className = "listPanel roomsPanel";
-    map.getContainer().parentElement.appendChild(roomsPanelEl);
+    roomsPanelEl.className = "roomsModal";
+    document.body.appendChild(roomsPanelEl);
     L.DomEvent.disableClickPropagation(roomsPanelEl); L.DomEvent.disableScrollPropagation(roomsPanelEl);
   }
   const el = roomsPanelEl;
+  /* 一覧が無ければ推定値で最初から一覧を作っておく(「カチカチ生成」させない) */
+  if (!rooms.list.length) {
+    const est = estimateRooms(props);
+    rooms.floors = est.floors; rooms.perFloor = est.per; rooms.style = rooms.style || "num"; rooms.startFloor = 1; rooms.estimated = est.src;
+    rooms.list = genRooms(rooms.floors, rooms.perFloor, rooms.style, rooms.startFloor);
+    stampFeature(props); persist();
+  }
+  function regen() {
+    /* 階数・戸数を変えても、同じ部屋番号のチェックは引き継ぐ */
+    const done = new Set(rooms.list.filter(r => r.done).map(r => r.no));
+    rooms.list = genRooms(rooms.floors, rooms.perFloor, rooms.style || "num", rooms.startFloor || 1).map(r => ({ no: r.no, done: done.has(r.no) }));
+    rooms.estimated = "";
+  }
   function render() {
-    const title = (props.bname ? props.bname + " " : "") + (props.addrs && props.addrs.length ? props.addrs.join(" ／ ") : (props.place || "建物"));
+    const title = (props.bname ? props.bname : "") ;
+    const addr = props.addrs && props.addrs.length ? props.addrs.join(" ／ ") : (props.place || "");
     const done = rooms.list.filter(r => r.done).length;
+    const estNote = rooms.estimated ? `<span class="rpEst">※${rooms.estimated === "osm" ? "OpenStreetMapの階数/戸数" : "建物の大きさ(" + (props.areaM2 || "?") + "㎡)"}からの<b>推定</b>です。現地の集合ポストに合わせて階数・戸数を±で直してください</span>` : "";
     el.innerHTML =
-      `<button class="lpClose" id="rpClose" title="閉じる">✕</button><h3>🏢 部屋割り</h3>` +
-      `<div class="rpTitle">${mgEsc(title)}</div>` +
-      (rooms.list.length ? `<div class="rpCount">配布済 <b>${done}</b> / ${rooms.list.length} 部屋</div>` : "") +
-      `<details class="rpGen" ${rooms.list.length ? "" : "open"}><summary>部屋番号の一覧を作る</summary>` +
-      `<div class="rpForm">階数 <input type="number" id="rpFloors" min="1" max="99" value="${rooms.floors || 5}"> × 各階 <input type="number" id="rpPer" min="1" max="99" value="${rooms.perFloor || 4}"> 戸` +
-      `<select id="rpStyle"><option value="num">101, 102…</option><option value="dash">1-01, 1-02…</option><option value="seq">1, 2, 3…(連番)</option></select>` +
-      `開始階 <input type="number" id="rpStart" min="1" max="99" value="${rooms.startFloor || 1}">` +
-      `<button class="popupSave" id="rpGenBtn">生成</button></div>` +
-      `<div class="rpForm">手入力(カンマ・改行区切り)<textarea id="rpManual" rows="2" placeholder="例) 101,102,103,201,202"></textarea><button class="popupSave" id="rpAddBtn">追加</button></div>` +
-      `<div class="lpSection">※部屋番号の公開データはありません。現地の集合ポストや表札を見て作成してください。住人の氏名は入力しないでください</div></details>` +
-      (rooms.list.length ? `<div class="roomGrid">${rooms.list.map((r, i) => `<label class="roomCell ${r.done ? "done" : ""}"><input type="checkbox" data-i="${i}" ${r.done ? "checked" : ""}> ${mgEsc(r.no)}</label>`).join("")}</div>` +
-        `<div class="row rpBtns"><button class="popupSave" id="rpAll">全部チェック</button><button id="rpNone">チェックを外す</button><button class="popupDel" id="rpClear">一覧を消す</button></div>` : `<div class="lpEmpty">まだ部屋番号の一覧がありません</div>`);
+      `<div class="rmHead"><div><div class="rmTitle">🏢 ${mgEsc(title || "建物")}</div><div class="rmAddr">${mgEsc(addr)}</div></div>` +
+      `<button class="rmClose" id="rpClose" title="閉じる" aria-label="閉じる">✕</button></div>` +
+      `<div class="rmCtl">` +
+      `<span class="rmCtlGrp">階数 <button id="rpFm" aria-label="階数を減らす">−</button><b id="rpFloorsV">${rooms.floors}</b><button id="rpFp" aria-label="階数を増やす">＋</button></span>` +
+      `<span class="rmCtlGrp">各階 <button id="rpPm" aria-label="各階の戸数を減らす">−</button><b id="rpPerV">${rooms.perFloor}</b><button id="rpPp" aria-label="各階の戸数を増やす">＋</button> 戸</span>` +
+      `<select id="rpStyle" aria-label="部屋番号の形式"><option value="num" ${rooms.style === "num" || !rooms.style ? "selected" : ""}>101, 102…</option><option value="dash" ${rooms.style === "dash" ? "selected" : ""}>1-01, 1-02…</option><option value="seq" ${rooms.style === "seq" ? "selected" : ""}>1, 2, 3…</option></select>` +
+      `<span class="rmCount">配布済 <b>${done}</b> / ${rooms.list.length}</span></div>` +
+      estNote +
+      `<div class="rmHint">部屋をクリックすると「配布済」になります(もう一度で戻る)</div>` +
+      `<div class="roomGrid">${rooms.list.map((r, i) => `<button type="button" class="roomCell ${r.done ? "done" : ""}" data-i="${i}">${mgEsc(r.no)}</button>`).join("")}</div>` +
+      `<details class="rmMore"><summary>部屋番号を手入力で足す／一覧の操作</summary>` +
+      `<div class="rpForm"><textarea id="rpManual" rows="2" placeholder="例) 101,102,103,201,202(カンマ・改行区切り)"></textarea><button class="popupSave" id="rpAddBtn">追加</button></div>` +
+      `<div class="rpBtns"><button class="popupSave" id="rpAll">全部チェック</button><button id="rpNone">チェックを外す</button><button class="popupDel" id="rpClear">一覧を消す</button></div>` +
+      `<div class="lpSection">※部屋番号の公開データはありません。住人の氏名は入力しないでください。チェックは図形に保存され、GeoJSON書出・統合にも乗ります</div></details>`;
     el.querySelector("#rpClose").onclick = () => { el.style.display = "none"; };
-    el.querySelector("#rpGenBtn").onclick = () => {
-      const floors = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpFloors").value, 10) || 1));
-      const per = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpPer").value, 10) || 1));
-      const start = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpStart").value, 10) || 1));
-      const style = el.querySelector("#rpStyle").value;
-      if (rooms.list.length && !confirm("今の一覧(チェック含む)を作り直します。よろしいですか?")) return;
-      rooms.list = genRooms(floors, per, style, start); rooms.floors = floors; rooms.perFloor = per; rooms.style = style; rooms.startFloor = start;
-      save();
-    };
+    el.querySelector("#rpFm").onclick = () => { if (rooms.floors > 1) { rooms.floors--; regen(); save(); } };
+    el.querySelector("#rpFp").onclick = () => { if (rooms.floors < 99) { rooms.floors++; regen(); save(); } };
+    el.querySelector("#rpPm").onclick = () => { if (rooms.perFloor > 1) { rooms.perFloor--; regen(); save(); } };
+    el.querySelector("#rpPp").onclick = () => { if (rooms.perFloor < 99) { rooms.perFloor++; regen(); save(); } };
+    el.querySelector("#rpStyle").onchange = (e) => { rooms.style = e.target.value; regen(); save(); };
+    el.querySelectorAll(".roomCell").forEach(b => b.onclick = () => { const r = rooms.list[Number(b.dataset.i)]; r.done = !r.done; save(); });
     el.querySelector("#rpAddBtn").onclick = () => {
-      const txt = el.querySelector("#rpManual").value;
-      const nos = txt.split(/[,、\n\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 500);
+      const nos = el.querySelector("#rpManual").value.split(/[,、\n\s]+/).map(x => x.trim()).filter(Boolean).slice(0, 500);
       const have = new Set(rooms.list.map(r => r.no));
       nos.forEach(no => { if (!have.has(no)) { rooms.list.push({ no: no.slice(0, 12), done: false }); have.add(no); } });
-      save();
+      rooms.estimated = ""; save();
     };
-    el.querySelectorAll(".roomCell input").forEach(cb => cb.onchange = () => { rooms.list[Number(cb.dataset.i)].done = cb.checked; save(); });
-    const all = el.querySelector("#rpAll"); if (all) all.onclick = () => { rooms.list.forEach(r => r.done = true); save(); };
-    const none = el.querySelector("#rpNone"); if (none) none.onclick = () => { rooms.list.forEach(r => r.done = false); save(); };
-    const clr = el.querySelector("#rpClear"); if (clr) clr.onclick = () => { if (!confirm("部屋番号の一覧を消します。よろしいですか?")) return; rooms.list = []; save(); };
+    el.querySelector("#rpAll").onclick = () => { rooms.list.forEach(r => r.done = true); save(); };
+    el.querySelector("#rpNone").onclick = () => { rooms.list.forEach(r => r.done = false); save(); };
+    el.querySelector("#rpClear").onclick = () => { if (!confirm("部屋番号の一覧を消します。よろしいですか?")) return; rooms.list = []; rooms.estimated = ""; save(); if (!rooms.list.length) el.style.display = "none"; };
   }
   function save() { stampFeature(props); persist(); render(); }
   render();
