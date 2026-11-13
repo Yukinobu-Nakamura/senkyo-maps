@@ -1577,7 +1577,14 @@ async function jushoAddrsFor(code, geom) {
     if (psPointInRing(ring, pt[0], pt[1])) inside.push(pt);
     else if (ringDistM(ring, pt[0], pt[1]) <= 6) near.push(pt);
   }
-  const use = inside.length ? inside : near;
+  let use = inside.length ? inside : near;
+  /* 道路をはさんだ隣の街区の点(6m以内)が混ざることがある → 最も点の多い(町丁目,街区符号)のグループだけ残す */
+  if (use.length > 1) {
+    const cnt = new Map();
+    use.forEach(pt => { const k = pt[2] + "|" + pt[3]; cnt.set(k, (cnt.get(k) || 0) + 1); });
+    const best = [...cnt.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    use = use.filter(pt => pt[2] + "|" + pt[3] === best);
+  }
   const seen = new Set(), out = [];
   use.forEach(pt => {
     const town = d.towns[pt[2]], key = town + "|" + pt[3] + "|" + pt[4];
