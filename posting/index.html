@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=127da9ef">
+<link rel="stylesheet" href="../assets/common.css?v=fc3d4a72">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -107,7 +107,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=127da9ef"></script>
+<script src="../assets/common.js?v=fc3d4a72"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -176,6 +176,7 @@ const map = L.map("map", { renderer: L.svg({ padding: 1 }), zoomSnap: 0.5, zoomD
 const baseLayers = createBaseLayers();
 baseLayers["地理院地図(淡色)"].addTo(map);
 const layersCtl = L.control.layers(baseLayers, null, { collapsed: true }).addTo(map);
+const jushoLayer = addJushoLabels(map, layersCtl);   /* 🔢 番地・号ラベル(z17以上・既定ON) */
 addLocateControl(map);
 /* 🔍で囲んだ町丁目を、そのまま配布区域の図形として登録する(状態は「予定」で開始しポップアップで変更) */
 addPlaceSearchControl(map, {

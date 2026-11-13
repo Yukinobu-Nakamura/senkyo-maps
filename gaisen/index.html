@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>街宣マップ — 音声配慮地点と街宣好適地点の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="../assets/common.css?v=127da9ef">
+<link rel="stylesheet" href="../assets/common.css?v=fc3d4a72">
 <style>
   /* 種別ピン(絵文字divIcon) */
   .gm-pin{
@@ -64,7 +64,7 @@
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="../assets/common.js?v=127da9ef"></script>
+<script src="../assets/common.js?v=fc3d4a72"></script>
 <script>
 "use strict";
 
@@ -124,7 +124,8 @@ CATS.forEach(c => {
   const grp = c.care ? "🔇 " : (REF_GROUP.indexOf(c.id)>=0 ? "🏢 " : VOTE_GROUP.indexOf(c.id)>=0 ? "🗳️ " : "📢 ");
   overlays[grp + c.emoji + " " + c.label] = catLayers[c.id];
 });
-L.control.layers(baseLayers, overlays, { collapsed:true }).addTo(map);
+const layersCtl = L.control.layers(baseLayers, overlays, { collapsed:true }).addTo(map);
+const jushoLayer = addJushoLabels(map, layersCtl);   /* 🔢 番地・号ラベル(z17以上・既定ON) */
 addLocateControl(map);
 addPlaceSearchControl(map);
 L.control.scale({ imperial:false }).addTo(map);

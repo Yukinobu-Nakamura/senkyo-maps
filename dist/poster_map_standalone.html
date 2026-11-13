@@ -288,6 +288,13 @@ body.uiHidden .noticebar{ display:none !important; }
 .placeSearch .psTap{ width:100%; font-size:12px; color:#374151; display:flex; align-items:center; gap:4px; }
 .placeSearch .psTapSel{ flex:1; min-width:0; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; background:#fff; }
 .leaflet-container.psTapping{ cursor:crosshair; }
+/* 🔢 番地(街区符号)・号(住居番号)のラベル(z17以上)。地図の文字と同じく白い縁取りで地物の上に載せる */
+.jushoWrap{ background:none; border:none; }
+.jushoBlk, .jushoGo{ position:absolute; left:0; top:0; transform:translate(-50%,-50%); white-space:nowrap; pointer-events:none; line-height:1;
+  text-shadow:0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff, 0 0 1px #fff; }
+.jushoBlk{ font-size:12px; font-weight:800; color:#1f2937; }
+.jushoGo{ font-size:9.5px; font-weight:600; color:#4b5563; }
+.leaflet-container.jushoDense .jushoBlk{ font-size:14px; color:#111827; }
 .placeSearch .psAdopt{ border:1px solid #7c3aed; background:#7c3aed; color:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; font-weight:600; }
 /* 検索した町丁目・街区の枠に載せる名前+世帯数ラベル(divIcon マーカー。中心に置くため内側で -50% ずらす) */
 .psAreaLabelWrap{ background:none; border:none; }
@@ -539,6 +546,7 @@ const FAQ_HTML = `
 <li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
 <li class="needsSetai"><b>世帯数などの公開データ</b> — このサイト自身</li>
 <li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目・街区(○番)を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>(作成者の公開データ置き場 senkyo-maps-data を含む)から取り寄せます。※街区の枠は国勢調査の調査区(道路の中心線)に基づくため、実際の街区より道路の半分ほど外側に膨らみます。号(○番○号)まで入力したときは、<b>その地点に最も近い建物の形を国土地理院の地図データ(ベクトルタイル)から取り寄せて</b>枠にします(密集地では隣の建物を拾うことがあります)</li>
+<li><b>🔢 番地・号のラベル(地図を拡大したとき)</b> — 国土地理院に<b>画面中心の緯度経度</b>を送って市区町村を判定し、その市区町村の<b>住居表示住所データ(国土地理院の公開データ)をこのサイト自身</b>(作成者の公開データ置き場)から取り寄せます。レイヤ一覧の「🔢 番地・号」を外せば通信しません</li>
 <li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
 <li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
 <li class="teamSync"><b>☁️ 同期(設定したときだけ)</b> — <b>チーム自身が用意したGoogleスプレッドシート</b>。区域・ルートの座標と<b>担当・メモ・登録者名</b>を送ります。設定しなければ通信しません</li>
@@ -1664,6 +1672,105 @@ async function gsiBuildingAt(lat, lng, maxDistM) {
   }
   if (!best || bestD > (maxDistM || 15)) return null;
   return { type: "Feature", geometry: { type: "Polygon", coordinates: [best.ring] }, properties: { distM: Math.round(bestD * 10) / 10 } };
+}
+
+/* ---- 🔢 番地(街区符号)・号(住居番号)のラベル: 地図を拡大したとき(z17以上)に表示 ----
+   データ: 国土地理院「住居表示住所」(住居番号の位置=建物前面の点) を市区町村ごとに軽量化したもの
+   (senkyo-maps-data/jusho/jusho_<code>.json.gz。作り方 build/make_jusho.py。住居表示未実施の地番地域には無い)。
+   z17: 街区符号(○番)を街区ごとに1つ(同じ町丁目・同じ街区符号の点の重心)。z18以上: 住居番号(○号)も各点に。
+   どの市区町村を読むかは画面中心の逆ジオコーダ(z14タイル単位でキャッシュ)。読み込んだ自治体は保持し、
+   画面に入る分だけラベルを描く(上限あり)。Googleマップの番地・号表示に相当する機能。 */
+const JUSHO_BASE = KB_BASE.replace(/kb\/$/, "jusho/");
+const _jushoLoaded = new Map();        /* code → {towns, pts, blocks} */
+const _jushoPending = new Map();       /* code → Promise */
+const _jushoCodeAt = new Map();        /* z14 タイルキー → Promise<code|""> */
+let _jushoIndexPromise = null;
+function jushoIndex() {
+  if (!_jushoIndexPromise) {
+    _jushoIndexPromise = fetch(JUSHO_BASE + "jusho_index.json")
+      .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(j => new Set(j.codes || []))
+      .catch(() => { _jushoIndexPromise = null; return new Set(); });
+  }
+  return _jushoIndexPromise;
+}
+function jushoData(code) {
+  if (_jushoLoaded.has(code)) return Promise.resolve(_jushoLoaded.get(code));
+  if (!_jushoPending.has(code)) {
+    const p = jushoIndex()
+      .then(codes => codes.has(code) ? fetchGzJson(JUSHO_BASE + "jusho_" + code + ".json.gz") : null)
+      .then(d => {
+        if (!d || !Array.isArray(d.p)) return null;
+        /* 街区ごとの重心(同じ町丁目 + 同じ街区符号) */
+        const acc = new Map();
+        d.p.forEach(pt => {
+          const k = pt[2] + "|" + pt[3];
+          const a = acc.get(k) || { lng: 0, lat: 0, n: 0, ti: pt[2], b: pt[3] };
+          a.lng += pt[0]; a.lat += pt[1]; a.n++; acc.set(k, a);
+        });
+        const blocks = [...acc.values()].map(a => ({ lng: a.lng / a.n, lat: a.lat / a.n, b: a.b, town: d.t[a.ti], n: a.n }));
+        const out = { code, towns: d.t, pts: d.p, blocks };
+        _jushoLoaded.set(code, out);
+        return out;
+      })
+      .catch(() => null)
+      .then(v => { _jushoPending.delete(code); return v; });
+    _jushoPending.set(code, p);
+  }
+  return _jushoPending.get(code);
+}
+function jushoCodeAt(lat, lng) {
+  const n = Math.pow(2, 14), latR = lat * Math.PI / 180;
+  const key = Math.floor((lng + 180) / 360 * n) + "/" + Math.floor((1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n);
+  if (!_jushoCodeAt.has(key)) {
+    _jushoCodeAt.set(key, gsiReverse(lat, lng).then(r => r.code || "").catch(() => { _jushoCodeAt.delete(key); return ""; }));
+  }
+  return _jushoCodeAt.get(key);
+}
+/* map にラベルのオーバーレイを足す。layersCtl があればレイヤ一覧に「🔢 番地・号(拡大時)」として載せる(既定ON) */
+function addJushoLabels(map, layersCtl, opts) {
+  opts = opts || {};
+  const MIN_Z = opts.minZoom || 17, GO_Z = opts.goZoom || 18, MAX_BLK = 400, MAX_GO = 900;
+  if (!map.getPane("jushoPane")) { map.createPane("jushoPane"); const pn = map.getPane("jushoPane"); pn.style.zIndex = 450; pn.style.pointerEvents = "none"; }
+  const grp = L.layerGroup(), blkGrp = L.layerGroup(), goGrp = L.layerGroup();
+  grp.addLayer(blkGrp); grp.addLayer(goGrp);
+  const ATTR = '住居表示: <a href="https://www.gsi.go.jp/kihonjohochousa/jukyo_jusho.html" target="_blank" rel="noopener noreferrer">国土地理院</a>';
+  let timer = null, seq = 0;
+  const mk = (lat, lng, cls, text) => L.marker([lat, lng], { pane: "jushoPane", interactive: false, keyboard: false,
+    icon: L.divIcon({ className: "jushoWrap", html: `<div class="${cls}">${String(text).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))}</div>`, iconSize: null }) });
+  async function refresh() {
+    const my = ++seq;
+    const z = map.getZoom();
+    if (!map.hasLayer(grp) || z < MIN_Z) { blkGrp.clearLayers(); goGrp.clearLayers(); return; }
+    const c = map.getCenter();
+    const code = await jushoCodeAt(c.lat, c.lng);
+    if (my !== seq) return;
+    if (code) { await jushoData(code); if (my !== seq) return; }
+    const b = map.getBounds().pad(0.15);
+    blkGrp.clearLayers(); goGrp.clearLayers();
+    let nb = 0, ng = 0;
+    _jushoLoaded.forEach(d => {
+      for (const bk of d.blocks) {
+        if (nb >= MAX_BLK) break;
+        if (b.contains([bk.lat, bk.lng])) { blkGrp.addLayer(mk(bk.lat, bk.lng, "jushoBlk", bk.b)); nb++; }
+      }
+      if (z >= GO_Z) {
+        for (const pt of d.pts) {
+          if (ng >= MAX_GO) break;
+          if (b.contains([pt[1], pt[0]])) { goGrp.addLayer(mk(pt[1], pt[0], "jushoGo", pt[4])); ng++; }
+        }
+      }
+    });
+    map.getContainer().classList.toggle("jushoDense", z >= GO_Z);
+  }
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(refresh, 160); };
+  map.on("moveend zoomend", schedule);
+  grp.on("add", () => { if (map.attributionControl) map.attributionControl.addAttribution(ATTR); schedule(); });
+  grp.on("remove", () => { if (map.attributionControl) map.attributionControl.removeAttribution(ATTR); blkGrp.clearLayers(); goGrp.clearLayers(); });
+  map.addLayer(grp);
+  if (layersCtl) layersCtl.addOverlay(grp, "🔢 番地・号(拡大時)");
+  grp.refresh = refresh;
+  return grp;
 }
 
 /* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。
@@ -3226,6 +3333,7 @@ baseLayers["地理院地図(淡色)"].addTo(map);
 const statusLayers = {};
 STATUSES.forEach(s => { statusLayers[s.label] = L.layerGroup().addTo(map); });
 const layersCtl = L.control.layers(baseLayers, statusLayers, { collapsed: true }).addTo(map);
+const jushoLayer = addJushoLabels(map, layersCtl);   /* 🔢 番地・号ラベル(z17以上・既定ON) */
 addLocateControl(map);
 addPlaceSearchControl(map);
 L.control.scale({ imperial: false }).addTo(map);
