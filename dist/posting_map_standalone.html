@@ -289,6 +289,16 @@ body.uiHidden .noticebar{ display:none !important; }
 .placeSearch .psTap{ width:100%; font-size:12px; color:#374151; display:flex; align-items:center; gap:4px; }
 .placeSearch .psTapSel{ flex:1; min-width:0; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; background:#fff; }
 .leaflet-container.psTapping{ cursor:crosshair; }
+/* タップ選択のポップアップ(名称・住所・登録/詳細) */
+.psPop{ min-width:200px; font-size:13px; }
+.psPop .psPopName{ font-weight:800; font-size:14px; color:#111827; }
+.psPop .psPopNameIn{ width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 6px; font-size:13px; font-weight:700; }
+.psPop .psPopAddr{ color:#1e3a5f; font-weight:700; margin-top:2px; }
+.psPop .psPopSub{ font-size:10.5px; color:#6b7280; margin-top:2px; }
+.psPop .psPopBtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.psPop button{ min-height:30px; border-radius:6px; padding:4px 10px; font-size:12.5px; cursor:pointer; border:1px solid #d1d5db; background:#f3f4f6; color:#111827; }
+.psPop .psPopReg{ background:var(--accent,#7c3aed); border-color:var(--accent,#7c3aed); color:#fff; font-weight:700; }
+.psPop .psPopDetail{ background:#eef2ff; border-color:#c7d2fe; color:#3730a3; font-weight:600; }
 /* 🔢 番地(街区符号)・号(住居番号)のラベル(z17以上)。地図の文字と同じく白い縁取りで地物の上に載せる */
 .jushoWrap{ background:none; border:none; }
 .jushoBlk, .jushoGo{ position:absolute; left:0; top:0; transform:translate(-50%,-50%); white-space:nowrap; pointer-events:none; line-height:1;
@@ -409,6 +419,20 @@ body.uiHidden .noticebar{ display:none !important; }
   .lpSub{ flex:none; font-size:11px; color:#6b7280; }
   .lpEmpty{ color:#9ca3af; padding:4px 6px; }
   .lpSection{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:11.5px; color:#374151; }
+  /* 🏢 部屋割りパネル */
+  .roomsPanel .rpTitle{ font-weight:700; color:#1e3a5f; margin-bottom:4px; }
+  .roomsPanel .rpCount{ margin-bottom:6px; }
+  .roomsPanel details.rpGen summary{ cursor:pointer; font-weight:700; font-size:12px; }
+  .roomsPanel .rpForm{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin:6px 0; font-size:12px; }
+  .roomsPanel .rpForm input[type=number]{ width:44px; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; }
+  .roomsPanel .rpForm select{ border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; }
+  .roomsPanel .rpForm textarea{ width:100%; border:1px solid #d1d5db; border-radius:6px; padding:4px; font-size:12px; }
+  .roomsPanel .roomGrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(62px, 1fr)); gap:4px; margin-top:6px; }
+  .roomsPanel .roomCell{ display:flex; align-items:center; gap:3px; border:1px solid #e5e7eb; border-radius:6px; padding:3px 5px; font-size:12px; cursor:pointer; min-height:24px; }
+  .roomsPanel .roomCell.done{ background:#ede9fe; border-color:#c4b5fd; text-decoration:line-through; color:#6b7280; }
+  .roomsPanel .rpBtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .roomsPanel .rpBtns button{ min-height:26px; font-size:12px; }
+  .popupRooms{ margin-left:6px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
   /* 世帯数レイヤのラベル(.setaiLabel)と追加リクエストのモーダル(.req*)は
      ポスターマップと共通のため assets/common.css に置いている */
   /* 説明文バー(details化): スマホでは初期折りたたみで地図を広く使う(開閉はJS不要のネイティブ動作) */
@@ -594,6 +618,7 @@ const FAQ_HTML = `
 <li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
 <li class="needsSetai"><b>世帯数などの公開データ</b> — このサイト自身</li>
 <li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目・街区(○番)を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>(作成者の公開データ置き場 senkyo-maps-data を含む)から取り寄せます。※街区の枠は国勢調査の調査区(道路の中心線)に基づくため、実際の街区より道路の半分ほど外側に膨らみます。号(○番○号)まで入力したときは、<b>その地点に最も近い建物の形を国土地理院の地図データ(ベクトルタイル)から取り寄せて</b>枠にします(密集地では隣の建物を拾うことがあります)</li>
+<li class="teamSync"><b>📍「タップで選ぶ」で建物をタップしたとき</b> — OpenStreetMap(Overpass API)に<b>タップした地点の緯度経度</b>を送って建物名(登録があれば)を取得します。番地・号は上記の住居表示住所データから求めます</li>
 <li><b>🔢 番地・号のラベル(地図を拡大したとき)</b> — 国土地理院に<b>画面中心の緯度経度</b>を送って市区町村を判定し、その市区町村の<b>住居表示住所データ(国土地理院の公開データ)をこのサイト自身</b>(作成者の公開データ置き場)から取り寄せます。レイヤ一覧の「🔢 番地・号」を外せば通信しません</li>
 <li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
 <li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
@@ -1577,24 +1602,96 @@ function kbPick(gj, lng, lat, lv01, wantNum) {
 }
 /* 「タップで選ぶ」モード(null=オフ / "chome" / "block" / "bld")。addUiHideControl が参照する */
 let _psTapMode = null;
+/* 「池袋三丁目」→「池袋3」(住所の短い表記用)。丁目の無い町はそのまま */
+function chomeShort(town) {
+  const m = /^(.*?)([一二三四五六七八九十]+)丁目$/.exec(town || "");
+  if (!m) return town || "";
+  const k = m[2]; const d = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  let n;
+  if (k === "十") n = 10;
+  else if (k.indexOf("十") >= 0) { const [a, b] = k.split("十"); n = (a ? d[a] : 1) * 10 + (b ? d[b] : 0); }
+  else n = d[k] || 0;
+  return m[1] + n;
+}
+/* 建物(面)に属する住居表示住所(○番○号)を返す: 面の中の点 → 無ければ 6m 以内の点。[{town, b, g, addr}] 号の昇順 */
+function ringDistM(ring, lng, lat) {
+  const latR = lat * Math.PI / 180, kx = 111320 * Math.cos(latR), ky = 110540;
+  let d = Infinity;
+  for (let k = 0; k < ring.length - 1; k++) {
+    const ax = ring[k][0], ay = ring[k][1], bx = ring[k + 1][0], by = ring[k + 1][1];
+    const dx = (bx - ax) * kx, dy = (by - ay) * ky, px = (lng - ax) * kx, py = (lat - ay) * ky;
+    const L = dx * dx + dy * dy; const t = L ? Math.max(0, Math.min(1, (px * dx + py * dy) / L)) : 0;
+    d = Math.min(d, Math.hypot(px - t * dx, py - t * dy));
+  }
+  return d;
+}
+async function jushoAddrsFor(code, geom) {
+  const d = await jushoData(code);
+  if (!d || !geom || geom.type !== "Polygon") return [];
+  const ring = geom.coordinates[0];
+  const [minX, minY, maxX, maxY] = ring.reduce((a, c) => [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[2], c[0]), Math.max(a[3], c[1])], [Infinity, Infinity, -Infinity, -Infinity]);
+  const pad = 0.0001; /* 約10m */
+  const inside = [], near = [];
+  for (const pt of d.pts) {
+    if (pt[0] < minX - pad || pt[0] > maxX + pad || pt[1] < minY - pad || pt[1] > maxY + pad) continue;
+    if (psPointInRing(ring, pt[0], pt[1])) inside.push(pt);
+    else if (ringDistM(ring, pt[0], pt[1]) <= 6) near.push(pt);
+  }
+  const use = inside.length ? inside : near;
+  const seen = new Set(), out = [];
+  use.forEach(pt => {
+    const town = d.towns[pt[2]], key = town + "|" + pt[3] + "|" + pt[4];
+    if (seen.has(key)) return; seen.add(key);
+    out.push({ town, b: pt[3], g: pt[4], addr: chomeShort(town) + "-" + pt[3] + "-" + pt[4] });
+  });
+  out.sort((a, b) => (parseInt(a.b, 10) - parseInt(b.b, 10)) || (parseInt(a.g, 10) - parseInt(b.g, 10)) || a.addr.localeCompare(b.addr));
+  return out;
+}
+/* 建物名: OpenStreetMap(Overpass API)に、その地点から 8m 以内の name 付き建物を問い合わせる。
+   無ければ ""。失敗・7秒超も ""(建物名は無くても登録できるので静かに諦める)。表示時は ODbL の帰属表示をつける */
+const OVERPASS_ENDPOINTS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];  /* 混雑時(502/504)は次へ */
+async function osmBuildingName(lat, lng) {
+  const q = `[out:json][timeout:6];way(around:8,${lat},${lng})[building][name];out tags center 5;`;
+  for (const ep of OVERPASS_ENDPOINTS) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 5000) : null;
+    try {
+      const r = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(q), signal: ctrl ? ctrl.signal : undefined });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const els = (j.elements || []).filter(e => e.tags && e.tags.name);
+      if (!els.length) return "";
+      els.sort((a, b) => {
+        const da = a.center ? Math.hypot((a.center.lat - lat) * 110540, (a.center.lon - lng) * 91000) : 1e9;
+        const db = b.center ? Math.hypot((b.center.lat - lat) * 110540, (b.center.lon - lng) * 91000) : 1e9;
+        return da - db;
+      });
+      return String(els[0].tags.name).slice(0, 60);
+    } catch (_) { /* 次のエンドポイントへ */ }
+    finally { if (timer) clearTimeout(timer); }
+  }
+  return "";
+}
 /* 地点(lat,lng)を含む区画を単位別に1つ返す。無ければ null */
 async function psUnitAt(mode, lat, lng) {
   const rg = await gsiReverse(lat, lng).catch(() => null);
   if (!rg || !rg.code) return null;
   if (mode === "bld") {
     const b = await gsiBuildingAt(lat, lng, 8).catch(() => null);
-    return b ? { type: "Feature", geometry: b.geometry, properties: { name: (rg.name || "") + " の建物", building: true } } : null;
+    return b ? { type: "Feature", geometry: b.geometry, properties: { name: (rg.name || "") + " の建物", building: true, code: rg.code, town: rg.name || "" } } : null;
   }
   if (mode === "block") {
     const kb = await kbGeo(rg.code);
     const f = kb && (kb.features || []).find(x => psContains(x.geometry, lng, lat));
-    return f ? kbFeat(f) : null;
+    if (!f) return null;
+    const o = kbFeat(f); o.properties.code = rg.code; o.properties.town = f.properties.n || rg.name || "";
+    return o;
   }
   const codes = await psCityCodes();
   if (!codes.has(rg.code)) return null;
   const gj = await psGeo(rg.code);
   const f = (gj && gj.features || []).find(x => psContains(x.geometry, lng, lat));
-  return f ? { type: "Feature", geometry: f.geometry, properties: { name: f.properties.name, setai: f.properties.setai } } : null;
+  return f ? { type: "Feature", geometry: f.geometry, properties: { name: f.properties.name, setai: f.properties.setai, code: rg.code, town: f.properties.name } } : null;
 }
 
 /* ---- 号(住居番号)まで入力されたとき: その建物の外形を囲む ----
@@ -1839,7 +1936,7 @@ function addPlaceSearchControl(map, opts) {
       '<button class="psGo" type="button">検索</button>' +
       '<button class="psClear" type="button" style="display:none" title="検索結果の枠・マーカーを消す">枠を消す</button>' +
       (opts.onAdopt ? '<button class="psAdopt" type="button" style="display:none" title="赤い枠の区域をそのまま図形として登録し、状態(予定/配布中/済)などを設定します">➕ この区域を登録</button>' : "") +
-      '<label class="psTap" title="地図をタップした場所の区画を選びます(続けてタップすると複数選べます)">📍 タップで選ぶ: <select class="psTapSel">' +
+      '<label class="psTap" title="地図をタップした場所の区画(丁目・街区・建物)を赤枠で示し、名称・住所と「登録」ボタンをポップアップで出します">📍 タップで選ぶ: <select class="psTapSel">' +
       '<option value="">オフ</option><option value="chome">丁目・町</option><option value="block">街区(○番)</option><option value="bld">建物(○号)</option></select></label>' +
       '<div class="psList"></div></span>';
     L.DomEvent.disableClickPropagation(div);
@@ -1880,21 +1977,76 @@ function addPlaceSearchControl(map, opts) {
       map.getContainer().classList.toggle("psTapping", !!_psTapMode);
       if (_psTapMode) showMapToast(map.getContainer(), "地図をタップすると、その場所の" + tapSel.options[tapSel.selectedIndex].text + "が選ばれます", 3500);
     };
+    /* タップ → その区画を赤枠で示し、その場にポップアップ(名称・住所・「登録」「詳細を見る」)。
+       建物: 住居表示住所(○番○号)から「池袋3-62-1」の形の住所、建物名は OpenStreetMap にあれば表示 */
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    let tapPopup = null;
     map.on("click", async (e) => {
       if (!_psTapMode || tapBusy) return;
       if (map.pm && (map.pm.globalDrawModeEnabled() || map.pm.globalEditModeEnabled() || map.pm.globalRemovalModeEnabled())) return;
       const t = e.originalEvent && e.originalEvent.target;
-      if (t && t.closest && t.closest(".leaflet-control, .leaflet-popup")) return;
+      if (t && t.closest && t.closest(".leaflet-control, .leaflet-popup, .leaflet-interactive")) return;   /* 既存の図形の上はその図形のポップアップに任せる */
       tapBusy = true;
       try {
         const f = await psUnitAt(_psTapMode, e.latlng.lat, e.latlng.lng);
         if (!f) { showMapToast(map.getContainer(), "この地点の区画データがありません(未収録の自治体・建物なし)", 3000); return; }
         if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
-        const key = g => JSON.stringify(g.geometry.coordinates).slice(0, 200) + (g.properties.name || "");
-        const k = key(f), idx = hitFeats.findIndex(x => key(x) === k);
-        const next = hitFeats.slice();
-        if (idx >= 0) next.splice(idx, 1); else next.push(f);
-        if (next.length) showArea(next, { noFit: true }); else clearHit();
+        showArea([f], { noFit: true, noLabel: true });
+        const p = f.properties;
+        let title = "", addrLine = "", sub = "";
+        let namePromise = null;
+        if (p.building) {
+          /* 住所は手元のデータで即座に出す。建物名(OpenStreetMap)は遅い/落ちていることがあるので、ポップアップを開いた後に届いたら埋める */
+          const addrs = await jushoAddrsFor(p.code, f.geometry).catch(() => []);
+          if (hitFeats[0] !== f) return;   /* 待っている間に別の場所がタップされた */
+          addrLine = addrs.length ? addrs.map(a => a.addr).join(" ／ ") : (chomeShort(p.town) + "(号は不明)");
+          title = "(建物名は未登録)";
+          p.bname = ""; p.addrs = addrs.map(a => a.addr);
+          p.name = addrs.length ? addrs[0].addr + (addrs.length > 1 ? " ほか" : "") : chomeShort(p.town);
+          namePromise = osmBuildingName(e.latlng.lat, e.latlng.lng);
+        } else if (p.block) {
+          title = chomeShort(p.town) + "-" + String(p.name).replace(/^.*?(\d+)番$/, "$1");
+          addrLine = p.name + (p.setai ? `　${Number(p.setai).toLocaleString()}世帯` : "");
+        } else {
+          title = p.name;
+          addrLine = p.setai ? `${Number(p.setai).toLocaleString()}世帯(国勢調査2020)` : "";
+        }
+        const canAdopt = !!opts.onAdopt, canDetail = !!(opts.onAdopt && opts.onDetail && p.building);
+        /* 建物名が地図データに無いときは、その場で手入力できる(任意)。入力した名前は登録時に使う */
+        const nameHtml = (p.building && !p.bname && canAdopt)
+          ? `<input type="text" class="psPopNameIn" maxlength="60" placeholder="建物名(任意・手入力。例: ○○マンション)">`
+          : `<div class="psPopName">${esc(title)}</div>`;
+        const html = `<div class="psPop">${nameHtml}<div class="psPopAddr">${esc(addrLine)}</div>` +
+          (sub ? `<div class="psPopSub">${sub}</div>` : "") +
+          `<div class="psPopBtns">` + (canAdopt ? `<button type="button" class="psPopReg">登録</button>` : "") +
+          (canDetail ? `<button type="button" class="psPopDetail">詳細を見る</button>` : "") +
+          `<button type="button" class="psPopClose">閉じる</button></div></div>`;
+        if (tapPopup) map.closePopup(tapPopup);
+        tapPopup = L.popup({ closeOnClick: false, autoClose: true, className: "psPopWrap", maxWidth: 300 }).setLatLng(e.latlng).setContent(html).openOn(map);
+        const el = tapPopup.getElement();
+        const adopt = () => {
+          const nin = el.querySelector(".psPopNameIn");
+          if (nin && nin.value.trim()) { p.bname = nin.value.trim().slice(0, 60); p.name = p.bname + " " + (p.addrs && p.addrs.length ? p.addrs[0] + (p.addrs.length > 1 ? " ほか" : "") : chomeShort(p.town)); }
+          const copy = { type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: p.name || "", key: p.key || "", bname: p.bname || "", addrs: p.addrs || [] } };
+          map.closePopup(tapPopup); clearHit();
+          return opts.onAdopt([copy]);
+        };
+        const reg = el.querySelector(".psPopReg"); if (reg) reg.onclick = adopt;
+        const det = el.querySelector(".psPopDetail"); if (det) det.onclick = () => { const lyr = adopt(); if (lyr) opts.onDetail(lyr); };
+        el.querySelector(".psPopClose").onclick = () => map.closePopup(tapPopup);
+        if (namePromise) {
+          const myPopup = tapPopup;
+          namePromise.then(bname => {
+            if (!bname || tapPopup !== myPopup || !map.hasLayer(myPopup) || hitFeats[0] !== f) return;
+            const nin = el.querySelector(".psPopNameIn");
+            if (nin && nin.value.trim()) return;            /* 先に手入力されていたらそれを尊重 */
+            p.bname = bname; p.name = bname + " " + (p.addrs && p.addrs.length ? p.addrs[0] + (p.addrs.length > 1 ? " ほか" : "") : chomeShort(p.town));
+            const nameEl = document.createElement("div"); nameEl.className = "psPopName"; nameEl.textContent = bname;
+            if (nin) nin.replaceWith(nameEl); else { const t = el.querySelector(".psPopName"); if (t) t.textContent = bname; }
+            if (!el.querySelector(".psPopSub")) { const s = document.createElement("div"); s.className = "psPopSub"; s.innerHTML = '建物名: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'; el.querySelector(".psPopAddr").insertAdjacentElement("afterend", s); }
+            myPopup.update();
+          });
+        }
       } finally { tapBusy = false; }
     });
     function showArea(feats, o) {
@@ -1910,6 +2062,7 @@ function addPlaceSearchControl(map, opts) {
          常時表示ツールチップはズームアニメーション中の付け外しで取り残されることがあり、
          マーカーなら removeLayer で確実に消える */
       hitArea.eachLayer(lyr => {
+        if (o.noLabel) return;                                   /* タップ選択はポップアップで示すので赤字ラベルは出さない */
         const p = (lyr.feature && lyr.feature.properties) || {};
         const label = (p.name || "") + (p.setai ? ` ${Number(p.setai).toLocaleString()}世帯` : "");
         if (!label) return;
@@ -2979,20 +3132,96 @@ addPlaceSearchControl(map, {
   onAdopt: (feats) => {
     let last = null;
     feats.forEach(f => {
-      const nm = f.properties && f.properties.name;
-      const key = f.properties && f.properties.key;
-      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: { status: "plan", place: nm || undefined, setaiKey: key || undefined } });
+      const fp = f.properties || {};
+      const props = { status: "plan", place: fp.name || undefined, setaiKey: fp.key || undefined };
+      if (fp.bname) props.bname = fp.bname;                          /* 建物名(OpenStreetMap) */
+      if (fp.addrs && fp.addrs.length) props.addrs = fp.addrs;        /* 住居表示住所(複数の号があれば全部) */
+      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: props });
       if (!lyr) return;
       stampFeature(lyr.feature.properties);
       last = lyr;
     });
-    if (!last) return;
+    if (!last) return null;
     persist();
     renderStats();
     if (feats.length === 1) last.openPopup();
     else showMapToast(map.getContainer(), `${feats.length}件の区域を「予定」で登録しました。各図形をタップして状態・担当を設定できます`, 5000);
+    return last;
   },
+  /* 「詳細を見る」= 登録したうえで部屋割り(部屋番号一覧)パネルを開く */
+  onDetail: (lyr) => { map.closePopup(); openRoomsPanel(lyr); },
 });
+
+/* ===== 🏢 部屋割り(集合住宅の部屋番号一覧と配布チェック) =====
+   部屋番号の公開データは存在しない(ゼンリン等の有償地図のみ)ため、階数×各階の戸数から生成するか、
+   手入力で一覧を作る。各部屋の「配布済」チェックは図形の properties.rooms に保存され、GeoJSON書出・統合にも乗る。
+   rooms = { list: [{no:"101", done:true}, ...], floors, perFloor, style } */
+let roomsPanelEl = null;
+function roomsOf(props) { if (!props.rooms || !Array.isArray(props.rooms.list)) props.rooms = { list: [] }; return props.rooms; }
+function genRooms(floors, perFloor, style, startFloor) {
+  const list = [];
+  for (let f = startFloor; f < startFloor + floors; f++) {
+    for (let r = 1; r <= perFloor; r++) {
+      const no = style === "seq" ? String((f - startFloor) * perFloor + r)
+        : style === "dash" ? `${f}-${String(r).padStart(2, "0")}`
+        : `${f}${String(r).padStart(2, "0")}`;            /* 101, 102 … */
+      list.push({ no, done: false });
+    }
+  }
+  return list;
+}
+function openRoomsPanel(layer) {
+  const props = layer.feature.properties;
+  const rooms = roomsOf(props);
+  if (!roomsPanelEl) {
+    roomsPanelEl = document.createElement("div");
+    roomsPanelEl.className = "listPanel roomsPanel";
+    map.getContainer().parentElement.appendChild(roomsPanelEl);
+    L.DomEvent.disableClickPropagation(roomsPanelEl); L.DomEvent.disableScrollPropagation(roomsPanelEl);
+  }
+  const el = roomsPanelEl;
+  function render() {
+    const title = (props.bname ? props.bname + " " : "") + (props.addrs && props.addrs.length ? props.addrs.join(" ／ ") : (props.place || "建物"));
+    const done = rooms.list.filter(r => r.done).length;
+    el.innerHTML =
+      `<button class="lpClose" id="rpClose" title="閉じる">✕</button><h3>🏢 部屋割り</h3>` +
+      `<div class="rpTitle">${mgEsc(title)}</div>` +
+      (rooms.list.length ? `<div class="rpCount">配布済 <b>${done}</b> / ${rooms.list.length} 部屋</div>` : "") +
+      `<details class="rpGen" ${rooms.list.length ? "" : "open"}><summary>部屋番号の一覧を作る</summary>` +
+      `<div class="rpForm">階数 <input type="number" id="rpFloors" min="1" max="99" value="${rooms.floors || 5}"> × 各階 <input type="number" id="rpPer" min="1" max="99" value="${rooms.perFloor || 4}"> 戸` +
+      `<select id="rpStyle"><option value="num">101, 102…</option><option value="dash">1-01, 1-02…</option><option value="seq">1, 2, 3…(連番)</option></select>` +
+      `開始階 <input type="number" id="rpStart" min="1" max="99" value="${rooms.startFloor || 1}">` +
+      `<button class="popupSave" id="rpGenBtn">生成</button></div>` +
+      `<div class="rpForm">手入力(カンマ・改行区切り)<textarea id="rpManual" rows="2" placeholder="例) 101,102,103,201,202"></textarea><button class="popupSave" id="rpAddBtn">追加</button></div>` +
+      `<div class="lpSection">※部屋番号の公開データはありません。現地の集合ポストや表札を見て作成してください。住人の氏名は入力しないでください</div></details>` +
+      (rooms.list.length ? `<div class="roomGrid">${rooms.list.map((r, i) => `<label class="roomCell ${r.done ? "done" : ""}"><input type="checkbox" data-i="${i}" ${r.done ? "checked" : ""}> ${mgEsc(r.no)}</label>`).join("")}</div>` +
+        `<div class="row rpBtns"><button class="popupSave" id="rpAll">全部チェック</button><button id="rpNone">チェックを外す</button><button class="popupDel" id="rpClear">一覧を消す</button></div>` : `<div class="lpEmpty">まだ部屋番号の一覧がありません</div>`);
+    el.querySelector("#rpClose").onclick = () => { el.style.display = "none"; };
+    el.querySelector("#rpGenBtn").onclick = () => {
+      const floors = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpFloors").value, 10) || 1));
+      const per = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpPer").value, 10) || 1));
+      const start = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpStart").value, 10) || 1));
+      const style = el.querySelector("#rpStyle").value;
+      if (rooms.list.length && !confirm("今の一覧(チェック含む)を作り直します。よろしいですか?")) return;
+      rooms.list = genRooms(floors, per, style, start); rooms.floors = floors; rooms.perFloor = per; rooms.style = style; rooms.startFloor = start;
+      save();
+    };
+    el.querySelector("#rpAddBtn").onclick = () => {
+      const txt = el.querySelector("#rpManual").value;
+      const nos = txt.split(/[,、\n\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 500);
+      const have = new Set(rooms.list.map(r => r.no));
+      nos.forEach(no => { if (!have.has(no)) { rooms.list.push({ no: no.slice(0, 12), done: false }); have.add(no); } });
+      save();
+    };
+    el.querySelectorAll(".roomCell input").forEach(cb => cb.onchange = () => { rooms.list[Number(cb.dataset.i)].done = cb.checked; save(); });
+    const all = el.querySelector("#rpAll"); if (all) all.onclick = () => { rooms.list.forEach(r => r.done = true); save(); };
+    const none = el.querySelector("#rpNone"); if (none) none.onclick = () => { rooms.list.forEach(r => r.done = false); save(); };
+    const clr = el.querySelector("#rpClear"); if (clr) clr.onclick = () => { if (!confirm("部屋番号の一覧を消します。よろしいですか?")) return; rooms.list = []; save(); };
+  }
+  function save() { stampFeature(props); persist(); render(); }
+  render();
+  el.style.display = "";
+}
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
   `<div class="gTabs">
@@ -3208,7 +3437,8 @@ function popupHtml(props) {
     `濃さ:<select id="sOpacity">${opOpts}</select>` +
     `担当:<input type="text" id="sWho" value="${esc(props.who)}" maxlength="20" placeholder="例)佐藤">` +
     `メモ:<input type="text" id="sMemo" value="${esc(props.memo)}" maxlength="100" placeholder="例)7/20 午前に配布予定">` +
-    `<button class="popupSave" id="sSave">保存</button><button class="popupDel" id="sDel">削除</button>`;
+    `<button class="popupSave" id="sSave">保存</button><button class="popupDel" id="sDel">削除</button>` +
+    `<button type="button" class="popupRooms" id="sRooms" title="集合住宅の部屋番号一覧と配布チェック">🏢 部屋割り${props.rooms && props.rooms.list && props.rooms.list.length ? `(${props.rooms.list.filter(r => r.done).length}/${props.rooms.list.length})` : ""}</button>`;
 }
 
 function wireLayer(layer) {
@@ -3255,6 +3485,8 @@ function wireLayer(layer) {
       autoBtn.style.color = textOn(c);   /* 背景に合わせて文字色も切り替える(白固定だと消える) */
       autoBtn.title = `状態の色(${c})を使う`;
     };
+    const roomsBtn = node.querySelector("#sRooms");
+    if (roomsBtn) roomsBtn.onclick = () => { map.closePopup(); openRoomsPanel(layer); };
     node.querySelector("#sSave").onclick = () => {
       props.status = node.querySelector("#sStatus").value;
       const selEl = node.querySelector("#sColors .sel");

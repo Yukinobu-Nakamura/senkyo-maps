@@ -124,6 +124,7 @@ const FAQ_HTML = `
 <li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
 <li class="needsSetai"><b>世帯数などの公開データ</b> — このサイト自身</li>
 <li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目・街区(○番)を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>(作成者の公開データ置き場 senkyo-maps-data を含む)から取り寄せます。※街区の枠は国勢調査の調査区(道路の中心線)に基づくため、実際の街区より道路の半分ほど外側に膨らみます。号(○番○号)まで入力したときは、<b>その地点に最も近い建物の形を国土地理院の地図データ(ベクトルタイル)から取り寄せて</b>枠にします(密集地では隣の建物を拾うことがあります)</li>
+<li class="teamSync"><b>📍「タップで選ぶ」で建物をタップしたとき</b> — OpenStreetMap(Overpass API)に<b>タップした地点の緯度経度</b>を送って建物名(登録があれば)を取得します。番地・号は上記の住居表示住所データから求めます</li>
 <li><b>🔢 番地・号のラベル(地図を拡大したとき)</b> — 国土地理院に<b>画面中心の緯度経度</b>を送って市区町村を判定し、その市区町村の<b>住居表示住所データ(国土地理院の公開データ)をこのサイト自身</b>(作成者の公開データ置き場)から取り寄せます。レイヤ一覧の「🔢 番地・号」を外せば通信しません</li>
 <li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
 <li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
@@ -1107,24 +1108,96 @@ function kbPick(gj, lng, lat, lv01, wantNum) {
 }
 /* 「タップで選ぶ」モード(null=オフ / "chome" / "block" / "bld")。addUiHideControl が参照する */
 let _psTapMode = null;
+/* 「池袋三丁目」→「池袋3」(住所の短い表記用)。丁目の無い町はそのまま */
+function chomeShort(town) {
+  const m = /^(.*?)([一二三四五六七八九十]+)丁目$/.exec(town || "");
+  if (!m) return town || "";
+  const k = m[2]; const d = { 一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+  let n;
+  if (k === "十") n = 10;
+  else if (k.indexOf("十") >= 0) { const [a, b] = k.split("十"); n = (a ? d[a] : 1) * 10 + (b ? d[b] : 0); }
+  else n = d[k] || 0;
+  return m[1] + n;
+}
+/* 建物(面)に属する住居表示住所(○番○号)を返す: 面の中の点 → 無ければ 6m 以内の点。[{town, b, g, addr}] 号の昇順 */
+function ringDistM(ring, lng, lat) {
+  const latR = lat * Math.PI / 180, kx = 111320 * Math.cos(latR), ky = 110540;
+  let d = Infinity;
+  for (let k = 0; k < ring.length - 1; k++) {
+    const ax = ring[k][0], ay = ring[k][1], bx = ring[k + 1][0], by = ring[k + 1][1];
+    const dx = (bx - ax) * kx, dy = (by - ay) * ky, px = (lng - ax) * kx, py = (lat - ay) * ky;
+    const L = dx * dx + dy * dy; const t = L ? Math.max(0, Math.min(1, (px * dx + py * dy) / L)) : 0;
+    d = Math.min(d, Math.hypot(px - t * dx, py - t * dy));
+  }
+  return d;
+}
+async function jushoAddrsFor(code, geom) {
+  const d = await jushoData(code);
+  if (!d || !geom || geom.type !== "Polygon") return [];
+  const ring = geom.coordinates[0];
+  const [minX, minY, maxX, maxY] = ring.reduce((a, c) => [Math.min(a[0], c[0]), Math.min(a[1], c[1]), Math.max(a[2], c[0]), Math.max(a[3], c[1])], [Infinity, Infinity, -Infinity, -Infinity]);
+  const pad = 0.0001; /* 約10m */
+  const inside = [], near = [];
+  for (const pt of d.pts) {
+    if (pt[0] < minX - pad || pt[0] > maxX + pad || pt[1] < minY - pad || pt[1] > maxY + pad) continue;
+    if (psPointInRing(ring, pt[0], pt[1])) inside.push(pt);
+    else if (ringDistM(ring, pt[0], pt[1]) <= 6) near.push(pt);
+  }
+  const use = inside.length ? inside : near;
+  const seen = new Set(), out = [];
+  use.forEach(pt => {
+    const town = d.towns[pt[2]], key = town + "|" + pt[3] + "|" + pt[4];
+    if (seen.has(key)) return; seen.add(key);
+    out.push({ town, b: pt[3], g: pt[4], addr: chomeShort(town) + "-" + pt[3] + "-" + pt[4] });
+  });
+  out.sort((a, b) => (parseInt(a.b, 10) - parseInt(b.b, 10)) || (parseInt(a.g, 10) - parseInt(b.g, 10)) || a.addr.localeCompare(b.addr));
+  return out;
+}
+/* 建物名: OpenStreetMap(Overpass API)に、その地点から 8m 以内の name 付き建物を問い合わせる。
+   無ければ ""。失敗・7秒超も ""(建物名は無くても登録できるので静かに諦める)。表示時は ODbL の帰属表示をつける */
+const OVERPASS_ENDPOINTS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];  /* 混雑時(502/504)は次へ */
+async function osmBuildingName(lat, lng) {
+  const q = `[out:json][timeout:6];way(around:8,${lat},${lng})[building][name];out tags center 5;`;
+  for (const ep of OVERPASS_ENDPOINTS) {
+    const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 5000) : null;
+    try {
+      const r = await fetch(ep, { method: "POST", body: "data=" + encodeURIComponent(q), signal: ctrl ? ctrl.signal : undefined });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const els = (j.elements || []).filter(e => e.tags && e.tags.name);
+      if (!els.length) return "";
+      els.sort((a, b) => {
+        const da = a.center ? Math.hypot((a.center.lat - lat) * 110540, (a.center.lon - lng) * 91000) : 1e9;
+        const db = b.center ? Math.hypot((b.center.lat - lat) * 110540, (b.center.lon - lng) * 91000) : 1e9;
+        return da - db;
+      });
+      return String(els[0].tags.name).slice(0, 60);
+    } catch (_) { /* 次のエンドポイントへ */ }
+    finally { if (timer) clearTimeout(timer); }
+  }
+  return "";
+}
 /* 地点(lat,lng)を含む区画を単位別に1つ返す。無ければ null */
 async function psUnitAt(mode, lat, lng) {
   const rg = await gsiReverse(lat, lng).catch(() => null);
   if (!rg || !rg.code) return null;
   if (mode === "bld") {
     const b = await gsiBuildingAt(lat, lng, 8).catch(() => null);
-    return b ? { type: "Feature", geometry: b.geometry, properties: { name: (rg.name || "") + " の建物", building: true } } : null;
+    return b ? { type: "Feature", geometry: b.geometry, properties: { name: (rg.name || "") + " の建物", building: true, code: rg.code, town: rg.name || "" } } : null;
   }
   if (mode === "block") {
     const kb = await kbGeo(rg.code);
     const f = kb && (kb.features || []).find(x => psContains(x.geometry, lng, lat));
-    return f ? kbFeat(f) : null;
+    if (!f) return null;
+    const o = kbFeat(f); o.properties.code = rg.code; o.properties.town = f.properties.n || rg.name || "";
+    return o;
   }
   const codes = await psCityCodes();
   if (!codes.has(rg.code)) return null;
   const gj = await psGeo(rg.code);
   const f = (gj && gj.features || []).find(x => psContains(x.geometry, lng, lat));
-  return f ? { type: "Feature", geometry: f.geometry, properties: { name: f.properties.name, setai: f.properties.setai } } : null;
+  return f ? { type: "Feature", geometry: f.geometry, properties: { name: f.properties.name, setai: f.properties.setai, code: rg.code, town: f.properties.name } } : null;
 }
 
 /* ---- 号(住居番号)まで入力されたとき: その建物の外形を囲む ----
@@ -1369,7 +1442,7 @@ function addPlaceSearchControl(map, opts) {
       '<button class="psGo" type="button">検索</button>' +
       '<button class="psClear" type="button" style="display:none" title="検索結果の枠・マーカーを消す">枠を消す</button>' +
       (opts.onAdopt ? '<button class="psAdopt" type="button" style="display:none" title="赤い枠の区域をそのまま図形として登録し、状態(予定/配布中/済)などを設定します">➕ この区域を登録</button>' : "") +
-      '<label class="psTap" title="地図をタップした場所の区画を選びます(続けてタップすると複数選べます)">📍 タップで選ぶ: <select class="psTapSel">' +
+      '<label class="psTap" title="地図をタップした場所の区画(丁目・街区・建物)を赤枠で示し、名称・住所と「登録」ボタンをポップアップで出します">📍 タップで選ぶ: <select class="psTapSel">' +
       '<option value="">オフ</option><option value="chome">丁目・町</option><option value="block">街区(○番)</option><option value="bld">建物(○号)</option></select></label>' +
       '<div class="psList"></div></span>';
     L.DomEvent.disableClickPropagation(div);
@@ -1410,21 +1483,76 @@ function addPlaceSearchControl(map, opts) {
       map.getContainer().classList.toggle("psTapping", !!_psTapMode);
       if (_psTapMode) showMapToast(map.getContainer(), "地図をタップすると、その場所の" + tapSel.options[tapSel.selectedIndex].text + "が選ばれます", 3500);
     };
+    /* タップ → その区画を赤枠で示し、その場にポップアップ(名称・住所・「登録」「詳細を見る」)。
+       建物: 住居表示住所(○番○号)から「池袋3-62-1」の形の住所、建物名は OpenStreetMap にあれば表示 */
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+    let tapPopup = null;
     map.on("click", async (e) => {
       if (!_psTapMode || tapBusy) return;
       if (map.pm && (map.pm.globalDrawModeEnabled() || map.pm.globalEditModeEnabled() || map.pm.globalRemovalModeEnabled())) return;
       const t = e.originalEvent && e.originalEvent.target;
-      if (t && t.closest && t.closest(".leaflet-control, .leaflet-popup")) return;
+      if (t && t.closest && t.closest(".leaflet-control, .leaflet-popup, .leaflet-interactive")) return;   /* 既存の図形の上はその図形のポップアップに任せる */
       tapBusy = true;
       try {
         const f = await psUnitAt(_psTapMode, e.latlng.lat, e.latlng.lng);
         if (!f) { showMapToast(map.getContainer(), "この地点の区画データがありません(未収録の自治体・建物なし)", 3000); return; }
         if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
-        const key = g => JSON.stringify(g.geometry.coordinates).slice(0, 200) + (g.properties.name || "");
-        const k = key(f), idx = hitFeats.findIndex(x => key(x) === k);
-        const next = hitFeats.slice();
-        if (idx >= 0) next.splice(idx, 1); else next.push(f);
-        if (next.length) showArea(next, { noFit: true }); else clearHit();
+        showArea([f], { noFit: true, noLabel: true });
+        const p = f.properties;
+        let title = "", addrLine = "", sub = "";
+        let namePromise = null;
+        if (p.building) {
+          /* 住所は手元のデータで即座に出す。建物名(OpenStreetMap)は遅い/落ちていることがあるので、ポップアップを開いた後に届いたら埋める */
+          const addrs = await jushoAddrsFor(p.code, f.geometry).catch(() => []);
+          if (hitFeats[0] !== f) return;   /* 待っている間に別の場所がタップされた */
+          addrLine = addrs.length ? addrs.map(a => a.addr).join(" ／ ") : (chomeShort(p.town) + "(号は不明)");
+          title = "(建物名は未登録)";
+          p.bname = ""; p.addrs = addrs.map(a => a.addr);
+          p.name = addrs.length ? addrs[0].addr + (addrs.length > 1 ? " ほか" : "") : chomeShort(p.town);
+          namePromise = osmBuildingName(e.latlng.lat, e.latlng.lng);
+        } else if (p.block) {
+          title = chomeShort(p.town) + "-" + String(p.name).replace(/^.*?(\d+)番$/, "$1");
+          addrLine = p.name + (p.setai ? `　${Number(p.setai).toLocaleString()}世帯` : "");
+        } else {
+          title = p.name;
+          addrLine = p.setai ? `${Number(p.setai).toLocaleString()}世帯(国勢調査2020)` : "";
+        }
+        const canAdopt = !!opts.onAdopt, canDetail = !!(opts.onAdopt && opts.onDetail && p.building);
+        /* 建物名が地図データに無いときは、その場で手入力できる(任意)。入力した名前は登録時に使う */
+        const nameHtml = (p.building && !p.bname && canAdopt)
+          ? `<input type="text" class="psPopNameIn" maxlength="60" placeholder="建物名(任意・手入力。例: ○○マンション)">`
+          : `<div class="psPopName">${esc(title)}</div>`;
+        const html = `<div class="psPop">${nameHtml}<div class="psPopAddr">${esc(addrLine)}</div>` +
+          (sub ? `<div class="psPopSub">${sub}</div>` : "") +
+          `<div class="psPopBtns">` + (canAdopt ? `<button type="button" class="psPopReg">登録</button>` : "") +
+          (canDetail ? `<button type="button" class="psPopDetail">詳細を見る</button>` : "") +
+          `<button type="button" class="psPopClose">閉じる</button></div></div>`;
+        if (tapPopup) map.closePopup(tapPopup);
+        tapPopup = L.popup({ closeOnClick: false, autoClose: true, className: "psPopWrap", maxWidth: 300 }).setLatLng(e.latlng).setContent(html).openOn(map);
+        const el = tapPopup.getElement();
+        const adopt = () => {
+          const nin = el.querySelector(".psPopNameIn");
+          if (nin && nin.value.trim()) { p.bname = nin.value.trim().slice(0, 60); p.name = p.bname + " " + (p.addrs && p.addrs.length ? p.addrs[0] + (p.addrs.length > 1 ? " ほか" : "") : chomeShort(p.town)); }
+          const copy = { type: "Feature", geometry: JSON.parse(JSON.stringify(f.geometry)), properties: { name: p.name || "", key: p.key || "", bname: p.bname || "", addrs: p.addrs || [] } };
+          map.closePopup(tapPopup); clearHit();
+          return opts.onAdopt([copy]);
+        };
+        const reg = el.querySelector(".psPopReg"); if (reg) reg.onclick = adopt;
+        const det = el.querySelector(".psPopDetail"); if (det) det.onclick = () => { const lyr = adopt(); if (lyr) opts.onDetail(lyr); };
+        el.querySelector(".psPopClose").onclick = () => map.closePopup(tapPopup);
+        if (namePromise) {
+          const myPopup = tapPopup;
+          namePromise.then(bname => {
+            if (!bname || tapPopup !== myPopup || !map.hasLayer(myPopup) || hitFeats[0] !== f) return;
+            const nin = el.querySelector(".psPopNameIn");
+            if (nin && nin.value.trim()) return;            /* 先に手入力されていたらそれを尊重 */
+            p.bname = bname; p.name = bname + " " + (p.addrs && p.addrs.length ? p.addrs[0] + (p.addrs.length > 1 ? " ほか" : "") : chomeShort(p.town));
+            const nameEl = document.createElement("div"); nameEl.className = "psPopName"; nameEl.textContent = bname;
+            if (nin) nin.replaceWith(nameEl); else { const t = el.querySelector(".psPopName"); if (t) t.textContent = bname; }
+            if (!el.querySelector(".psPopSub")) { const s = document.createElement("div"); s.className = "psPopSub"; s.innerHTML = '建物名: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'; el.querySelector(".psPopAddr").insertAdjacentElement("afterend", s); }
+            myPopup.update();
+          });
+        }
       } finally { tapBusy = false; }
     });
     function showArea(feats, o) {
@@ -1440,6 +1568,7 @@ function addPlaceSearchControl(map, opts) {
          常時表示ツールチップはズームアニメーション中の付け外しで取り残されることがあり、
          マーカーなら removeLayer で確実に消える */
       hitArea.eachLayer(lyr => {
+        if (o.noLabel) return;                                   /* タップ選択はポップアップで示すので赤字ラベルは出さない */
         const p = (lyr.feature && lyr.feature.properties) || {};
         const label = (p.name || "") + (p.setai ? ` ${Number(p.setai).toLocaleString()}世帯` : "");
         if (!label) return;

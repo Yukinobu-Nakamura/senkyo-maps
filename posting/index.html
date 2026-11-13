@@ -7,7 +7,7 @@
 <title>ポスティングマップ — ビラ配布区域の管理</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css">
-<link rel="stylesheet" href="../assets/common.css?v=fc3d4a72">
+<link rel="stylesheet" href="../assets/common.css?v=0ddc46a7">
 <style>
   /* 管理表マーカーの実績枚数ラベル */
   .mgcount{ background:transparent; border:none; box-shadow:none; color:#111; font-weight:700; font-size:11px; text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff; }
@@ -50,6 +50,20 @@
   .lpSub{ flex:none; font-size:11px; color:#6b7280; }
   .lpEmpty{ color:#9ca3af; padding:4px 6px; }
   .lpSection{ margin-top:8px; border-top:1px solid #e5e7eb; padding-top:6px; font-size:11.5px; color:#374151; }
+  /* 🏢 部屋割りパネル */
+  .roomsPanel .rpTitle{ font-weight:700; color:#1e3a5f; margin-bottom:4px; }
+  .roomsPanel .rpCount{ margin-bottom:6px; }
+  .roomsPanel details.rpGen summary{ cursor:pointer; font-weight:700; font-size:12px; }
+  .roomsPanel .rpForm{ display:flex; flex-wrap:wrap; gap:4px; align-items:center; margin:6px 0; font-size:12px; }
+  .roomsPanel .rpForm input[type=number]{ width:44px; border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; }
+  .roomsPanel .rpForm select{ border:1px solid #d1d5db; border-radius:6px; padding:3px 4px; font-size:12px; }
+  .roomsPanel .rpForm textarea{ width:100%; border:1px solid #d1d5db; border-radius:6px; padding:4px; font-size:12px; }
+  .roomsPanel .roomGrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(62px, 1fr)); gap:4px; margin-top:6px; }
+  .roomsPanel .roomCell{ display:flex; align-items:center; gap:3px; border:1px solid #e5e7eb; border-radius:6px; padding:3px 5px; font-size:12px; cursor:pointer; min-height:24px; }
+  .roomsPanel .roomCell.done{ background:#ede9fe; border-color:#c4b5fd; text-decoration:line-through; color:#6b7280; }
+  .roomsPanel .rpBtns{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .roomsPanel .rpBtns button{ min-height:26px; font-size:12px; }
+  .popupRooms{ margin-left:6px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:12px; }
   /* 世帯数レイヤのラベル(.setaiLabel)と追加リクエストのモーダル(.req*)は
      ポスターマップと共通のため assets/common.css に置いている */
   /* 説明文バー(details化): スマホでは初期折りたたみで地図を広く使う(開閉はJS不要のネイティブ動作) */
@@ -107,7 +121,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-<script src="../assets/common.js?v=fc3d4a72"></script>
+<script src="../assets/common.js?v=0ddc46a7"></script>
 <script>
 "use strict";
 /* スマホ・タブレット(1024px以下)では説明文バーを初期折りたたみにして地図の表示面積を確保
@@ -183,20 +197,96 @@ addPlaceSearchControl(map, {
   onAdopt: (feats) => {
     let last = null;
     feats.forEach(f => {
-      const nm = f.properties && f.properties.name;
-      const key = f.properties && f.properties.key;
-      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: { status: "plan", place: nm || undefined, setaiKey: key || undefined } });
+      const fp = f.properties || {};
+      const props = { status: "plan", place: fp.name || undefined, setaiKey: fp.key || undefined };
+      if (fp.bname) props.bname = fp.bname;                          /* 建物名(OpenStreetMap) */
+      if (fp.addrs && fp.addrs.length) props.addrs = fp.addrs;        /* 住居表示住所(複数の号があれば全部) */
+      const lyr = addFeatureLayer({ type: "Feature", geometry: f.geometry, properties: props });
       if (!lyr) return;
       stampFeature(lyr.feature.properties);
       last = lyr;
     });
-    if (!last) return;
+    if (!last) return null;
     persist();
     renderStats();
     if (feats.length === 1) last.openPopup();
     else showMapToast(map.getContainer(), `${feats.length}件の区域を「予定」で登録しました。各図形をタップして状態・担当を設定できます`, 5000);
+    return last;
   },
+  /* 「詳細を見る」= 登録したうえで部屋割り(部屋番号一覧)パネルを開く */
+  onDetail: (lyr) => { map.closePopup(); openRoomsPanel(lyr); },
 });
+
+/* ===== 🏢 部屋割り(集合住宅の部屋番号一覧と配布チェック) =====
+   部屋番号の公開データは存在しない(ゼンリン等の有償地図のみ)ため、階数×各階の戸数から生成するか、
+   手入力で一覧を作る。各部屋の「配布済」チェックは図形の properties.rooms に保存され、GeoJSON書出・統合にも乗る。
+   rooms = { list: [{no:"101", done:true}, ...], floors, perFloor, style } */
+let roomsPanelEl = null;
+function roomsOf(props) { if (!props.rooms || !Array.isArray(props.rooms.list)) props.rooms = { list: [] }; return props.rooms; }
+function genRooms(floors, perFloor, style, startFloor) {
+  const list = [];
+  for (let f = startFloor; f < startFloor + floors; f++) {
+    for (let r = 1; r <= perFloor; r++) {
+      const no = style === "seq" ? String((f - startFloor) * perFloor + r)
+        : style === "dash" ? `${f}-${String(r).padStart(2, "0")}`
+        : `${f}${String(r).padStart(2, "0")}`;            /* 101, 102 … */
+      list.push({ no, done: false });
+    }
+  }
+  return list;
+}
+function openRoomsPanel(layer) {
+  const props = layer.feature.properties;
+  const rooms = roomsOf(props);
+  if (!roomsPanelEl) {
+    roomsPanelEl = document.createElement("div");
+    roomsPanelEl.className = "listPanel roomsPanel";
+    map.getContainer().parentElement.appendChild(roomsPanelEl);
+    L.DomEvent.disableClickPropagation(roomsPanelEl); L.DomEvent.disableScrollPropagation(roomsPanelEl);
+  }
+  const el = roomsPanelEl;
+  function render() {
+    const title = (props.bname ? props.bname + " " : "") + (props.addrs && props.addrs.length ? props.addrs.join(" ／ ") : (props.place || "建物"));
+    const done = rooms.list.filter(r => r.done).length;
+    el.innerHTML =
+      `<button class="lpClose" id="rpClose" title="閉じる">✕</button><h3>🏢 部屋割り</h3>` +
+      `<div class="rpTitle">${mgEsc(title)}</div>` +
+      (rooms.list.length ? `<div class="rpCount">配布済 <b>${done}</b> / ${rooms.list.length} 部屋</div>` : "") +
+      `<details class="rpGen" ${rooms.list.length ? "" : "open"}><summary>部屋番号の一覧を作る</summary>` +
+      `<div class="rpForm">階数 <input type="number" id="rpFloors" min="1" max="99" value="${rooms.floors || 5}"> × 各階 <input type="number" id="rpPer" min="1" max="99" value="${rooms.perFloor || 4}"> 戸` +
+      `<select id="rpStyle"><option value="num">101, 102…</option><option value="dash">1-01, 1-02…</option><option value="seq">1, 2, 3…(連番)</option></select>` +
+      `開始階 <input type="number" id="rpStart" min="1" max="99" value="${rooms.startFloor || 1}">` +
+      `<button class="popupSave" id="rpGenBtn">生成</button></div>` +
+      `<div class="rpForm">手入力(カンマ・改行区切り)<textarea id="rpManual" rows="2" placeholder="例) 101,102,103,201,202"></textarea><button class="popupSave" id="rpAddBtn">追加</button></div>` +
+      `<div class="lpSection">※部屋番号の公開データはありません。現地の集合ポストや表札を見て作成してください。住人の氏名は入力しないでください</div></details>` +
+      (rooms.list.length ? `<div class="roomGrid">${rooms.list.map((r, i) => `<label class="roomCell ${r.done ? "done" : ""}"><input type="checkbox" data-i="${i}" ${r.done ? "checked" : ""}> ${mgEsc(r.no)}</label>`).join("")}</div>` +
+        `<div class="row rpBtns"><button class="popupSave" id="rpAll">全部チェック</button><button id="rpNone">チェックを外す</button><button class="popupDel" id="rpClear">一覧を消す</button></div>` : `<div class="lpEmpty">まだ部屋番号の一覧がありません</div>`);
+    el.querySelector("#rpClose").onclick = () => { el.style.display = "none"; };
+    el.querySelector("#rpGenBtn").onclick = () => {
+      const floors = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpFloors").value, 10) || 1));
+      const per = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpPer").value, 10) || 1));
+      const start = Math.max(1, Math.min(99, parseInt(el.querySelector("#rpStart").value, 10) || 1));
+      const style = el.querySelector("#rpStyle").value;
+      if (rooms.list.length && !confirm("今の一覧(チェック含む)を作り直します。よろしいですか?")) return;
+      rooms.list = genRooms(floors, per, style, start); rooms.floors = floors; rooms.perFloor = per; rooms.style = style; rooms.startFloor = start;
+      save();
+    };
+    el.querySelector("#rpAddBtn").onclick = () => {
+      const txt = el.querySelector("#rpManual").value;
+      const nos = txt.split(/[,、\n\s]+/).map(s => s.trim()).filter(Boolean).slice(0, 500);
+      const have = new Set(rooms.list.map(r => r.no));
+      nos.forEach(no => { if (!have.has(no)) { rooms.list.push({ no: no.slice(0, 12), done: false }); have.add(no); } });
+      save();
+    };
+    el.querySelectorAll(".roomCell input").forEach(cb => cb.onchange = () => { rooms.list[Number(cb.dataset.i)].done = cb.checked; save(); });
+    const all = el.querySelector("#rpAll"); if (all) all.onclick = () => { rooms.list.forEach(r => r.done = true); save(); };
+    const none = el.querySelector("#rpNone"); if (none) none.onclick = () => { rooms.list.forEach(r => r.done = false); save(); };
+    const clr = el.querySelector("#rpClear"); if (clr) clr.onclick = () => { if (!confirm("部屋番号の一覧を消します。よろしいですか?")) return; rooms.list = []; save(); };
+  }
+  function save() { stampFeature(props); persist(); render(); }
+  render();
+  el.style.display = "";
+}
 L.control.scale({ imperial: false }).addTo(map);
 addGuideControl(map, "📮 ポスティングマップの使い方",
   `<div class="gTabs">
@@ -412,7 +502,8 @@ function popupHtml(props) {
     `濃さ:<select id="sOpacity">${opOpts}</select>` +
     `担当:<input type="text" id="sWho" value="${esc(props.who)}" maxlength="20" placeholder="例)佐藤">` +
     `メモ:<input type="text" id="sMemo" value="${esc(props.memo)}" maxlength="100" placeholder="例)7/20 午前に配布予定">` +
-    `<button class="popupSave" id="sSave">保存</button><button class="popupDel" id="sDel">削除</button>`;
+    `<button class="popupSave" id="sSave">保存</button><button class="popupDel" id="sDel">削除</button>` +
+    `<button type="button" class="popupRooms" id="sRooms" title="集合住宅の部屋番号一覧と配布チェック">🏢 部屋割り${props.rooms && props.rooms.list && props.rooms.list.length ? `(${props.rooms.list.filter(r => r.done).length}/${props.rooms.list.length})` : ""}</button>`;
 }
 
 function wireLayer(layer) {
@@ -459,6 +550,8 @@ function wireLayer(layer) {
       autoBtn.style.color = textOn(c);   /* 背景に合わせて文字色も切り替える(白固定だと消える) */
       autoBtn.title = `状態の色(${c})を使う`;
     };
+    const roomsBtn = node.querySelector("#sRooms");
+    if (roomsBtn) roomsBtn.onclick = () => { map.closePopup(); openRoomsPanel(layer); };
     node.querySelector("#sSave").onclick = () => {
       props.status = node.querySelector("#sStatus").value;
       const selEl = node.querySelector("#sColors .sel");
