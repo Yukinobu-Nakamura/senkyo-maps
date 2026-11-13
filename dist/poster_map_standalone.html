@@ -535,7 +535,7 @@ const FAQ_HTML = `
 <li><b>地図の画像</b> — 国土地理院／OpenStreetMap。見ている範囲の画像を取り寄せます</li>
 <li><b>プログラム本体</b> — unpkg.com(地図部品 Leaflet)</li>
 <li class="needsSetai"><b>世帯数などの公開データ</b> — このサイト自身</li>
-<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目・街区(○番)を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>(作成者の公開データ置き場 senkyo-maps-data を含む)から取り寄せます。※街区の枠は国勢調査の調査区(道路の中心線)に基づくため、実際の街区より道路の半分ほど外側に膨らみます</li>
+<li><b>🔍 地名検索</b> — 国土地理院。<b>入力した検索語</b>と、候補を選んだときに<b>その地点の緯度経度</b>(町丁目の判定用)を送ります。選んだ町丁目・街区(○番)を枠で囲むための<b>境界データ(国勢調査の公開データ)はこのサイト自身</b>(作成者の公開データ置き場 senkyo-maps-data を含む)から取り寄せます。※街区の枠は国勢調査の調査区(道路の中心線)に基づくため、実際の街区より道路の半分ほど外側に膨らみます。号(○番○号)まで入力したときは、<b>その地点に最も近い建物の形を国土地理院の地図データ(ベクトルタイル)から取り寄せて</b>枠にします(密集地では隣の建物を拾うことがあります)</li>
 <li class="teamSync"><b>図形を描いた/タップしたときの地名の自動表示</b> — 国土地理院。<b>その図形の中心の緯度経度</b>を送ります(GPX取込ルートも対象。一度取れた地名は端末に保存して再送しません)</li>
 <li class="teamSync"><b>🏠 世帯数CSVの位置の自動推定</b> — 国土地理院。<b>取り込んだCSVの「名称」列と、入力した自治体名</b>を1行ずつ送ります。世帯数の数値は送りません</li>
 <li class="teamSync"><b>☁️ 同期(設定したときだけ)</b> — <b>チーム自身が用意したGoogleスプレッドシート</b>。区域・ルートの座標と<b>担当・メモ・登録者名</b>を送ります。設定しなければ通信しません</li>
@@ -1514,8 +1514,134 @@ function kbPick(gj, lng, lat, lv01, wantNum) {
            properties: { name: (p.n || "") + (isFinite(num) ? ` ${num}番` : ""), setai: p.s, block: true } };
 }
 
+/* ---- 号(住居番号)まで入力されたとき: その建物の外形を囲む ----
+   「号」の面データは国にも存在しない(住居番号は建物の出入口側=道路に面した位置に振られる点)。
+   国土地理院の住所検索は住居表示地域なら「○番○号」の点(建物の前面)を返すので、その点に最も近い
+   建物の外形を 地理院地図Vector(ベクトルタイル experimental_bvmap, z16 の building 層)から取り、枠にする。
+   ・点を含む建物があればそれ、無ければ 15m 以内で最も近い建物(密集地では隣の建物を拾う可能性がある)
+   ・建物が見つからない/号まで解決できない自治体 → 従来の街区枠+地点マーカーに戻る
+   ・ベクトルタイルは Protocol Buffers。依存ライブラリを増やさないため、building 層の面だけを読む最小デコーダを持つ
+     (仕様: https://github.com/mapbox/vector-tile-spec/tree/master/2.1) */
+const PS_GO_RE = /([0-9０-９]+)番([0-9０-９]+)号/;
+const BVMAP_URL = "https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/16/{x}/{y}.pbf";
+const _bvCache = new Map();   /* "x/y" → Promise<[{ring:[[lng,lat]...]}]|null> */
+function psZen2Han(s) { return String(s).replace(/[０-９]/g, d => String.fromCharCode(d.charCodeAt(0) - 0xFEE0)); }
+function pbfVarint(buf, pos) {
+  let r = 0, s = 0, b;
+  do { b = buf[pos.i++]; r += (b & 0x7f) * Math.pow(2, s); s += 7; } while (b & 0x80);
+  return r;
+}
+/* buf[start,end) のフィールドを順に cb(tag, varint値 or null, 子の開始, 子の終了) で渡す */
+function pbfFields(buf, start, end, cb) {
+  const pos = { i: start };
+  while (pos.i < end) {
+    const key = pbfVarint(buf, pos), tag = Math.floor(key / 8), wt = key & 7;
+    if (wt === 0) cb(tag, pbfVarint(buf, pos));
+    else if (wt === 2) { const len = pbfVarint(buf, pos); cb(tag, null, pos.i, pos.i + len); pos.i += len; }
+    else if (wt === 1) pos.i += 8;
+    else if (wt === 5) pos.i += 4;
+    else throw new Error("pbf wire type " + wt);
+  }
+}
+/* MVT の building 層から面のリングだけを取り出す(タイル座標) */
+function mvtBuildingRings(buf) {
+  const out = [];
+  const dec = new TextDecoder();
+  pbfFields(buf, 0, buf.length, (tag, v, s, e) => {
+    if (tag !== 3) return;                         /* Tile.layers */
+    let name = "", extent = 4096; const feats = [];
+    pbfFields(buf, s, e, (t2, v2, s2, e2) => {
+      if (t2 === 1) name = dec.decode(buf.subarray(s2, e2));
+      else if (t2 === 5) extent = v2;
+      else if (t2 === 2) feats.push([s2, e2]);
+    });
+    if (name !== "building") return;
+    feats.forEach(([fs, fe]) => {
+      let type = 0, geom = null;
+      pbfFields(buf, fs, fe, (t3, v3, s3, e3) => {
+        if (t3 === 3) type = v3;
+        else if (t3 === 4) { geom = []; const p = { i: s3 }; while (p.i < e3) geom.push(pbfVarint(buf, p)); }
+      });
+      if (type !== 3 || !geom) return;             /* 3 = POLYGON */
+      const zz = n => (n % 2 === 0) ? n / 2 : -(n + 1) / 2;
+      let x = 0, y = 0, i = 0, ring = null; const rings = [];
+      while (i < geom.length) {
+        const cmd = geom[i] & 7, cnt = Math.floor(geom[i] / 8); i++;
+        if (cmd === 1 || cmd === 2) {
+          for (let k = 0; k < cnt; k++) {
+            x += zz(geom[i++]); y += zz(geom[i++]);
+            if (cmd === 1) { ring = []; rings.push(ring); }
+            ring.push([x, y]);
+          }
+        } else if (cmd === 7) { if (ring && ring.length) ring.push(ring[0]); }
+      }
+      /* 外周リングだけ採用(穴は無視)。符号は最大面積のリングに合わせる */
+      const area = r => { let a = 0; for (let k = 0; k < r.length - 1; k++) a += r[k][0] * r[k + 1][1] - r[k + 1][0] * r[k][1]; return a / 2; };
+      const areas = rings.map(area);
+      let big = 0; areas.forEach((a, k) => { if (Math.abs(a) > Math.abs(areas[big])) big = k; });
+      const sign = Math.sign(areas[big]) || 1;
+      rings.forEach((r, k) => { if (r.length >= 4 && Math.sign(areas[k]) === sign) out.push({ ring: r, extent }); });
+    });
+  });
+  return out;
+}
+function bvTile(x, y) {
+  const key = x + "/" + y;
+  if (!_bvCache.has(key)) {
+    const n = Math.pow(2, 16);
+    const p = fetch(BVMAP_URL.replace("{x}", x).replace("{y}", y))
+      .then(r => r.ok ? r.arrayBuffer() : null)
+      .then(buf => {
+        if (!buf) return null;
+        return mvtBuildingRings(new Uint8Array(buf)).map(o => ({
+          ring: o.ring.map(([px, py]) => {
+            const lng = (x + px / o.extent) / n * 360 - 180;
+            const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + py / o.extent) / n))) * 180 / Math.PI;
+            return [lng, lat];
+          })
+        }));
+      })
+      .catch(() => { _bvCache.delete(key); return null; });
+    _bvCache.set(key, p);
+  }
+  return _bvCache.get(key);
+}
+/* 点(lat,lng) に最も近い建物の外形を返す(GeoJSON Polygon)。見つからなければ null */
+async function gsiBuildingAt(lat, lng, maxDistM) {
+  const n = Math.pow(2, 16);
+  const fx = (lng + 180) / 360 * n;
+  const latR = lat * Math.PI / 180;
+  const fy = (1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n;
+  const tx = Math.floor(fx), ty = Math.floor(fy);
+  /* タイルの端(約40m以内)なら隣のタイルも読む(建物が切れているため) */
+  const xs = [tx], ys = [ty], edge = 0.07;
+  if (fx - tx < edge) xs.push(tx - 1); else if (tx + 1 - fx < edge) xs.push(tx + 1);
+  if (fy - ty < edge) ys.push(ty - 1); else if (ty + 1 - fy < edge) ys.push(ty + 1);
+  const tiles = [];
+  xs.forEach(x => ys.forEach(y => tiles.push(bvTile(x, y))));
+  const polys = (await Promise.all(tiles)).filter(Boolean).flat();
+  if (!polys.length) return null;
+  const kx = 111320 * Math.cos(latR), ky = 110540;
+  const segDist = (ax, ay, bx, by) => {
+    const dx = (bx - ax) * kx, dy = (by - ay) * ky, px = (lng - ax) * kx, py = (lat - ay) * ky;
+    const L = dx * dx + dy * dy; const t = L ? Math.max(0, Math.min(1, (px * dx + py * dy) / L)) : 0;
+    return Math.hypot(px - t * dx, py - t * dy);
+  };
+  let best = null, bestD = Infinity;
+  for (const p of polys) {
+    const r = p.ring;
+    if (psPointInRing(r, lng, lat)) { best = p; bestD = 0; break; }
+    let d = Infinity;
+    for (let k = 0; k < r.length - 1; k++) d = Math.min(d, segDist(r[k][0], r[k][1], r[k + 1][0], r[k + 1][1]));
+    if (d < bestD) { bestD = d; best = p; }
+  }
+  if (!best || bestD > (maxDistM || 15)) return null;
+  return { type: "Feature", geometry: { type: "Polygon", coordinates: [best.ring] }, properties: { distM: Math.round(bestD * 10) / 10 } };
+}
+
 /* 地名検索コントロール(🔍で開閉)。全国の地名・住所から地図ジャンプ。
-   収録自治体では検索した町丁目を枠で囲む(上の psPickFeatures)。番地まで入れたときはその街区だけ(kbPick) */
+   収録自治体では検索した町丁目を枠で囲む(上の psPickFeatures)。番地まで入れたときはその街区だけ(kbPick)、
+   号まで入れたときはその建物(gsiBuildingAt) */
 function addPlaceSearchControl(map, opts) {
   opts = opts || {};
   /* opts.onAdopt(features, label): 囲んだ区画をそのページの図形として登録する関数(ポスティングが渡す)。
@@ -1586,7 +1712,8 @@ function addPlaceSearchControl(map, opts) {
       });
       /* ズームアニメーション中の fitBounds は Leaflet に無視される(_tryAnimatedZoom が true を返して終わる)ので、終わってから寄せる */
       const b = hitArea.getBounds();
-      const fit = () => map.fitBounds(b, { padding: [24, 24], maxZoom: 17 });
+      const isBld = feats.length === 1 && feats[0].properties && feats[0].properties.building;
+      const fit = () => map.fitBounds(b, { padding: [24, 24], maxZoom: isBld ? 18 : 17 });   /* 建物1棟は1段寄る */
       if (map._animatingZoom) map.once("zoomend", fit); else fit();
     }
     async function pick(title, lat, lng) {
@@ -1613,6 +1740,19 @@ function addPlaceSearchControl(map, opts) {
           }
           return;   /* 外周が取れなくても丁目には落とさない(マーカーのみ) */
         }
+        /* 号(○番○号)まで解決できた → その建物の外形を囲む(街区・丁目は囲まない) */
+        const gm = title.match(PS_GO_RE);
+        if (gm) {
+          const bld = await gsiBuildingAt(lat, lng, 15).catch(() => null);
+          if (my !== seq) return;
+          if (bld) {
+            const label = (rg.name || "") + ` ${parseInt(psZen2Han(gm[1]), 10)}番${parseInt(psZen2Han(gm[2]), 10)}号`;
+            showArea([{ type: "Feature", geometry: bld.geometry, properties: { name: label, building: true } }]);
+            if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+            return;
+          }
+          /* 建物が取れなければ街区枠へ(地点マーカーは残す) */
+        }
         /* 番地(○番)まで入力 → その街区だけを囲む(丁目は囲まない・マーカーも消す) */
         const bm = title.match(PS_BLOCK_RE);
         if (bm) {
@@ -1622,7 +1762,8 @@ function addPlaceSearchControl(map, opts) {
           const bf = kb && kbPick(kb, lng, lat, rg.name, wantNum);
           if (bf) {
             showArea([bf]);
-            if (hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
+            /* 号まで入力したのに建物が取れなかったときは地点マーカーを残して位置を示す */
+            if (!gm && hitMarker) { map.removeLayer(hitMarker); hitMarker = null; }
             return;
           }
           /* 街区データが無い(未収録・地番地域・非対応ブラウザ) → 従来の丁目枠+マーカーへ */
